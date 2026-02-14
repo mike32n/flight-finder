@@ -5,6 +5,7 @@ const runWithConcurrencyLimit = require("./promisePool");
 
 const app = express();
 app.use(express.json());
+app.use(express.static("public"));
 
 app.post("/search", async (req, res) => {
   try {

@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Flight Finder</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <h1>✈️ Flight Finder</h1>
+
+    <div class="form">
+      <input id="destinations" placeholder="Paris, Rome, Berlin" />
+      
+      <select id="weekday">
+        <option value="1">Monday</option>
+        <option value="2">Tuesday</option>
+        <option value="3">Wednesday</option>
+        <option value="4">Thursday</option>
+        <option value="5">Friday</option>
+      </select>
+
+      <input id="nights" type="number" placeholder="Nights" />
+
+      <button onclick="search()">Search</button>
+    </div>
+
+    <div id="loading" class="hidden">Loading...</div>
+    <div id="results"></div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
