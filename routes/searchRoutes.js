@@ -1,11 +1,12 @@
 const express = require("express");
 const generateTrips = require("../dateGenerator");
-const { searchMockFlights } = require("../flightService");
+const { getProvider } = require("../providers/providerFactory");
 const runWithConcurrencyLimit = require("../promisePool");
 const validateSearch = require("../middlewares/validateSearch");
 const { getAllDestinations } = require("../models/destinationModel");
 
 const router = express.Router();
+const flightProvider = getProvider();
 
 router.get("/destinations", async (req, res) => {
   try {
@@ -26,7 +27,11 @@ router.post("/search", validateSearch, async (req, res) => {
     for (const destination of destinations) {
       for (const trip of trips) {
         tasks.push(() =>
-          searchMockFlights(destination, trip.departure, trip.return),
+          flightProvider.searchFlights(
+            destination,
+            trip.departure,
+            trip.return,
+          ),
         );
       }
     }
