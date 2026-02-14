@@ -24,5 +24,6 @@ async function searchMockFlights(destination, departure, returnDate) {
 }
 
 module.exports = {
-  searchMockFlights
+  searchMockFlights,
+  generateMockPrice
 };
