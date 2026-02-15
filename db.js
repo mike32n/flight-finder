@@ -6,16 +6,30 @@ db.serialize(() => {
   db.run(`
     CREATE TABLE IF NOT EXISTS destinations (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT UNIQUE NOT NULL
+      city_name TEXT NOT NULL,
+      iata_code TEXT UNIQUE NOT NULL
     )
   `);
 
-  const cities = ["Paris", "Rome", "Berlin", "Madrid", "Lisbon"];
+  const cities = [
+    { city: "Paris", iata: "PAR" },
+    { city: "Rome", iata: "ROM" },
+    { city: "Berlin", iata: "BER" },
+    { city: "Madrid", iata: "MAD" },
+    { city: "Lisbon", iata: "LIS" },
+    { city: "Seoul", iata: "ICN" },
+    { city: "London", iata: "LON" },
+    { city: "Paris Charles de Gaulle", iata: "CDG" },
+    { city: "Frankfurt", iata: "FRA" },
+    { city: "New York John F Kennedy", iata: "JFK" },
+    { city: "Barcelona", iata: "BCN" }
+  ];
 
-  cities.forEach(city => {
+  cities.forEach(c => {
     db.run(
-      "INSERT OR IGNORE INTO destinations (name) VALUES (?)",
-      [city]
+      `INSERT OR IGNORE INTO destinations (city_name, iata_code)
+       VALUES (?, ?)`,
+      [c.city, c.iata]
     );
   });
 });

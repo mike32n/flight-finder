@@ -1,4 +1,59 @@
+# dependencies
 node_modules/
-.env
+
+# build output
 dist/
+build/
+.next/
+out/
+
+# logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# environment variables
+.env
+.env.*
+!.env.example
+
+# coverage
 coverage/
+.nyc_output/
+
+# cache
+.cache/
+.parcel-cache/
+
+# TypeScript
+*.tsbuildinfo
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# optional npm cache
+.npm/
+
+# optional eslint cache
+.eslintcache
+
+# SQLite database
+*.db
+*.sqlite
+*.sqlite3

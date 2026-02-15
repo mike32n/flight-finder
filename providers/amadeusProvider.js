@@ -17,15 +17,18 @@ class AmadeusProvider extends BaseProvider {
         destinationLocationCode: destination,
         departureDate: departure,
         returnDate: returnDate,
-        adults: "1",
-        max: "3",
+        adults: 1,
+        max: 1,
       });
 
-      if (!response.data.length) {
+      const offers =
+        response?.data || response?.result?.data || response?.body?.data;
+
+      if (!offers || !Array.isArray(offers) || offers.length === 0) {
         return { success: false };
       }
 
-      const cheapest = response.data[0];
+      const cheapest = offers[0];
 
       return {
         success: true,
@@ -33,10 +36,21 @@ class AmadeusProvider extends BaseProvider {
           destination,
           departure,
           return: returnDate,
-          price: parseFloat(cheapest.price.total),
+          price: Number(cheapest?.price?.total),
+          currency: cheapest?.price?.currency,
         },
       };
     } catch (error) {
+      const status = error.response?.statusCode || error.response?.status;
+
+      if (status === 429) {
+        console.log("Rate limit hit. Retrying in 2 seconds...");
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+
+        return this.searchFlights(destination, departure, returnDate);
+      }
+
+      console.error("Amadeus error:", status);
       return { success: false };
     }
   }

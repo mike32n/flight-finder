@@ -11,7 +11,14 @@ const flightProvider = getProvider();
 router.get("/destinations", async (req, res) => {
   try {
     const destinations = await getAllDestinations();
-    res.json(destinations);
+
+    res.json(
+      destinations.map(d => ({
+        label: d.city_name,
+        value: d.iata_code
+      }))
+    );
+
   } catch (err) {
     res.status(500).json({ error: "DB error" });
   }
@@ -36,7 +43,9 @@ router.post("/search", validateSearch, async (req, res) => {
       }
     }
 
-    const results = await runWithConcurrencyLimit(tasks, 5);
+    const results = await runWithConcurrencyLimit(tasks, 1);
+
+    console.log("RAW RESULTS:", JSON.stringify(results, null, 2));
 
     const successful = results.filter((r) => r.success).map((r) => r.data);
 

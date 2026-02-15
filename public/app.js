@@ -6,8 +6,8 @@ window.onload = async function () {
 
   data.forEach((dest) => {
     const option = document.createElement("option");
-    option.value = dest.name;
-    option.textContent = dest.name;
+    option.value = dest.value;
+    option.textContent = dest.label;
     select.appendChild(option);
   });
 };

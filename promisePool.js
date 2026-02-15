@@ -5,7 +5,7 @@ async function runWithConcurrencyLimit(tasks, limit) {
   for (const task of tasks) {
     const p = task()
       .then(result => {
-        results.push({ success: true, data: result });
+        results.push(result);
       })
       .catch(error => {
         results.push({ success: false, error: error.message });

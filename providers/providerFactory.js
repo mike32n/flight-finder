@@ -3,6 +3,7 @@ const AmadeusProvider = require("./amadeusProvider");
 
 function getProvider() {
   const provider = process.env.FLIGHT_PROVIDER;
+  console.log("Active provider:", provider);
 
   switch (provider) {
     case "amadeus":
