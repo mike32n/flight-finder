@@ -1,178 +1,237 @@
-# Flight Finder Backend
+# ✈️ Flight Finder Backend
 
-Node.js backend service for searching flight offers across multiple destinations and date combinations using a pluggable provider architecture (Mock / Amadeus Test / Amadeus Production).
+Node.js backend service for searching flight offers across multiple destinations and date combinations using a pluggable provider architecture.
 
-## Features
+---
 
-🔁 Concurrency control (rate-limit aware)
+## 🚀 Current Status
 
-🧩 Provider abstraction layer
+✅ Amadeus TEST environment supported  
+✅ Amadeus PRODUCTION environment supported  
+✅ Mock provider supported  
+✅ Concurrency control per provider  
+✅ Partial failure handling  
+✅ Rate-limit aware architecture  
+✅ Environment-based provider switching  
 
-🧪 Mock provider for local testing
+---
 
-🌍 Amadeus Test & Production support
+## 🏗 Architecture Overview
 
-⚠️ Partial failure handling
+The backend uses a **provider abstraction layer**, allowing different flight data sources to be plugged in without modifying business logic.
 
-🧵 Custom Promise Pool implementation
+### Supported Providers
 
-## Architecture
+| Provider Key     | Description |
+|------------------|------------|
+| `mock`           | Local mock data for development |
+| `amadeus-test`   | Amadeus Sandbox API |
+| `amadeus-prod`   | Amadeus Production API |
 
-The backend uses a provider-based architecture:
+The active provider is selected via environment variable:
 
-Frontend → /search → Provider → External API
+```
+FLIGHT_PROVIDER=amadeus-prod
+```
 
+---
 
-### Supported providers:
+## ⚙️ Tech Stack
 
-mock
-
-amadeus-test
-
-amadeus-prod
-
-### Active provider is selected via environment variable:
-
-ACTIVE_PROVIDER=amadeus-prod
-
-## Tech Stack
 - Node.js
 - Express
 - Amadeus Node SDK
-- Custom Promise Pool (concurrency limiter)
+- Custom Promise Pool (Concurrency limiter)
 - dotenv
 
-## Installation
+---
+
+## 📦 Installation
+
 ```bash
 npm install
+```
+
+---
+
+## ▶️ Running the Server
+
+```bash
 npm start
 ```
 
-Server runs at:
+Server runs on:
 
+```
 http://localhost:3000
+```
 
-## Environment Configuration
+---
 
-Create a .env file in the root:
+## 🔐 Environment Configuration
 
+Create a `.env` file in the project root:
+
+```env
 PORT=3000
+FLIGHT_PROVIDER=amadeus-prod
 
-ACTIVE_PROVIDER=amadeus-prod
+# Amadeus Test
+AMADEUS_TEST_CLIENT_ID=your_test_client_id
+AMADEUS_TEST_CLIENT_SECRET=your_test_client_secret
 
-### Test credentials
-AMADEUS_TEST_CLIENT_ID=your_test_id
-AMADEUS_TEST_CLIENT_SECRET=your_test_secret
+# Amadeus Production
+AMADEUS_PROD_CLIENT_ID=your_prod_client_id
+AMADEUS_PROD_CLIENT_SECRET=your_prod_client_secret
+```
 
-### Production credentials
-AMADEUS_PROD_CLIENT_ID=your_prod_id
-AMADEUS_PROD_CLIENT_SECRET=your_prod_secret
+---
 
-## Amadeus Configuration
+## 🌍 Amadeus Configuration Details
 
-The SDK requires the correct hostname mapping:
+The system automatically maps environment mode to the correct API hostname:
 
-Mode	hostname value	API URL
-Test	test	https://test.api.amadeus.com
+| Mode             | Hostname value | API Endpoint |
+|------------------|---------------|-------------|
+| `amadeus-test`   | `test`        | https://test.api.amadeus.com |
+| `amadeus-prod`   | `production`  | https://api.amadeus.com |
 
-Production	production	https://api.amadeus.com
+⚠️ Important:  
+The Amadeus SDK expects `hostname` to be either:
 
-## Concurrency Control
+```
+"test"
+"production"
+```
+
+Using `"api"` will cause:
+
+```
+host: null
+NetworkError
+```
+
+---
+
+## 🔄 Concurrency Control
 
 Each provider defines its own concurrency limit:
 
-concurrencyLimit: 5
+```js
+concurrencyLimit: 1   // test (safe mode)
+concurrencyLimit: 5   // production
+```
 
+This prevents:
 
-This protects against:
+- API rate limit violations
+- Burst request overload
+- Resource exhaustion
 
-API rate limits
+---
 
-Burst request overload
+## 🧪 Example Request Flow
 
-Token flooding
+1. Frontend sends multiple route/date combinations
+2. Backend:
+   - Creates tasks per combination
+   - Runs them via Promise Pool
+   - Collects results
+   - Returns aggregated response
+3. Partial failures do NOT crash the request
 
-The Promise Pool ensures:
+Example result structure:
 
-Controlled parallelism
-
-Partial failure resilience
-
-All requests resolved before response aggregation
-
-## Example Search Flow
-
-Frontend sends multiple route/date combinations
-
-Backend distributes requests through Promise Pool
-
-Provider executes API calls
-
-Results are aggregated
-
-Partial failures are preserved
-
-Response structure:
-
+```json
 [
   { "success": true, "data": {...} },
   { "success": false }
 ]
+```
 
-## Mock Mode
+---
 
-For local testing without API calls:
+## 🛠 Troubleshooting
 
-ACTIVE_PROVIDER=mock
+### 401 Unauthorized
 
+Check:
 
-No external requests are made.
+- Correct CLIENT_ID / CLIENT_SECRET
+- Using correct provider (`amadeus-test` vs `amadeus-prod`)
+- Production credentials are approved
 
-## Troubleshooting
-❌ 401 Unauthorized
+---
 
-Check client ID / secret
+### NetworkError / host: null
 
-Verify you are using the correct credentials for the selected environment
-
-Confirm production access is enabled in Amadeus dashboard
-
-❌ NetworkError / host: null
-
-#### Cause:
-Invalid hostname value.
-
-#### Fix:
-Use only:
-
-hostname: "test"
-hostname: "production"
-
-
-#### Never:
-
+Cause:
+```
 hostname: "api"
+```
 
-❌ Frontend shows "Error occurred"
+Fix:
+```
+hostname: "production"
+```
 
-#### Check backend logs for:
+The SDK only accepts:
+- `"test"`
+- `"production"`
 
-Token request failure
+---
 
-Missing environment variables
+### Frontend shows "Error occurred"
 
-Provider mismatch
+Check backend logs for:
 
-## Current Status
+- Amadeus error codes
+- Token fetch failures
+- Rate limit errors
 
-✅ Mock provider working
+---
 
-✅ Amadeus Test working
+## 📁 Project Structure (Simplified)
 
-✅ Amadeus Production working
+```
+/config
+  providers.js
 
-✅ OAuth2 token handling verified
+/providers
+  AmadeusProvider.js
+  MockProvider.js
 
-✅ Provider switching via env working
+/routes
+  searchRoutes.js
 
-🔜 Next: caching layer / pricing normalization
+app.js
+server.js
+```
+
+---
+
+## 🎯 Design Goals
+
+- Provider-agnostic architecture
+- Easy expansion to Skyscanner / Kiwi / other APIs
+- Production-ready concurrency handling
+- Clean separation of config and business logic
+- Environment-driven deployment
+
+---
+
+## 🔮 Possible Next Steps
+
+- Caching layer (Redis)
+- Request deduplication
+- Price tracking
+- Multi-provider aggregation
+- Observability (Winston / structured logging)
+- Docker support
+- CI pipeline
+
+---
+
+## 📄 License
+
+MIT
