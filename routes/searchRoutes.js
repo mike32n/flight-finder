@@ -1,12 +1,14 @@
 const express = require("express");
 const generateTrips = require("../dateGenerator");
 const { getProvider } = require("../providers/providerFactory");
+const { getProviderConfig } = require("../config/providers");
 const runWithConcurrencyLimit = require("../promisePool");
 const validateSearch = require("../middlewares/validateSearch");
 const { getAllDestinations } = require("../models/destinationModel");
 
 const router = express.Router();
 const flightProvider = getProvider();
+const config = getProviderConfig();
 
 router.get("/destinations", async (req, res) => {
   try {
@@ -43,7 +45,7 @@ router.post("/search", validateSearch, async (req, res) => {
       }
     }
 
-    const results = await runWithConcurrencyLimit(tasks, 1);
+    const results = await runWithConcurrencyLimit(tasks, config.concurrency);
 
     console.log("RAW RESULTS:", JSON.stringify(results, null, 2));
 
