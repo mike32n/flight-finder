@@ -1,13 +1,14 @@
 const MockProvider = require("./mockProvider");
 const AmadeusProvider = require("./amadeusProvider");
+const { getProviderConfig } = require("../config/providers");
 
 function getProvider() {
-  const provider = process.env.FLIGHT_PROVIDER;
-  console.log("Active provider:", provider);
+  const config = getProviderConfig();
 
-  switch (provider) {
+  switch (config.type) {
     case "amadeus":
-      return new AmadeusProvider();
+      return new AmadeusProvider(config);
+
     case "mock":
     default:
       return new MockProvider();

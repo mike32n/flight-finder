@@ -22,7 +22,14 @@ db.serialize(() => {
     { city: "Paris Charles de Gaulle", iata: "CDG" },
     { city: "Frankfurt", iata: "FRA" },
     { city: "New York John F Kennedy", iata: "JFK" },
-    { city: "Barcelona", iata: "BCN" }
+    { city: "Barcelona", iata: "BCN" },
+    { city: "Tenerife South Airport", iata: "TFS" },
+    { city: "Larnaca", iata: "LCA" },
+    { city: "Palma de Mallorca", iata: "PMI" },
+    { city: "Milan", iata: "MXP" },
+    { city: "Eindhoven", iata: "EIN" },
+    { city: "Malé", iata: "MLE" },
+    { city: "San José", iata: "SJC" }
   ];
 
   cities.forEach(c => {

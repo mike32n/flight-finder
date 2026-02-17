@@ -2,12 +2,18 @@ const Amadeus = require("amadeus");
 const BaseProvider = require("./baseProvider");
 
 class AmadeusProvider extends BaseProvider {
-  constructor() {
+  constructor(config) {
     super();
+
+    this.retryDelay = config.retryDelay || 1000;
+
     this.amadeus = new Amadeus({
-      clientId: process.env.AMADEUS_CLIENT_ID,
-      clientSecret: process.env.AMADEUS_CLIENT_SECRET,
+      clientId: config.clientId,
+      clientSecret: config.clientSecret,
+      hostname: config.hostname,
     });
+    console.log("Using hostname:", config.hostname);
+    console.log("Amadeus client:", this.amadeus.client);
   }
 
   async searchFlights(destination, departure, returnDate) {
@@ -44,13 +50,17 @@ class AmadeusProvider extends BaseProvider {
       const status = error.response?.statusCode || error.response?.status;
 
       if (status === 429) {
-        console.log("Rate limit hit. Retrying in 2 seconds...");
-        await new Promise((resolve) => setTimeout(resolve, 2000));
+        console.log(`Rate limit hit. Retrying in ${this.retryDelay}ms...`);
+        await new Promise((resolve) => setTimeout(resolve, this.retryDelay));
 
         return this.searchFlights(destination, departure, returnDate);
       }
 
       console.error("Amadeus error:", status);
+      console.error("FULL ERROR:", error);
+      console.error("RESPONSE:", error.response);
+      console.error("BODY:", error.response?.body);
+      console.error("RESULT:", error.response?.result);
       return { success: false };
     }
   }
