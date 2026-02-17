@@ -36,21 +36,17 @@ amadeus-prod
 ACTIVE_PROVIDER=amadeus-prod
 
 ## Tech Stack
-
-Node.js
-
-Express
-
-Amadeus Node SDK
-
-Custom Promise Pool (concurrency limiter)
-
-dotenv
+- Node.js
+- Express
+- Amadeus Node SDK
+- Custom Promise Pool (concurrency limiter)
+- dotenv
 
 ## Installation
+```bash
 npm install
-
 npm start
+```
 
 Server runs at:
 
@@ -64,11 +60,11 @@ PORT=3000
 
 ACTIVE_PROVIDER=amadeus-prod
 
-# Test credentials
+### Test credentials
 AMADEUS_TEST_CLIENT_ID=your_test_id
 AMADEUS_TEST_CLIENT_SECRET=your_test_secret
 
-# Production credentials
+### Production credentials
 AMADEUS_PROD_CLIENT_ID=your_prod_id
 AMADEUS_PROD_CLIENT_SECRET=your_prod_secret
 
