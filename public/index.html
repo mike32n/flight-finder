@@ -10,8 +10,19 @@
     <div class="container">
       <h1>✈️ Flight Finder</h1>
 
+      <!-- Selected IATA badges -->
+      <div id="selected-container" class="selected-container"></div>
+
       <div class="form">
-        <select id="destinations" multiple></select>
+        <div class="autocomplete-wrapper">
+          <input
+            id="destination-input"
+            type="text"
+            placeholder="Type city or IATA code..."
+            autocomplete="off"
+          />
+          <div id="autocomplete-list" class="autocomplete-list hidden"></div>
+        </div>
 
         <select id="weekday">
           <option value="0">Sunday</option>

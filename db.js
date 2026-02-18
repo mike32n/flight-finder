@@ -82,6 +82,7 @@ db.serialize(() => {
     { city: "London", iata: "LON" },
     { city: "Luxembourg City", iata: "LUX" },
     { city: "Lyon", iata: "LYS" },
+    { city: "Madrid (Barajas)", iata: "MAD" },
     { city: "Malaga", iata: "AGP" },
     { city: "Marrakech", iata: "RAK" },
     { city: "Marseille", iata: "MRS" },
