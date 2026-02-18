@@ -1,24 +1,129 @@
+let destinationsData = [];
+let selectedDestinations = [];
+let maxDestinations = 3;
+
+let currentFocus = -1;
+
 window.onload = async function () {
   const res = await fetch("/destinations");
-  const data = await res.json();
+  destinationsData = await res.json();
 
-  const select = document.getElementById("destinations");
+  // ha később lesz config endpoint:
+  try {
+    const configRes = await fetch("/config");
+    const config = await configRes.json();
+    maxDestinations = config.maxDestinations;
+  } catch {}
 
-  data.forEach((dest) => {
-    const option = document.createElement("option");
-    option.value = dest.value;
-    option.textContent = dest.label;
-    select.appendChild(option);
-  });
+  setupAutocomplete();
 };
 
+function setupAutocomplete() {
+  const input = document.getElementById("destination-input");
+  const list = document.getElementById("autocomplete-list");
+
+  input.addEventListener("input", function () {
+    const value = this.value.toLowerCase();
+    list.innerHTML = "";
+    currentFocus = -1;
+
+    if (!value) {
+      list.classList.add("hidden");
+      return;
+    }
+
+    const filtered = destinationsData.filter(
+      (d) =>
+        d.label.toLowerCase().includes(value) ||
+        d.value.toLowerCase().includes(value),
+    );
+
+    filtered.forEach((dest) => {
+      const item = document.createElement("div");
+      item.className = "autocomplete-item";
+      item.textContent = `${dest.label} (${dest.value})`;
+
+      item.addEventListener("click", () => {
+        selectDestination(dest);
+      });
+
+      list.appendChild(item);
+    });
+
+    list.classList.toggle("hidden", filtered.length === 0);
+  });
+
+  input.addEventListener("keydown", function (e) {
+    const items = list.getElementsByClassName("autocomplete-item");
+
+    if (e.key === "ArrowDown") {
+      currentFocus++;
+      addActive(items);
+    } else if (e.key === "ArrowUp") {
+      currentFocus--;
+      addActive(items);
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      if (currentFocus > -1 && items[currentFocus]) {
+        items[currentFocus].click();
+      }
+    }
+  });
+}
+
+function addActive(items) {
+  if (!items) return;
+
+  removeActive(items);
+
+  if (currentFocus >= items.length) currentFocus = 0;
+  if (currentFocus < 0) currentFocus = items.length - 1;
+
+  items[currentFocus].classList.add("active");
+}
+
+function removeActive(items) {
+  for (let item of items) {
+    item.classList.remove("active");
+  }
+}
+
+function selectDestination(dest) {
+  if (selectedDestinations.length >= maxDestinations) return;
+
+  if (selectedDestinations.includes(dest.value)) return;
+
+  selectedDestinations.push(dest.value);
+  renderSelected();
+
+  document.getElementById("destination-input").value = "";
+  document.getElementById("autocomplete-list").classList.add("hidden");
+}
+
+function renderSelected() {
+  const container = document.getElementById("selected-container");
+  container.innerHTML = "";
+
+  selectedDestinations.forEach((code) => {
+    const badge = document.createElement("div");
+    badge.className = "iata-badge";
+    badge.textContent = code;
+
+    badge.addEventListener("click", () => {
+      selectedDestinations = selectedDestinations.filter(
+        (c) => c !== code,
+      );
+      renderSelected();
+    });
+
+    container.appendChild(badge);
+  });
+
+  const input = document.getElementById("destination-input");
+  input.disabled = selectedDestinations.length >= maxDestinations;
+}
+
 async function search() {
-  const selectedOptions = Array.from(
-    document.getElementById("destinations").selectedOptions,
-  );
-
-  const destinations = selectedOptions.map((opt) => opt.value);
-
   const weekday = Number(document.getElementById("weekday").value);
   const nights = Number(document.getElementById("nights").value);
 
@@ -34,11 +139,14 @@ async function search() {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ destinations, weekday, nights }),
+      body: JSON.stringify({
+        destinations: selectedDestinations,
+        weekday,
+        nights,
+      }),
     });
 
     const data = await res.json();
-
     loading.classList.add("hidden");
 
     data.results.forEach((r) => {

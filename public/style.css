@@ -54,3 +54,60 @@ button:hover {
 .hidden {
   display: none;
 }
+
+.selected-container {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.iata-badge {
+  font-family: monospace;
+  font-size: 20px;
+  padding: 8px 18px;
+  border-radius: 6px;
+  background: #111;
+  color: #00f7ff;
+  text-shadow:
+    0 0 5px #00f7ff,
+    0 0 15px #00f7ff;
+  box-shadow:
+    0 0 10px #00f7ff,
+    0 0 25px #00f7ff;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.iata-badge:hover {
+  transform: scale(1.1);
+}
+
+.autocomplete-wrapper {
+  position: relative;
+  flex: 2;
+}
+
+.autocomplete-list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 1000;
+}
+
+.autocomplete-item {
+  padding: 10px;
+  cursor: pointer;
+}
+
+.autocomplete-item:hover,
+.autocomplete-item.active {
+  background: #f0f4ff;
+}
