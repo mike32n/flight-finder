@@ -1,59 +1,173 @@
+/* ========================= */
+/* Global Settings */
+/* ========================= */
+
+* {
+  box-sizing: border-box;
+}
+
+:root {
+  --bg: #f4f6f8;
+  --card: #ffffff;
+  --text: #111;
+  --muted: #666;
+  --primary: #0066ff;
+  --border: #ddd;
+  --neon: #00f7ff;
+}
+
+/* ========================= */
+/* DARK MODE VARIABLES */
+/* ========================= */
+
+body.dark {
+  --bg: #0f172a;
+  --card: #1e293b;
+  --text: #e2e8f0;
+  --muted: #94a3b8;
+  --primary: #00f7ff;
+  --border: #334155;
+}
+
+/* ========================= */
+/* Base Layout */
+/* ========================= */
+
 body {
   font-family: Arial, sans-serif;
-  background: #f4f6f8;
+  background: var(--bg);
   margin: 0;
+  transition: background 0.3s ease;
 }
 
 .container {
   max-width: 800px;
-  margin: 60px auto;
-  background: white;
+  margin: 40px auto;
+  background: var(--card);
   padding: 30px;
-  border-radius: 12px;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+  border-radius: 16px;
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.08);
+  transition: background 0.3s ease;
 }
 
 h1 {
   text-align: center;
+  color: var(--text);
+  transition: 0.3s ease;
 }
+
+/* Neon glow only in DARK */
+body.dark h1 {
+  color: var(--primary);
+  text-shadow:
+    0 0 8px var(--primary),
+    0 0 25px rgba(0, 247, 255, 0.6);
+}
+
+.meta-info {
+  margin-top: 10px;
+  color: var(--muted);
+}
+
+body.dark .meta-info {
+  color: #cbd5e1;   /* világos szürkés-kék */
+}
+
+/* ========================= */
+/* FORM */
+/* ========================= */
 
 .form {
   display: flex;
   gap: 10px;
   margin-bottom: 20px;
+  align-items: stretch;
 }
 
-input, select {
-  padding: 10px;
-  border-radius: 6px;
-  border: 1px solid #ccc;
+input,
+select {
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
   flex: 1;
+  font-size: 14px;
+  background: var(--card);
+  color: var(--text);
+  transition: all 0.25s ease;
 }
+
+input:focus,
+select:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+/* Dark input refinement (not too dark) */
+body.dark input,
+body.dark select {
+  background: #243247;
+  border: 1px solid #3a4b63;
+  color: var(--text);
+}
+
+body.dark input:focus,
+body.dark select:focus {
+  box-shadow: 0 0 8px rgba(0, 247, 255, 0.4);
+}
+
+/* ========================= */
+/* BUTTON */
+/* ========================= */
 
 button {
-  padding: 10px 20px;
-  background: #0066ff;
+  padding: 12px 20px;
+  background: var(--primary);
   color: white;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
+  font-weight: bold;
+  transition: all 0.25s ease;
 }
 
 button:hover {
-  background: #004dcc;
+  opacity: 0.9;
 }
+
+/* Dark mode button = neon, not blue */
+body.dark button {
+  background: var(--primary);
+  color: #000;
+  box-shadow:
+    0 0 12px var(--primary),
+    0 0 30px rgba(0, 247, 255, 0.5);
+}
+
+body.dark button:hover {
+  transform: translateY(-2px);
+}
+
+/* ========================= */
+/* RESULT CARDS */
+/* ========================= */
 
 .card {
   padding: 15px;
-  margin-bottom: 10px;
-  border-radius: 8px;
-  background: #f9fafb;
-  border: 1px solid #eee;
+  margin-bottom: 12px;
+  border-radius: 12px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--text);
+  transition: all 0.25s ease;
 }
 
-.hidden {
-  display: none;
+.card:hover {
+  transform: translateY(-3px);
 }
+
+/* ========================= */
+/* IATA BADGES */
+/* ========================= */
 
 .selected-container {
   display: flex;
@@ -66,48 +180,115 @@ button:hover {
 .iata-badge {
   font-family: monospace;
   font-size: 20px;
-  padding: 8px 18px;
-  border-radius: 6px;
+  padding: 10px 20px;
+  border-radius: 8px;
   background: #111;
-  color: #00f7ff;
-  text-shadow:
-    0 0 5px #00f7ff,
-    0 0 15px #00f7ff;
-  box-shadow:
-    0 0 10px #00f7ff,
-    0 0 25px #00f7ff;
+  color: white;
   cursor: pointer;
-  transition: transform 0.2s;
+  transition: all 0.25s ease;
+}
+
+/* Neon only in dark mode */
+body.dark .iata-badge {
+  background: #000;
+  color: var(--primary);
+  text-shadow:
+    0 0 5px var(--primary),
+    0 0 20px var(--primary);
+  box-shadow:
+    0 0 10px var(--primary),
+    0 0 30px rgba(0, 247, 255, 0.6);
 }
 
 .iata-badge:hover {
-  transform: scale(1.1);
+  transform: scale(1.08);
 }
+
+/* ========================= */
+/* AUTOCOMPLETE */
+/* ========================= */
 
 .autocomplete-wrapper {
   position: relative;
-  flex: 2;
+  flex: 1;
+  width: 100%;
+}
+
+.autocomplete-wrapper input {
+  width: 100%;
 }
 
 .autocomplete-list {
   position: absolute;
-  top: 100%;
+  top: 105%;
   left: 0;
   right: 0;
-  background: white;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  max-height: 200px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  max-height: 220px;
   overflow-y: auto;
   z-index: 1000;
+  transition: 0.2s ease;
+}
+
+/* Dark dropdown lighter & readable */
+body.dark .autocomplete-list {
+  background: #2b3a52; /* világosabb navy */
+  border: 1px solid #3f5676;
+}
+
+body.dark .autocomplete-item {
+  color: #e6f1ff; /* világos szürkés-kék */
 }
 
 .autocomplete-item {
   padding: 10px;
   cursor: pointer;
+  transition: 0.2s ease;
 }
 
 .autocomplete-item:hover,
 .autocomplete-item.active {
-  background: #f0f4ff;
+  background: rgba(0, 102, 255, 0.1);
+}
+
+body.dark .autocomplete-item:hover,
+body.dark .autocomplete-item.active {
+  background: rgba(0, 247, 255, 0.2);
+}
+
+/* ========================= */
+/* UTIL */
+/* ========================= */
+
+.hidden {
+  display: none;
+}
+
+/* ========================= */
+/* MOBILE UX */
+/* ========================= */
+
+@media (max-width: 768px) {
+  .container {
+    margin: 0;
+    min-height: 100vh;
+    border-radius: 0;
+  }
+
+  .form {
+    flex-direction: column;
+  }
+
+  input,
+  select,
+  button {
+    width: 100%;
+  }
+
+  .iata-badge {
+    font-size: 18px;
+    padding: 12px 24px;
+  }
 }

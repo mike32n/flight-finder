@@ -161,10 +161,26 @@ async function search() {
     });
 
     const failed = document.createElement("div");
-    failed.innerHTML = `<p>Failed requests: ${data.failedRequests}</p>`;
+    failed.innerHTML = `<p class="meta-info">Failed requests: ${data.failedRequests}</p>`;
     resultsDiv.appendChild(failed);
   } catch (err) {
     loading.classList.add("hidden");
     resultsDiv.innerHTML = "Error occurred.";
   }
 }
+
+function toggleTheme() {
+  document.body.classList.toggle("dark");
+
+  localStorage.setItem(
+    "theme",
+    document.body.classList.contains("dark") ? "dark" : "light"
+  );
+}
+
+(function loadTheme() {
+  const saved = localStorage.getItem("theme");
+  if (saved === "dark") {
+    document.body.classList.add("dark");
+  }
+})();
