@@ -34,7 +34,11 @@
           <option value="6">Saturday</option>
         </select>
 
-        <input id="nights" type="number" placeholder="Nights" />
+        <div class="stepper">
+          <button onclick="changeNights(-1)">−</button>
+          <input id="nights" type="number" value="0" min="0" />
+          <button onclick="changeNights(1)">+</button>
+        </div>
 
         <button onclick="search()">Search</button>
       </div>
