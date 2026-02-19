@@ -64,13 +64,28 @@ body.dark h1 {
     0 0 25px rgba(0, 247, 255, 0.6);
 }
 
+/* ========================= */
+/* META TEXT */
+/* ========================= */
+
 .meta-info {
   margin-top: 10px;
   color: var(--muted);
 }
 
 body.dark .meta-info {
-  color: #cbd5e1;   /* világos szürkés-kék */
+  color: var(--primary);
+  text-shadow: 0 0 6px rgba(0, 247, 255, 0.6);
+}
+
+/* loading text fix */
+#loading {
+  color: var(--muted);
+}
+
+body.dark #loading {
+  color: var(--primary);
+  text-shadow: 0 0 8px var(--primary);
 }
 
 /* ========================= */
@@ -96,13 +111,15 @@ select {
   transition: all 0.25s ease;
 }
 
+/* 🔥 SUBTLE FOCUS (LIGHT) */
 input:focus,
 select:focus {
   outline: none;
   border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(0, 102, 255, 0.15);
 }
 
-/* Dark input refinement (not too dark) */
+/* Dark input refinement */
 body.dark input,
 body.dark select {
   background: #243247;
@@ -110,9 +127,12 @@ body.dark select {
   color: var(--text);
 }
 
+/* 🔥 NEON FOCUS (DARK) */
 body.dark input:focus,
 body.dark select:focus {
-  box-shadow: 0 0 8px rgba(0, 247, 255, 0.4);
+  box-shadow:
+    0 0 6px var(--primary),
+    0 0 12px rgba(0, 247, 255, 0.4);
 }
 
 /* ========================= */
@@ -134,17 +154,63 @@ button:hover {
   opacity: 0.9;
 }
 
-/* Dark mode button = neon, not blue */
+/* Dark mode neon button */
 body.dark button {
   background: var(--primary);
   color: #000;
   box-shadow:
-    0 0 12px var(--primary),
-    0 0 30px rgba(0, 247, 255, 0.5);
+    0 0 10px var(--primary),
+    0 0 25px rgba(0, 247, 255, 0.5);
 }
 
 body.dark button:hover {
   transform: translateY(-2px);
+}
+
+/* ========================= */
+/* STEPPER (NIGHTS INPUT) */
+/* ========================= */
+
+input[type="number"] {
+  appearance: textfield;
+}
+
+/* Chrome arrows off */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  appearance: none;
+  margin: 0;
+}
+
+/* DARK MODE – custom neon arrows */
+body.dark input[type="number"] {
+  position: relative;
+}
+
+/* ha custom gombokat használsz később */
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.stepper button {
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 16px;
+}
+
+/* neon glow stepper buttons */
+body.dark .stepper button {
+  background: var(--primary);
+  color: #000;
+  box-shadow:
+    0 0 8px var(--primary),
+    0 0 20px rgba(0, 247, 255, 0.6);
+}
+
+body.dark .stepper button:hover {
+  transform: scale(1.05);
 }
 
 /* ========================= */
@@ -188,7 +254,6 @@ body.dark button:hover {
   transition: all 0.25s ease;
 }
 
-/* Neon only in dark mode */
 body.dark .iata-badge {
   background: #000;
   color: var(--primary);
@@ -210,8 +275,13 @@ body.dark .iata-badge {
 
 .autocomplete-wrapper {
   position: relative;
-  flex: 1;
+  flex: 2; /* ez a kulcs */
   width: 100%;
+  min-width: 0; /* overflow fix */
+}
+
+.form > * {
+  min-width: 0;
 }
 
 .autocomplete-wrapper input {
@@ -229,23 +299,35 @@ body.dark .iata-badge {
   max-height: 220px;
   overflow-y: auto;
   z-index: 1000;
-  transition: 0.2s ease;
+
+  /* 🚀 smooth open */
+  opacity: 0;
+  transform: translateY(-5px);
+  pointer-events: none;
+  transition: all 0.2s ease;
 }
 
-/* Dark dropdown lighter & readable */
+/* visible state (JS-ben add hozzá ezt a class-t) */
+.autocomplete-list.open {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+/* Dark dropdown */
 body.dark .autocomplete-list {
-  background: #2b3a52; /* világosabb navy */
+  background: #2b3a52;
   border: 1px solid #3f5676;
-}
-
-body.dark .autocomplete-item {
-  color: #e6f1ff; /* világos szürkés-kék */
 }
 
 .autocomplete-item {
   padding: 10px;
   cursor: pointer;
   transition: 0.2s ease;
+}
+
+body.dark .autocomplete-item {
+  color: #f1f5f9;
 }
 
 .autocomplete-item:hover,
@@ -255,7 +337,41 @@ body.dark .autocomplete-item {
 
 body.dark .autocomplete-item:hover,
 body.dark .autocomplete-item.active {
-  background: rgba(0, 247, 255, 0.2);
+  background: rgba(0, 247, 255, 0.25);
+  box-shadow: inset 0 0 10px rgba(0, 247, 255, 0.3);
+}
+
+/* ========================= */
+/* ✨ CUSTOM SCROLLBAR */
+/* ========================= */
+
+.autocomplete-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.autocomplete-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.autocomplete-list::-webkit-scrollbar-thumb {
+  background: #bbb;
+  border-radius: 10px;
+}
+
+/* Dark scrollbar */
+body.dark .autocomplete-list::-webkit-scrollbar-thumb {
+  background: var(--primary);
+  box-shadow: 0 0 8px var(--primary);
+}
+
+/* Firefox */
+.autocomplete-list {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+body.dark .autocomplete-list {
+  scrollbar-color: var(--primary) transparent;
 }
 
 /* ========================= */
@@ -291,4 +407,25 @@ body.dark .autocomplete-item.active {
     font-size: 18px;
     padding: 12px 24px;
   }
+}
+
+/* subtle UI polish */
+
+input::placeholder {
+  color: var(--muted);
+}
+
+body.dark input::placeholder {
+  color: #7c8aa0;
+}
+
+/* smoother cards dark mode */
+body.dark .card {
+  background: #1e293b;
+  border: 1px solid #334155;
+}
+
+/* subtle glow on hover */
+body.dark .card:hover {
+  box-shadow: 0 0 12px rgba(0, 247, 255, 0.2);
 }
