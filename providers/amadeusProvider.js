@@ -4,17 +4,19 @@ const { getOrSet } = require("../services/cacheService");
 const { acquireToken } = require("../services/rateLimiter");
 
 class AmadeusProvider extends BaseProvider {
-  constructor(config) {
+  constructor(config, amadeusClient = null) {
     super();
 
     this.rateLimit = Number(process.env.AMADEUS_RATE_LIMIT) || 40;
     this.rateWindow = Number(process.env.AMADEUS_RATE_WINDOW) || 10;
 
-    this.amadeus = new Amadeus({
-      clientId: config.clientId,
-      clientSecret: config.clientSecret,
-      hostname: config.hostname, // MUST be "test" or "production"
-    });
+    this.amadeus =
+      amadeusClient ||
+      new Amadeus({
+        clientId: config.clientId,
+        clientSecret: config.clientSecret,
+        hostname: config.hostname,
+      });
 
     console.log("Using hostname:", config.hostname);
   }

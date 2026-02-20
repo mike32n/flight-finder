@@ -14,6 +14,16 @@ function generateKey(providerName, payload) {
   return `flight:${providerName}:${hash}`;
 }
 
+async function set(key, value, ttl = DEFAULT_TTL) {
+  await redis.set(key, JSON.stringify(value), "EX", ttl);
+}
+
+async function get(key) {
+  const cached = await redis.get(key);
+  if (!cached) return null;
+  return JSON.parse(cached);
+}
+
 async function getOrSet(providerName, payload, fetcher) {
   const key = generateKey(providerName, payload);
 
@@ -51,4 +61,6 @@ async function getOrSet(providerName, payload, fetcher) {
 
 module.exports = {
   getOrSet,
+  set,
+  get,
 };
