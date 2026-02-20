@@ -1,208 +1,40 @@
-# ✈️ Flight Finder Backend
+# ✈️ Flight Finder
 
-Node.js backend service for searching flight offers across multiple destinations and date combinations using a pluggable provider architecture.
-
----
-
-## 🚀 Current Status
-
-✅ Amadeus TEST environment supported  
-✅ Amadeus PRODUCTION environment supported  
-✅ Mock provider supported  
-✅ Concurrency control per provider  
-✅ Partial failure handling  
-✅ Rate-limit aware architecture  
-✅ Environment-based provider switching  
+A lightweight flight search backend with provider abstraction, concurrency control, and upcoming caching + rate limiting support.
 
 ---
 
-## 🏗 Architecture Overview
+## 🚀 Features
 
-The backend uses a **provider abstraction layer**, allowing different flight data sources to be plugged in without modifying business logic.
-
-### Supported Providers
-
-| Provider Key     | Description |
-|------------------|------------|
-| `mock`           | Local mock data for development |
-| `amadeus-test`   | Amadeus Sandbox API |
-| `amadeus-prod`   | Amadeus Production API |
-
-The active provider is selected via environment variable:
-
-```
-FLIGHT_PROVIDER=amadeus-prod
-```
+* Provider abstraction layer (mock + Amadeus)
+* Concurrent request handling (custom Promise Pool)
+* Testable architecture (Jest + Supertest)
+* Partial failure handling (fail-soft design)
+* Environment-based provider switching
+* Redis-ready (caching + rate limiting planned)
 
 ---
 
-## ⚙️ Tech Stack
-
-- Node.js
-- Express
-- Amadeus Node SDK
-- Custom Promise Pool (Concurrency limiter)
-- dotenv
-
----
-
-## 📦 Installation
-
-```bash
-npm install
-```
-
----
-
-## ▶️ Running the Server
-
-```bash
-npm start
-```
-
-Server runs on:
+## 🏗 Architecture
 
 ```
-http://localhost:3000
-```
-
----
-
-## 🔐 Environment Configuration
-
-Create a `.env` file in the project root:
-
-```env
-PORT=3000
-FLIGHT_PROVIDER=amadeus-prod
-
-# Amadeus Test
-AMADEUS_TEST_CLIENT_ID=your_test_client_id
-AMADEUS_TEST_CLIENT_SECRET=your_test_client_secret
-
-# Amadeus Production
-AMADEUS_PROD_CLIENT_ID=your_prod_client_id
-AMADEUS_PROD_CLIENT_SECRET=your_prod_client_secret
-```
-
----
-
-## 🌍 Amadeus Configuration Details
-
-The system automatically maps environment mode to the correct API hostname:
-
-| Mode             | Hostname value | API Endpoint |
-|------------------|---------------|-------------|
-| `amadeus-test`   | `test`        | https://test.api.amadeus.com |
-| `amadeus-prod`   | `production`  | https://api.amadeus.com |
-
-⚠️ Important:  
-The Amadeus SDK expects `hostname` to be either:
-
-```
-"test"
-"production"
-```
-
-Using `"api"` will cause:
-
-```
-host: null
-NetworkError
-```
-
----
-
-## 🔄 Concurrency Control
-
-Each provider defines its own concurrency limit:
-
-```js
-concurrencyLimit: 1   // test (safe mode)
-concurrencyLimit: 5   // production
-```
-
-This prevents:
-
-- API rate limit violations
-- Burst request overload
-- Resource exhaustion
-
----
-
-## 🧪 Example Request Flow
-
-1. Frontend sends multiple route/date combinations
-2. Backend:
-   - Creates tasks per combination
-   - Runs them via Promise Pool
-   - Collects results
-   - Returns aggregated response
-3. Partial failures do NOT crash the request
-
-Example result structure:
-
-```json
-[
-  { "success": true, "data": {...} },
-  { "success": false }
-]
-```
-
----
-
-## 🛠 Troubleshooting
-
-### 401 Unauthorized
-
-Check:
-
-- Correct CLIENT_ID / CLIENT_SECRET
-- Using correct provider (`amadeus-test` vs `amadeus-prod`)
-- Production credentials are approved
-
----
-
-### NetworkError / host: null
-
-Cause:
-```
-hostname: "api"
-```
-
-Fix:
-```
-hostname: "production"
-```
-
-The SDK only accepts:
-- `"test"`
-- `"production"`
-
----
-
-### Frontend shows "Error occurred"
-
-Check backend logs for:
-
-- Amadeus error codes
-- Token fetch failures
-- Rate limit errors
-
----
-
-## 📁 Project Structure (Simplified)
-
-```
-/config
+config/
   providers.js
 
-/providers
+providers/
   AmadeusProvider.js
   MockProvider.js
 
-/routes
+routes/
   searchRoutes.js
+
+services/
+  flightService.js
+  cacheService.js        # (WIP)
+  rateLimitService.js    # (WIP)
+
+utils/
+  promisePool.js
 
 app.js
 server.js
@@ -210,25 +42,201 @@ server.js
 
 ---
 
-## 🎯 Design Goals
+## 🔌 Supported Providers
 
-- Provider-agnostic architecture
-- Easy expansion to Skyscanner / Kiwi / other APIs
-- Production-ready concurrency handling
-- Clean separation of config and business logic
-- Environment-driven deployment
+| Provider     | Description        | Hostname   |
+| ------------ | ------------------ | ---------- |
+| mock         | Local testing      | -          |
+| amadeus-test | Amadeus sandbox    | test       |
+| amadeus-prod | Amadeus production | production |
+
+**Important:**
+Hostname must be `"test"` or `"production"` — never `"api"`.
 
 ---
 
-## 🔮 Possible Next Steps
+## ⚙️ Environment Variables
 
-- Caching layer (Redis)
-- Request deduplication
-- Price tracking
-- Multi-provider aggregation
-- Observability (Winston / structured logging)
-- Docker support
-- CI pipeline
+Create a `.env` file in the root:
+
+```
+FLIGHT_PROVIDER=
+
+AMADEUS_TEST_CLIENT_ID=
+AMADEUS_TEST_CLIENT_SECRET=
+
+AMADEUS_PROD_CLIENT_ID=
+AMADEUS_PROD_CLIENT_SECRET=
+
+REDIS_HOST=
+REDIS_PORT=
+CACHE_TTL=
+
+AMADEUS_RATE_LIMIT=
+AMADEUS_RATE_WINDOW=
+```
+
+---
+
+## ▶️ Getting Started
+
+### Install dependencies
+
+```
+npm install
+```
+
+### Start Redis (Docker)
+
+```
+docker run -d -p 6379:6379 redis
+```
+
+### Run the server
+
+```
+npm start
+```
+
+Server runs on:
+[http://localhost:3000](http://localhost:3000)
+
+---
+
+## 🔍 API Usage
+
+### POST `/search`
+
+#### Request
+
+```json
+{
+  "destinations": ["BCN", "ROM"],
+  "weekday": 2,
+  "nights": 3
+}
+```
+
+#### Response
+
+```json
+[
+  {
+    "success": true,
+    "data": {}
+  },
+  {
+    "success": false,
+    "error": "Provider error"
+  }
+]
+```
+
+* Partial failures are allowed
+* Each provider response is independent
+
+---
+
+## ⚡ Concurrency Control
+
+* Custom Promise Pool
+* Prevents API overuse
+* Supports provider-level limits
+
+---
+
+## 🧠 Caching (WIP)
+
+Planned Redis-based caching:
+
+* Key: hashed request parameters
+* TTL-based expiration
+* Reduces API calls and latency
+
+---
+
+## 🚧 Rate Limiting (WIP)
+
+Planned Redis-based protection:
+
+* Per IP or request fingerprint
+* Configurable window and limits
+* Prevents abuse and throttling issues
+
+---
+
+## 🧪 Testing
+
+Run tests:
+
+```
+npm test
+```
+
+### Current coverage
+
+* Route validation
+* Basic service logic
+
+### Planned
+
+* Cache layer tests
+* Rate limiting tests
+* Provider mocking
+* Error handling scenarios
+
+---
+
+## 🎨 Frontend (Experimental)
+
+* Dark / Light mode support
+* Mobile UX improvements in progress
+* Keyboard navigation for dropdown
+
+---
+
+## 📌 Design Principles
+
+* Provider-agnostic architecture
+* Fail-soft behavior (no global crashes)
+* Scalable foundation (Redis-ready)
+* Minimal dependencies
+* Clean modular structure
+
+---
+
+## 🚀 Roadmap
+
+### High Priority
+
+* Redis caching integration
+* Rate limiting stabilization
+* Test coverage expansion
+
+### Backend
+
+* Retry logic for providers
+* Structured logging
+* Request fingerprinting
+
+### Frontend
+
+* Mobile UX polish
+* Loading states / skeletons
+* Accessibility improvements
+
+### Future
+
+* Multi-provider aggregation
+* Cheapest flight ranking
+* Database integration
+* User preferences / alerts
+
+---
+
+## 🧑‍💻 Author
+
+Flight Finder backend prototype.
 
 ---
 
