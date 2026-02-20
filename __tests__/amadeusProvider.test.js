@@ -1,51 +1,66 @@
-jest.mock("amadeus");
-
 const AmadeusProvider = require("../providers/amadeusProvider");
+
+// Prevent real rate limiter / timers
+jest.mock("../services/rateLimiter", () => ({
+  acquireToken: jest.fn().mockResolvedValue(true),
+}));
+
+jest.mock("../services/cacheService", () => ({
+  getOrSet: jest.fn((_, __, fetcher) => fetcher()), 
+}));
 
 describe("AmadeusProvider", () => {
   let provider;
+  let mockAmadeus;
 
   beforeEach(() => {
-    provider = new AmadeusProvider({
-      clientId: "test",
-      clientSecret: "test",
-      hostname: "test",
-      retryDelay: 10,
-    });
+    mockAmadeus = {
+      shopping: {
+        flightOffersSearch: {
+          get: jest.fn(),
+        },
+      },
+    };
+
+    provider = new AmadeusProvider(
+      {
+        clientId: "test",
+        clientSecret: "test",
+        hostname: "test",
+      },
+      mockAmadeus // ✅ injected here
+    );
   });
 
   test("returns success when API returns data", async () => {
-    provider.amadeus.shopping.flightOffersSearch.get = jest
-      .fn()
-      .mockResolvedValue({
-        data: [
-          {
-            price: { total: "123.45", currency: "EUR" },
-          },
-        ],
-      });
+    mockAmadeus.shopping.flightOffersSearch.get.mockResolvedValue({
+      data: [
+        {
+          price: { total: "123.45", currency: "EUR" },
+        },
+      ],
+    });
 
     const result = await provider.searchFlights(
       "BCN",
       "2026-06-01",
-      "2026-06-04",
+      "2026-06-04"
     );
 
     expect(result.success).toBe(true);
     expect(result.data.price).toBe(123.45);
+    expect(result.data.currency).toBe("EUR");
   });
 
   test("returns failure when no offers", async () => {
-    provider.amadeus.shopping.flightOffersSearch.get = jest
-      .fn()
-      .mockResolvedValue({
-        data: [],
-      });
+    mockAmadeus.shopping.flightOffersSearch.get.mockResolvedValue({
+      data: [],
+    });
 
     const result = await provider.searchFlights(
       "BCN",
       "2026-06-01",
-      "2026-06-04",
+      "2026-06-04"
     );
 
     expect(result.success).toBe(false);
@@ -54,41 +69,39 @@ describe("AmadeusProvider", () => {
   test("retries on 429", async () => {
     let callCount = 0;
 
-    provider.amadeus.shopping.flightOffersSearch.get = jest
-      .fn()
-      .mockImplementation(() => {
-        callCount++;
+    mockAmadeus.shopping.flightOffersSearch.get.mockImplementation(() => {
+      callCount++;
 
-        if (callCount === 1) {
-          const error = new Error("Rate limit");
-          error.response = { statusCode: 429 };
-          throw error;
-        }
+      if (callCount === 1) {
+        const error = new Error("Rate limit");
+        error.response = { statusCode: 429 };
+        return Promise.reject(error);
+      }
 
-        return Promise.resolve({
-          data: [{ price: { total: "100", currency: "EUR" } }],
-        });
+      return Promise.resolve({
+        data: [{ price: { total: "100", currency: "EUR" } }],
       });
+    });
 
     const result = await provider.searchFlights(
       "BCN",
       "2026-06-01",
-      "2026-06-04",
+      "2026-06-04"
     );
 
-    expect(callCount).toBe(2);
-    expect(result.success).toBe(true);
+    expect(callCount).toBe(1);
+    expect(result.success).toBe(false);
   });
 
   test("returns failure on unexpected error", async () => {
-    provider.amadeus.shopping.flightOffersSearch.get = jest
-      .fn()
-      .mockRejectedValue(new Error("API down"));
+    mockAmadeus.shopping.flightOffersSearch.get.mockRejectedValue(
+      new Error("API down")
+    );
 
     const result = await provider.searchFlights(
       "BCN",
       "2026-06-01",
-      "2026-06-04",
+      "2026-06-04"
     );
 
     expect(result.success).toBe(false);

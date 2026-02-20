@@ -1,11 +1,14 @@
 function generateMockPrice(destination, departure) {
-  // random alapár 20 000 - 80 000 Ft között
-  const basePrice = Math.floor(Math.random() * 60000) + 20000;
+  const input = destination + departure;
 
-  // kicsi eltérés dátum alapján (hogy ne teljesen random legyen)
-  const modifier = departure.charCodeAt(0) % 5000;
+  let hash = 0;
+  for (let i = 0; i < input.length; i++) {
+    hash = input.charCodeAt(i) + ((hash << 5) - hash);
+    hash |= 0; // convert to 32bit
+  }
 
-  return basePrice + modifier;
+  const normalized = Math.abs(hash % 60000);
+  return 20000 + normalized;
 }
 
 async function searchMockFlights(destination, departure, returnDate) {
@@ -19,11 +22,11 @@ async function searchMockFlights(destination, departure, returnDate) {
     destination,
     departure,
     return: returnDate,
-    price
+    price,
   };
 }
 
 module.exports = {
   searchMockFlights,
-  generateMockPrice
+  generateMockPrice,
 };

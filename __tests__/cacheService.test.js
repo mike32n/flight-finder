@@ -1,3 +1,15 @@
+jest.mock("../services/redisClient", () => {
+  let store = {};
+
+  return {
+    get: jest.fn((key) => Promise.resolve(store[key] || null)),
+    set: jest.fn((key, value) => {
+      store[key] = value;
+      return Promise.resolve();
+    }),
+  };
+});
+
 const cache = require("../services/cacheService");
 
 describe("cacheService", () => {
