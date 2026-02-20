@@ -1,63 +1,31 @@
 # ✈️ Flight Finder
 
-A lightweight flight search backend with provider abstraction, concurrency control, and upcoming caching + rate limiting support.
+Flight Finder is a lightweight backend service for searching flights using pluggable providers.  
+It is designed to be simple, modular, and easy to extend.
 
 ---
 
-## 🚀 Features
+## Features
 
-* Provider abstraction layer (mock + Amadeus)
-* Concurrent request handling (custom Promise Pool)
-* Testable architecture (Jest + Supertest)
-* Partial failure handling (fail-soft design)
-* Environment-based provider switching
-* Redis-ready (caching + rate limiting planned)
-
----
-
-## 🏗 Architecture
-
-```
-config/
-  providers.js
-
-providers/
-  AmadeusProvider.js
-  MockProvider.js
-
-routes/
-  searchRoutes.js
-
-services/
-  flightService.js
-  cacheService.js        # (WIP)
-  rateLimitService.js    # (WIP)
-
-utils/
-  promisePool.js
-
-app.js
-server.js
-```
+- Provider abstraction (Mock + Amadeus)
+- Environment-based provider switching
+- Concurrency control
+- Redis-ready (caching & rate limiting support)
+- Fully testable architecture (Jest + Supertest)
 
 ---
 
-## 🔌 Supported Providers
+## Requirements
 
-| Provider     | Description        | Hostname   |
-| ------------ | ------------------ | ---------- |
-| mock         | Local testing      | -          |
-| amadeus-test | Amadeus sandbox    | test       |
-| amadeus-prod | Amadeus production | production |
-
-**Important:**
-Hostname must be `"test"` or `"production"` — never `"api"`.
+- Node.js 18+
+- npm
+- (Optional) Docker for Redis
 
 ---
 
-## ⚙️ Environment Variables
+## Environment Configuration
 
-Create a `.env` file in the root:
+Create a `.env` file in the project root with the following structure:
 
 ```
 FLIGHT_PROVIDER=
@@ -76,38 +44,74 @@ AMADEUS_RATE_LIMIT=
 AMADEUS_RATE_WINDOW=
 ```
 
+### Description
+
+- `FLIGHT_PROVIDER` — `mock` or `amadeus`
+- `CACHE_TTL` — Cache duration in seconds
+- `AMADEUS_RATE_LIMIT` — Max allowed requests per window
+- `AMADEUS_RATE_WINDOW` — Rate limit window in seconds
+
 ---
 
-## ▶️ Getting Started
+## Installation
 
-### Install dependencies
+Install dependencies:
 
-```
+```bash
 npm install
 ```
 
-### Start Redis (Docker)
+Start the server:
 
-```
-docker run -d -p 6379:6379 redis
-```
-
-### Run the server
-
-```
+```bash
 npm start
 ```
 
-Server runs on:
-[http://localhost:3000](http://localhost:3000)
+The API will run on:
+
+```
+http://localhost:3000
+```
 
 ---
 
-## 🔍 API Usage
+## Running Redis (Optional)
+
+You can run Redis using Docker:
+
+```bash
+docker run -d -p 6379:6379 redis:7-alpine
+```
+
+Or use the included docker-compose configuration:
+
+### `docker-compose.redis.yml`
+
+```yaml
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: flightfinder-redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+```
+
+Run with:
+
+```bash
+docker compose -f docker-compose.redis.yml up -d
+```
+
+---
+
+## API
 
 ### POST `/search`
 
-#### Request
+Search for flights.
+
+### Request Example
 
 ```json
 {
@@ -117,7 +121,7 @@ Server runs on:
 }
 ```
 
-#### Response
+### Response Example
 
 ```json
 [
@@ -132,114 +136,31 @@ Server runs on:
 ]
 ```
 
-* Partial failures are allowed
-* Each provider response is independent
+Each provider call is handled independently. Partial failures are allowed.
 
 ---
 
-## ⚡ Concurrency Control
-
-* Custom Promise Pool
-* Prevents API overuse
-* Supports provider-level limits
-
----
-
-## 🧠 Caching (WIP)
-
-Planned Redis-based caching:
-
-* Key: hashed request parameters
-* TTL-based expiration
-* Reduces API calls and latency
-
----
-
-## 🚧 Rate Limiting (WIP)
-
-Planned Redis-based protection:
-
-* Per IP or request fingerprint
-* Configurable window and limits
-* Prevents abuse and throttling issues
-
----
-
-## 🧪 Testing
+## Testing
 
 Run tests:
 
-```
+```bash
 npm test
 ```
 
-### Current coverage
+---
 
-* Route validation
-* Basic service logic
+## Project Status
 
-### Planned
+Current state:
 
-* Cache layer tests
-* Rate limiting tests
-* Provider mocking
-* Error handling scenarios
+- Core flight search endpoint implemented
+- Provider abstraction working
+- Redis support configurable via environment
+- Rate limiting configuration prepared
 
 ---
 
-## 🎨 Frontend (Experimental)
+## License
 
-* Dark / Light mode support
-* Mobile UX improvements in progress
-* Keyboard navigation for dropdown
-
----
-
-## 📌 Design Principles
-
-* Provider-agnostic architecture
-* Fail-soft behavior (no global crashes)
-* Scalable foundation (Redis-ready)
-* Minimal dependencies
-* Clean modular structure
-
----
-
-## 🚀 Roadmap
-
-### High Priority
-
-* Redis caching integration
-* Rate limiting stabilization
-* Test coverage expansion
-
-### Backend
-
-* Retry logic for providers
-* Structured logging
-* Request fingerprinting
-
-### Frontend
-
-* Mobile UX polish
-* Loading states / skeletons
-* Accessibility improvements
-
-### Future
-
-* Multi-provider aggregation
-* Cheapest flight ranking
-* Database integration
-* User preferences / alerts
-
----
-
-## 🧑‍💻 Author
-
-Flight Finder backend prototype.
-
----
-
-## 📄 License
-
-MIT
+MIT License
