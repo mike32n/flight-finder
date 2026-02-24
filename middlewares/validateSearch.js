@@ -18,7 +18,8 @@ module.exports = function validateSearch(req, res, next) {
   if (
     flexibility !== undefined &&
     flexibility !== "none" &&
-    flexibility !== "controlled"
+    flexibility !== "controlled" &&
+    flexibility !== "smart"
   ) {
     return res.status(400).json({
       error: "flexibility must be 'none' or 'controlled'",
