@@ -5,6 +5,7 @@ const { getProviderConfig } = require("../config/providers");
 const runWithConcurrencyLimit = require("../promisePool");
 const validateSearch = require("../middlewares/validateSearch");
 const { getAllDestinations } = require("../models/destinationModel");
+const { expandControlledFlexibility } = require("../dateFlexibility");
 
 const router = express.Router();
 const flightProvider = getProvider();
@@ -15,12 +16,11 @@ router.get("/destinations", async (req, res) => {
     const destinations = await getAllDestinations();
 
     res.json(
-      destinations.map(d => ({
+      destinations.map((d) => ({
         label: d.city_name,
-        value: d.iata_code
-      }))
+        value: d.iata_code,
+      })),
     );
-
   } catch (err) {
     res.status(500).json({ error: "DB error" });
   }
@@ -28,20 +28,27 @@ router.get("/destinations", async (req, res) => {
 
 router.post("/search", validateSearch, async (req, res) => {
   try {
-    const { destinations, weekday, nights } = req.body;
+    const { destinations, weekday, nights, flexibility = "none" } = req.body;
 
     const trips = generateTrips(weekday, nights);
     const tasks = [];
 
     for (const destination of destinations) {
       for (const trip of trips) {
-        tasks.push(() =>
-          flightProvider.searchFlights(
-            destination,
-            trip.departure,
-            trip.return,
-          ),
-        );
+        const tripVariants =
+          flexibility === "controlled"
+            ? expandControlledFlexibility(trip)
+            : [trip];
+
+        for (const variant of tripVariants) {
+          tasks.push(() =>
+            flightProvider.searchFlights(
+              destination,
+              variant.departure,
+              variant.return,
+            ),
+          );
+        }
       }
     }
 
@@ -53,8 +60,21 @@ router.post("/search", validateSearch, async (req, res) => {
 
     successful.sort((a, b) => a.price - b.price);
 
+    const unique = new Map();
+
+    for (const item of successful) {
+      const key = `${item.destination}-${item.departure}-${item.return}`;
+      if (!unique.has(key)) {
+        unique.set(key, item);
+      }
+    }
+
+    const deduped = Array.from(unique.values());
+
+    deduped.sort((a, b) => a.price - b.price);
+
     res.json({
-      results: successful.slice(0, 5),
+      results: deduped.slice(0, 5),
       failedRequests: results.filter((r) => !r.success).length,
     });
   } catch (err) {

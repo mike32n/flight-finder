@@ -68,7 +68,16 @@ class AmadeusProvider extends BaseProvider {
       } catch (error) {
         const status = error.response?.statusCode || error.response?.status;
 
-        console.error("Amadeus error:", status);
+        const fullError =
+          error.response?.result ||
+          error.response?.data ||
+          error.response?.body ||
+          error;
+
+        console.error(
+          "FULL Amadeus error:",
+          JSON.stringify(fullError, null, 2),
+        );
 
         return { success: false };
       }
