@@ -3,6 +3,7 @@ const redis = require("./redisClient");
 
 const PREFIX = "ff:v1";
 const DEFAULT_TTL = Number(process.env.CACHE_TTL) || 600; // fallback
+const FETCH_TIMEOUT = 10000; // 10s
 
 const inFlight = new Map();
 
@@ -26,6 +27,15 @@ function generateKey(providerName, payload) {
   return `${PREFIX}:flight:${providerName}:${hash}`;
 }
 
+function withTimeout(promise, ms = FETCH_TIMEOUT) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("timeout")), ms),
+    ),
+  ]);
+}
+
 async function set(key, value, ttl = DEFAULT_TTL) {
   await redis.set(key, stableStringify(value), "EX", ttl);
 }
@@ -33,7 +43,12 @@ async function set(key, value, ttl = DEFAULT_TTL) {
 async function get(key) {
   const cached = await redis.get(key);
   if (!cached) return null;
-  return JSON.parse(cached);
+
+  try {
+    return JSON.parse(cached);
+  } catch {
+    return null;
+  }
 }
 
 async function getOrSet(providerName, payload, fetcher) {
@@ -48,11 +63,21 @@ async function getOrSet(providerName, payload, fetcher) {
     // 2️⃣ Cache check
     const cached = await redis.get(key);
     if (cached) {
-      return JSON.parse(cached);
+      try {
+        return JSON.parse(cached);
+      } catch {
+        return null;
+      }
     }
 
-    // 3️⃣ Fresh fetch
-    const fresh = await fetcher();
+    // 3️⃣ Fresh fetch (timeout protected)
+    let fresh;
+    try {
+      fresh = await withTimeout(fetcher());
+    } catch (err) {
+      // timeout vagy fetch error → nem cache-elünk
+      throw err;
+    }
 
     // only cache successful responses
     if (fresh?.success) {
@@ -68,6 +93,7 @@ async function getOrSet(providerName, payload, fetcher) {
   try {
     return await promise;
   } finally {
+    // 🔐 garantált cleanup még timeout esetén is
     inFlight.delete(key);
   }
 }
