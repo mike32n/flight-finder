@@ -4,4 +4,20 @@ services:
     container_name: flightfinder-redis
     ports:
       - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: ["redis-server", "--appendonly", "yes"]
     restart: unless-stopped
+    networks:
+      - flightfinder-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  redis_data:
+
+networks:
+  flightfinder-net:
