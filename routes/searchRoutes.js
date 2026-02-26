@@ -95,8 +95,6 @@ router.post("/search", validateSearch, async (req, res) => {
 
     const successful = results.filter((r) => r.success).map((r) => r.data);
 
-    successful.sort((a, b) => a.price - b.price);
-
     const unique = new Map();
 
     for (const item of successful) {

@@ -1,21 +1,33 @@
 const crypto = require("crypto");
 const redis = require("./redisClient");
 
-const DEFAULT_TTL = Number(process.env.CACHE_TTL) || 600; // 10 perc
+const PREFIX = "ff:v1";
+const DEFAULT_TTL = Number(process.env.CACHE_TTL) || 600; // fallback
 
 const inFlight = new Map();
+
+function stableStringify(obj) {
+  return JSON.stringify(
+    Object.keys(obj)
+      .sort()
+      .reduce((acc, key) => {
+        acc[key] = obj[key];
+        return acc;
+      }, {}),
+  );
+}
 
 function generateKey(providerName, payload) {
   const hash = crypto
     .createHash("sha256")
-    .update(JSON.stringify(payload))
+    .update(stableStringify(payload))
     .digest("hex");
 
-  return `flight:${providerName}:${hash}`;
+  return `${PREFIX}:flight:${providerName}:${hash}`;
 }
 
 async function set(key, value, ttl = DEFAULT_TTL) {
-  await redis.set(key, JSON.stringify(value), "EX", ttl);
+  await redis.set(key, stableStringify(value), "EX", ttl);
 }
 
 async function get(key) {
@@ -44,7 +56,8 @@ async function getOrSet(providerName, payload, fetcher) {
 
     // only cache successful responses
     if (fresh?.success) {
-      await redis.set(key, JSON.stringify(fresh), "EX", DEFAULT_TTL);
+      const ttl = fresh.data?.price < 50 ? 1800 : 600;
+      await redis.set(key, stableStringify(fresh), "EX", ttl);
     }
 
     return fresh;
