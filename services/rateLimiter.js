@@ -11,9 +11,10 @@ async function acquireToken(providerName, limit, windowSeconds) {
   tx.zadd(key, now, now);
   tx.expire(key, windowSeconds);
 
-  const [, count] = await tx.exec();
+  const results = await tx.exec();
+  const currentCount = results[1][1];
 
-  if (count[1] >= limit) {
+  if (currentCount >= limit) {
     return false;
   }
 
