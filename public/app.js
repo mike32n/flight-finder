@@ -217,9 +217,11 @@ async function search() {
       const div = document.createElement("div");
       div.className = "card";
       div.innerHTML = `
-        <strong>${r.destination}</strong><br/>
-        ${r.departure} → ${r.return}<br/>
-        💶 ${r.price}
+        <strong>→ ${r.destination.city} (${r.destination.code})</strong><br/>
+        <span class="meta-info">
+          ${r.departure} → ${r.return}
+        </span><br/>
+        💶 ${r.price.toLocaleString()}
       `;
       resultsDiv.appendChild(div);
     });
