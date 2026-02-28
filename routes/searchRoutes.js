@@ -15,6 +15,41 @@ const router = express.Router();
 const flightProvider = getProvider();
 const config = getProviderConfig();
 
+// ✅ CACHE
+let destinationsList = [];
+let destinationMap = new Map();
+
+// ✅ LOAD ON START
+(async () => {
+  try {
+    destinationsList = await getAllDestinations();
+
+    // 🔥 build map AFTER data arrives
+    destinationMap = new Map(destinationsList.map((d) => [d.iata_code, d]));
+
+    console.log("Destinations loaded:", destinationsList.length);
+  } catch (err) {
+    console.error("Failed to load destinations:", err);
+  }
+})();
+
+// ✅ HELPER
+function enrichAirport(code) {
+  const d = destinationMap.get(code);
+
+  if (!d) {
+    return { code };
+  }
+
+  return {
+    code,
+    city: d.city_name,
+    airport: d.airport_name, // adjust if needed
+  };
+}
+
+// -------------------- ROUTES --------------------
+
 router.get("/destinations", async (req, res) => {
   try {
     const destinations = await getAllDestinations();
@@ -36,7 +71,7 @@ router.post("/search", validateSearch, async (req, res) => {
 
     const trips = generateTrips(weekday, nights);
 
-    // 1️⃣ BASE TASKS (NO FLEX)
+    // 1️⃣ BASE TASKS
     const baseTasks = [];
 
     for (const destination of destinations) {
@@ -57,7 +92,7 @@ router.post("/search", validateSearch, async (req, res) => {
       config.concurrency,
     );
 
-    // 3️⃣ SMART FLEX DECISION
+    // 3️⃣ SMART FLEX
     let flexResults = [];
 
     if (flexibility === "smart" && shouldRunFlex(baseResults)) {
@@ -66,8 +101,6 @@ router.post("/search", validateSearch, async (req, res) => {
       for (const destination of destinations) {
         for (const trip of trips) {
           const variants = expandControlledFlexibility(trip);
-
-          // ❗ skip original (already queried)
           const onlyFlex = variants.slice(1);
 
           for (const variant of onlyFlex) {
@@ -88,7 +121,7 @@ router.post("/search", validateSearch, async (req, res) => {
       );
     }
 
-    // 4️⃣ MERGE RESULTS
+    // 4️⃣ MERGE
     const results = [...baseResults, ...flexResults];
 
     console.log("RAW RESULTS:", JSON.stringify(results, null, 2));
@@ -106,7 +139,16 @@ router.post("/search", validateSearch, async (req, res) => {
 
     const deduped = Array.from(unique.values());
 
-    deduped.sort((a, b) => a.price - b.price);
+    // ✅ ENRICH HERE
+    const enriched = deduped.map((item) => ({
+      origin: enrichAirport("BUD"), // still fixed
+      destination: enrichAirport(item.destination),
+      departure: item.departure,
+      return: item.return,
+      price: item.price,
+    }));
+
+    enriched.sort((a, b) => a.price - b.price);
 
     const priceInsight =
       flexibility === "smart"
@@ -114,7 +156,7 @@ router.post("/search", validateSearch, async (req, res) => {
         : null;
 
     return res.json({
-      results: deduped.slice(0, 5),
+      results: enriched.slice(0, 5),
       failedRequests: results.filter((r) => !r.success).length,
       priceInsight,
     });
