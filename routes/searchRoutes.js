@@ -165,4 +165,67 @@ router.post("/search", validateSearch, async (req, res) => {
   }
 });
 
+router.post("/search-stream", validateSearch, async (req, res) => {
+  try {
+    const { destinations, weekday, nights } = req.body;
+
+    // ✅ SSE HEADERS
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+
+    const trips = generateTrips(weekday, nights);
+
+    const tasks = [];
+
+    for (const destination of destinations) {
+      for (const trip of trips) {
+        tasks.push(() =>
+          flightProvider.searchFlights(
+            destination,
+            trip.departure,
+            trip.return,
+          ),
+        );
+      }
+    }
+
+    const sentKeys = new Set();
+
+    await runWithConcurrencyLimit(tasks, config.concurrency, (result) => {
+      // 🔥 RAW DEBUG
+      console.log("STREAM RESULT:", JSON.stringify(result, null, 2));
+
+      if (!result.success) {
+        res.write(`event: fail\ndata: fail\n\n`);
+        return;
+      }
+
+      const item = result.data;
+      const key = `${item.destination}-${item.departure}-${item.return}`;
+
+      if (sentKeys.has(key)) return;
+      sentKeys.add(key);
+
+      const enriched = {
+        origin: enrichAirport("BUD"),
+        destination: enrichAirport(item.destination),
+        departure: item.departure,
+        return: item.return,
+        price: item.price,
+      };
+
+      // ✅ STREAM KÜLDÉS
+      res.write(`data: ${JSON.stringify(enriched)}\n\n`);
+    });
+
+    // ✅ END SIGNAL
+    res.write(`event: end\ndata: done\n\n`);
+    res.end();
+  } catch (err) {
+    res.write(`event: error\ndata: error\n\n`);
+    res.end();
+  }
+});
+
 module.exports = router;

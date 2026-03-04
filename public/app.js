@@ -5,6 +5,10 @@ let maxDestinations = 3;
 let currentFocus = -1;
 let debounceTimer;
 
+let currentResults = [];
+let failedCount = 0;
+let resultNodes = [];
+
 /* ========================= */
 /* INIT */
 /* ========================= */
@@ -194,11 +198,18 @@ async function search() {
   const loading = document.getElementById("loading");
   const resultsDiv = document.getElementById("results");
 
-  loading.classList.remove("hidden");
   resultsDiv.innerHTML = "";
 
+  // footer reset
+  initFooter(resultsDiv);
+
+  // ✅ STATE
+  currentResults = [];
+  failedCount = 0;
+  resultNodes = [];
+
   try {
-    const res = await fetch("/search", {
+    const response = await fetch("/search-stream", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -210,27 +221,47 @@ async function search() {
       }),
     });
 
-    const data = await res.json();
-    loading.classList.add("hidden");
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
 
-    data.results.forEach((r) => {
-      const div = document.createElement("div");
-      div.className = "card";
-      div.innerHTML = `
-        <strong>→ ${r.destination.city} (${r.destination.code})</strong><br/>
-        <span class="meta-info">
-          ${r.departure} → ${r.return}
-        </span><br/>
-        💶 ${r.price.toLocaleString()}
-      `;
-      resultsDiv.appendChild(div);
-    });
+    let buffer = "";
 
-    const failed = document.createElement("div");
-    failed.innerHTML = `<p class="meta-info">Failed requests: ${data.failedRequests}</p>`;
-    resultsDiv.appendChild(failed);
-  } catch {
-    loading.classList.add("hidden");
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+
+      const parts = buffer.split("\n\n");
+      buffer = parts.pop(); // maradék
+
+      for (const part of parts) {
+        console.log("RAW EVENT:", part);
+        // 🔚 END
+        if (part.includes("event: end")) {
+          updateFooter(resultsDiv, true);
+          return;
+        }
+
+        // ❌ FAIL
+        if (part.includes("event: fail")) {
+          failedCount++;
+          updateFooter(resultsDiv, false);
+          continue;
+        }
+
+        // ✅ DATA
+        if (part.includes("data:")) {
+          const jsonStr = part.split("data: ")[1];
+          if (!jsonStr) continue;
+
+          const item = JSON.parse(jsonStr);
+
+          insertSortedWithDOM(item, resultsDiv);
+        }
+      }
+    }
+  } catch (err) {
     resultsDiv.innerHTML = "Error occurred.";
   }
 }
@@ -260,4 +291,127 @@ function changeNights(delta) {
   value += delta;
   if (value < 0) value = 0;
   input.value = value;
+}
+
+function insertSorted(arr, item) {
+  let left = 0;
+  let right = arr.length;
+
+  while (left < right) {
+    const mid = Math.floor((left + right) / 2);
+
+    if (arr[mid].price < item.price) {
+      left = mid + 1;
+    } else {
+      right = mid;
+    }
+  }
+
+  arr.splice(left, 0, item);
+
+  // max 5
+  if (arr.length > 5) {
+    arr.length = 5;
+  }
+}
+
+function renderResults(results, container) {
+  container.innerHTML = "";
+
+  results.forEach((r) => {
+    const div = document.createElement("div");
+    div.className = "card";
+
+    div.innerHTML = `
+      <strong>→ ${r.destination.city} (${r.destination.code})</strong><br/>
+      <span class="meta-info">
+        ${r.departure} → ${r.return}
+      </span><br/>
+      💶 ${r.price.toLocaleString()}
+    `;
+
+    container.appendChild(div);
+  });
+}
+
+function insertSortedWithDOM(item, container) {
+  let index = 0;
+
+  while (
+    index < currentResults.length &&
+    currentResults[index].price < item.price
+  ) {
+    index++;
+  }
+
+  // max 5 limit
+  if (index >= 5) return;
+
+  currentResults.splice(index, 0, item);
+
+  const node = createCard(item);
+
+  // beszúrás DOM-ba
+  const cards = container.querySelectorAll(".card");
+  const footer = document.getElementById("results-footer");
+
+  if (index >= cards.length) {
+    container.insertBefore(node, footer);
+  } else {
+    container.insertBefore(node, cards[index]);
+  }
+
+  resultNodes.splice(index, 0, node);
+
+  // levágás
+  if (currentResults.length > 5) {
+    currentResults.pop();
+    const removed = resultNodes.pop();
+    removed.remove();
+  }
+}
+
+function createCard(r) {
+  const div = document.createElement("div");
+  div.className = "card";
+
+  div.innerHTML = `
+    <strong>→ ${r.destination.city} (${r.destination.code})</strong><br/>
+    <span class="meta-info">
+      ${r.departure} → ${r.return}
+    </span><br/>
+    💶 ${r.price.toLocaleString()}
+  `;
+
+  return div;
+}
+
+function updateFooter(container, isDone = false) {
+  let el = document.getElementById("results-footer");
+
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "results-footer";
+    el.className = "meta-info";
+    container.appendChild(el);
+  }
+
+  if (isDone) {
+    el.textContent = `Finished...(failed: ${failedCount})`;
+  } else {
+    el.textContent = `Loading... (fails: ${failedCount})`;
+  }
+}
+
+function initFooter(container) {
+  let el = document.getElementById("results-footer");
+
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "results-footer";
+    el.className = "meta-info";
+    container.appendChild(el);
+  }
+
+  el.textContent = "Loading...";
 }
