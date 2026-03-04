@@ -1,14 +1,16 @@
-async function runWithConcurrencyLimit(tasks, limit) {
-  const results = [];
+async function runWithConcurrencyLimit(tasks, limit, onResult) {
   const executing = [];
 
   for (const task of tasks) {
     const p = task()
-      .then(result => {
-        results.push(result);
+      .then((result) => {
+        if (onResult) onResult(result);
+        return result;
       })
-      .catch(error => {
-        results.push({ success: false, error: error.message });
+      .catch((error) => {
+        const errResult = { success: false, error: error.message };
+        if (onResult) onResult(errResult);
+        return errResult;
       })
       .finally(() => {
         executing.splice(executing.indexOf(p), 1);
@@ -22,8 +24,6 @@ async function runWithConcurrencyLimit(tasks, limit) {
   }
 
   await Promise.all(executing);
-
-  return results;
 }
 
 module.exports = runWithConcurrencyLimit;
