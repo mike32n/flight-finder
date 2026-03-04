@@ -49,8 +49,8 @@ FLIGHT_PROVIDER=mock | amadeus-test | amadeus-prod
 
 ## Run
 
-npm install
-npm start
+- npm install
+- npm start
 
 ## License
 
