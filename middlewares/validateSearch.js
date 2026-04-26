@@ -22,7 +22,7 @@ module.exports = function validateSearch(req, res, next) {
     flexibility !== "smart"
   ) {
     return res.status(400).json({
-      error: "flexibility must be 'none' or 'controlled'",
+      error: "flexibility must be 'none', 'controlled', or 'smart'",
     });
   }
 

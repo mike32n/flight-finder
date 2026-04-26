@@ -1,14 +1,17 @@
 async function runWithConcurrencyLimit(tasks, limit, onResult) {
   const executing = [];
+  const results = [];
 
   for (const task of tasks) {
     const p = task()
       .then((result) => {
+        results.push(result);
         if (onResult) onResult(result);
         return result;
       })
       .catch((error) => {
         const errResult = { success: false, error: error.message };
+        results.push(errResult);
         if (onResult) onResult(errResult);
         return errResult;
       })
@@ -24,6 +27,8 @@ async function runWithConcurrencyLimit(tasks, limit, onResult) {
   }
 
   await Promise.all(executing);
+
+  return results; // 🔥 EZ HIÁNYZOTT
 }
 
 module.exports = runWithConcurrencyLimit;
