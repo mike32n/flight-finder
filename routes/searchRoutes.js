@@ -167,7 +167,7 @@ router.post("/search", validateSearch, async (req, res) => {
 
 router.post("/search-stream", validateSearch, async (req, res) => {
   try {
-    const { destinations, weekday, nights } = req.body;
+    const { destinations, weekday, nights, flexibility = "none" } = req.body;
 
     // ✅ SSE HEADERS
     res.setHeader("Content-Type", "text/event-stream");
@@ -187,6 +187,28 @@ router.post("/search-stream", validateSearch, async (req, res) => {
             trip.return,
           ),
         );
+      }
+    }
+
+    // 🔥 SMART FLEX EXTENSION (append tasks)
+    if (flexibility === "smart") {
+      for (const destination of destinations) {
+        for (const trip of trips) {
+          const variants = expandControlledFlexibility(trip);
+
+          // skip original (index 0), mert az már benne van base tasks-ben
+          const onlyFlex = variants.slice(1);
+
+          for (const variant of onlyFlex) {
+            tasks.push(() =>
+              flightProvider.searchFlights(
+                destination,
+                variant.departure,
+                variant.return,
+              ),
+            );
+          }
+        }
       }
     }
 

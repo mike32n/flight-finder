@@ -1,3 +1,5 @@
+const dayjs = require("dayjs");
+
 function expandControlledFlexibility(trip) {
   const results = [];
 
@@ -8,22 +10,18 @@ function expandControlledFlexibility(trip) {
 
   results.push(original);
 
-  // departure -1 nap (return FIX)
-  const depMinus1 = new Date(trip.departure);
-  depMinus1.setDate(depMinus1.getDate() - 1);
+  const depMinus1 = dayjs(trip.departure).subtract(1, "day");
 
   results.push({
-    departure: depMinus1.toISOString().split("T")[0],
+    departure: depMinus1.format("YYYY-MM-DD"),
     return: trip.return,
   });
 
-  // return +1 nap (departure FIX)
-  const retPlus1 = new Date(trip.return);
-  retPlus1.setDate(retPlus1.getDate() + 1);
+  const retPlus1 = dayjs(trip.return).add(1, "day");
 
   results.push({
     departure: trip.departure,
-    return: retPlus1.toISOString().split("T")[0],
+    return: retPlus1.format("YYYY-MM-DD"),
   });
 
   return results;

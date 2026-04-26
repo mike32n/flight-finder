@@ -61,14 +61,8 @@ async function getOrSet(providerName, payload, fetcher) {
 
   const promise = (async () => {
     // 2️⃣ Cache check
-    const cached = await redis.get(key);
-    if (cached) {
-      try {
-        return JSON.parse(cached);
-      } catch {
-        return null;
-      }
-    }
+    const cached = await get(key);
+    if (cached) return cached;
 
     // 3️⃣ Fresh fetch (timeout protected)
     let fresh;
