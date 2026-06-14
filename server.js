@@ -2,6 +2,12 @@ require("dotenv").config();
 
 const app = require("./app");
 
-app.listen(3000, () => {
-  console.log("Server running on http://localhost:3000");
-});
+const { initDestinations } = require("./routes/searchRoutes");
+
+(async () => {
+  await initDestinations();
+
+  app.listen(3000, () => {
+    console.log("Server running on http://localhost:3000");
+  });
+})();

@@ -20,18 +20,14 @@ let destinationsList = [];
 let destinationMap = new Map();
 
 // ✅ LOAD ON START
-(async () => {
-  try {
-    destinationsList = await getAllDestinations();
+async function initDestinations() {
+  destinationsList = await getAllDestinations();
 
-    // 🔥 build map AFTER data arrives
-    destinationMap = new Map(destinationsList.map((d) => [d.iata_code, d]));
+  // 🔥 build map AFTER data arrives
+  destinationMap = new Map(destinationsList.map((d) => [d.iata_code, d]));
 
-    console.log("Destinations loaded:", destinationsList.length);
-  } catch (err) {
-    console.error("Failed to load destinations:", err);
-  }
-})();
+  console.log("Destinations loaded:", destinationsList.length);
+}
 
 // ✅ HELPER
 function enrichAirport(code) {
@@ -250,4 +246,7 @@ router.post("/search-stream", validateSearch, async (req, res) => {
   }
 });
 
-module.exports = router;
+module.exports = {
+  router,
+  initDestinations,
+};
