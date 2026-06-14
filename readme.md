@@ -10,6 +10,7 @@ Simple tool for finding cheap flights for short trips (e.g. weekend getaways).
 - Top 5 cheapest results
 - Streaming results (live UI updates)
 - Partial failure handling
+- Playwright end-to-end test automation
 
 ## Flow
 
@@ -26,6 +27,7 @@ Simple tool for finding cheap flights for short trips (e.g. weekend getaways).
 POST /search-stream
 
 SSE events:
+
 - data → flight data
 - fail → failed request
 - end → finished
@@ -36,6 +38,8 @@ SSE events:
 - Amadeus API
 - Redis (cache + rate limit)
 - Vanilla JS frontend
+- Jest + Supertest
+- Playwright
 
 ## Config (.env)
 
@@ -51,6 +55,32 @@ FLIGHT_PROVIDER=mock | amadeus-test | amadeus-prod
 
 - npm install
 - npm start
+
+## Testing
+
+Run unit/integration tests:
+
+- npm test
+
+Install Playwright browsers (first time only):
+
+- npx playwright install
+
+Run Playwright end-to-end tests:
+
+- npm run pw:test
+
+Run Playwright in headed mode:
+
+- npm run pw:headed
+
+Open Playwright UI:
+
+- npm run pw:ui
+
+View Playwright report:
+
+- npm run pw:report
 
 ## License
 
