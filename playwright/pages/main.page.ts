@@ -11,7 +11,7 @@ export default class MainPage {
   readonly airportInput: Locator;
   readonly autocompleteList: Locator;
   readonly selectedContainer: Locator;
-  readonly autocompleteItems: Locator;
+  readonly autocompleteItem: Locator;
 
   constructor(page: Page) {
     this.page = page;
@@ -36,12 +36,11 @@ export default class MainPage {
       name: "Type city or IATA code...",
     });
 
-    // ugyanaz mint a recorder
     this.autocompleteList = page.locator("#autocomplete-list");
 
     this.selectedContainer = page.locator("#selected-container");
 
-    this.autocompleteItems = page.locator(".autocomplete-item");
+    this.autocompleteItem = page.locator(".autocomplete-item");
   }
 
   async clickToggleTheme(): Promise<void> {
@@ -106,7 +105,7 @@ export default class MainPage {
   }
 
   async getAutocompleteItemText(index: number): Promise<string> {
-    const item = this.autocompleteItems.nth(index);
+    const item = this.autocompleteItem.nth(index);
     return (await item.textContent())?.trim() ?? "";
   }
 
@@ -128,7 +127,7 @@ export default class MainPage {
   }
 
   async expectItemActive(index: number): Promise<void> {
-    await expect(this.autocompleteItems.nth(index)).toHaveClass(/active/);
+    await expect(this.autocompleteItem.nth(index)).toHaveClass(/active/);
   }
 
   async expectAirportSelected(code: string): Promise<void> {
@@ -137,23 +136,10 @@ export default class MainPage {
     ).toBeVisible();
   }
 
-  // Recorder: EIN
   async selectAirportByEnter(searchText: string): Promise<void> {
     await this.clickAirportInput();
     await this.searchAirport(searchText);
     await this.expectAutocompleteOpen();
     await this.pressEnter();
   }
-
-  /*
-  // Recorder: LA + 4x ArrowDown
-  async selectAirportByArrowDown(
-    searchText: string,
-    arrowDownCount: number,
-  ): Promise<void> {
-    await this.searchAirport(searchText);
-    await this.expectAutocompleteOpen();
-    await this.pressArrowDown(arrowDownCount);
-    await this.pressEnter();
-  } */
 }
