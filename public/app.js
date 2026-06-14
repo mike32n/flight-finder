@@ -25,6 +25,18 @@ window.onload = async function () {
 
   setupAutocomplete();
   loadTheme();
+
+  const nightsInput = document.getElementById("nights");
+
+  nightsInput.addEventListener("input", () => {
+    let value = Number(nightsInput.value);
+
+    if (isNaN(value)) value = 0;
+    if (value < 0) value = 0;
+    if (value > 99) value = 99;
+
+    nightsInput.value = value;
+  });
 };
 
 /* ========================= */
@@ -287,9 +299,13 @@ function loadTheme() {
 
 function changeNights(delta) {
   const input = document.getElementById("nights");
+
   let value = Number(input.value) || 0;
   value += delta;
+
   if (value < 0) value = 0;
+  if (value > 99) value = 99;
+
   input.value = value;
 }
 

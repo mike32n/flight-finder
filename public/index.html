@@ -36,7 +36,14 @@
 
         <div class="stepper">
           <button onclick="changeNights(-1)">−</button>
-          <input id="nights" type="number" value="0" min="0" />
+          <input
+            id="nights"
+            type="number"
+            value="0"
+            min="0"
+            max="99"
+            step="1"
+          />
           <button onclick="changeNights(1)">+</button>
         </div>
 
