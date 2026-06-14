@@ -238,9 +238,11 @@ body.dark .stepper button:hover {
 .selected-container {
   display: flex;
   justify-content: center;
+  align-items: center;
   gap: 15px;
-  margin-bottom: 20px;
   flex-wrap: wrap;
+  min-height: 56px;
+  margin-bottom: 20px;
 }
 
 .iata-badge {
