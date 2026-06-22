@@ -23,17 +23,14 @@ const providerConfigs = {
   },
 };
 
-function getProviderConfig() {
-  const providerKey = process.env.FLIGHT_PROVIDER || "mock";
+const providerKey = process.env.FLIGHT_PROVIDER || "mock";
 
-  const config = providerConfigs[providerKey];
+const config = providerConfigs[providerKey];
 
-  if (!config) {
-    throw new Error(`Unknown provider: ${providerKey}`);
-  }
-
-  console.log("Active provider:", providerKey);
-  return config;
+if (!config) {
+  throw new Error(`Unknown provider: ${providerKey}`);
 }
 
-module.exports = { getProviderConfig };
+console.log("Active provider:", providerKey);
+
+module.exports = config;
