@@ -1,7 +1,7 @@
 const express = require("express");
 const generateTrips = require("../dateGenerator");
 const { getProvider } = require("../providers/providerFactory");
-const { getProviderConfig } = require("../config/providers");
+const config = require("../config/providers");
 const runWithConcurrencyLimit = require("../promisePool");
 const validateSearch = require("../middlewares/validateSearch");
 const { getAllDestinations } = require("../models/destinationModel");
@@ -13,7 +13,6 @@ const {
 
 const router = express.Router();
 const flightProvider = getProvider();
-const config = getProviderConfig();
 
 // ✅ CACHE
 let destinationsList = [];

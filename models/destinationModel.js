@@ -1,4 +1,5 @@
-const db = require("../db");
+const { getDb } = require("../db");
+const db = getDb();
 
 function getAllDestinations() {
   return new Promise((resolve, reject) => {

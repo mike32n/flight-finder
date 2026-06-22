@@ -1,18 +1,26 @@
 const MockProvider = require("./mockProvider");
 const AmadeusProvider = require("./amadeusProvider");
-const { getProviderConfig } = require("../config/providers");
+const config = require("../config/providers");
+
+let provider;
 
 function getProvider() {
-  const config = getProviderConfig();
+  if (provider) {
+    return provider;
+  }
 
   switch (config.type) {
     case "amadeus":
-      return new AmadeusProvider(config);
+      provider = new AmadeusProvider(config);
+      break;
 
     case "mock":
     default:
-      return new MockProvider();
+      provider = new MockProvider();
+      break;
   }
+
+  return provider;
 }
 
 module.exports = { getProvider };

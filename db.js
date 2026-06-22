@@ -1,27 +1,41 @@
 const sqlite3 = require("sqlite3").verbose();
+const path = require("path");
 
-const db = new sqlite3.Database("./database.sqlite");
+let db;
 
-db.serialize(() => {
-  db.run(`
-    CREATE TABLE IF NOT EXISTS destinations (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      city_name TEXT NOT NULL,
-      iata_code TEXT UNIQUE NOT NULL,
-      airport_name TEXT NOT NULL
-    )
-  `);
+function getDb() {
+  if (!db) {
+    console.log("DB file:", path.resolve("./database.sqlite"));
+    db = new sqlite3.Database("./database.sqlite");
+  }
+  return db;
+}
+
+async function initDb() {
+  const db = getDb();
 
   const cities = [
-    { city: "Abu Dhabi", iata: "AUH", airport: "Zayed International Airport" },
+    {
+      city: "Abu Dhabi",
+      iata: "AUH",
+      airport: "Zayed International Airport",
+    },
     {
       city: "Alicante",
       iata: "ALC",
       airport: "Alicante–Elche Miguel Hernández Airport",
     },
-    { city: "Amman", iata: "AMM", airport: "Queen Alia International Airport" },
+    {
+      city: "Amman",
+      iata: "AMM",
+      airport: "Queen Alia International Airport",
+    },
     { city: "Amsterdam", iata: "AMS", airport: "Amsterdam Airport Schiphol" },
-    { city: "Ankara", iata: "ESB", airport: "Esenboğa International Airport" },
+    {
+      city: "Ankara",
+      iata: "ESB",
+      airport: "Esenboğa International Airport",
+    },
     { city: "Antalya", iata: "AYT", airport: "Antalya Airport" },
     { city: "Athens", iata: "ATH", airport: "Athens International Airport" },
     {
@@ -45,7 +59,11 @@ db.serialize(() => {
       iata: "PEK",
       airport: "Beijing Capital International Airport",
     },
-    { city: "Belgrade", iata: "BEG", airport: "Belgrade Nikola Tesla Airport" },
+    {
+      city: "Belgrade",
+      iata: "BEG",
+      airport: "Belgrade Nikola Tesla Airport",
+    },
     {
       city: "Bergamo",
       iata: "BGY",
@@ -119,10 +137,18 @@ db.serialize(() => {
       airport: "Madeira Cristiano Ronaldo Airport",
     },
     { city: "Geneva", iata: "GVA", airport: "Geneva Airport" },
-    { city: "Genoa", iata: "GOA", airport: "Genoa Cristoforo Colombo Airport" },
+    {
+      city: "Genoa",
+      iata: "GOA",
+      airport: "Genoa Cristoforo Colombo Airport",
+    },
     { city: "Gdansk", iata: "GDN", airport: "Gdańsk Lech Wałęsa Airport" },
     { city: "Giza", iata: "SPX", airport: "Sphinx International Airport" },
-    { city: "Gothenburg", iata: "GOT", airport: "Göteborg Landvetter Airport" },
+    {
+      city: "Gothenburg",
+      iata: "GOT",
+      airport: "Göteborg Landvetter Airport",
+    },
     { city: "Gran Canaria", iata: "LPA", airport: "Gran Canaria Airport" },
     {
       city: "Guangzhou",
@@ -170,7 +196,11 @@ db.serialize(() => {
       iata: "SUF",
       airport: "Lamezia Terme International Airport",
     },
-    { city: "Larnaca", iata: "LCA", airport: "Larnaca International Airport" },
+    {
+      city: "Larnaca",
+      iata: "LCA",
+      airport: "Larnaca International Airport",
+    },
     { city: "Lisbon", iata: "LIS", airport: "Humberto Delgado Airport" },
     {
       city: "London",
@@ -185,6 +215,7 @@ db.serialize(() => {
       airport: "Adolfo Suárez Madrid–Barajas Airport",
     },
     { city: "Malaga", iata: "AGP", airport: "Málaga–Costa del Sol Airport" },
+    { city: "Malta", iata: "MLA", airport: "Malta International Airport" },
     { city: "Marrakech", iata: "RAK", airport: "Marrakesh Menara Airport" },
     { city: "Marseille", iata: "MRS", airport: "Marseille Provence Airport" },
     { city: "Memmingen", iata: "FMM", airport: "Memmingen Airport" },
@@ -194,7 +225,11 @@ db.serialize(() => {
       airport: "Milan Malpensa Airport",
     },
     { city: "Munich", iata: "MUC", airport: "Munich Airport" },
-    { city: "Mykonos", iata: "JMK", airport: "Mykonos International Airport" },
+    {
+      city: "Mykonos",
+      iata: "JMK",
+      airport: "Mykonos International Airport",
+    },
     { city: "Nantes", iata: "NTE", airport: "Nantes Atlantique Airport" },
     { city: "Naples", iata: "NAP", airport: "Naples International Airport" },
     { city: "Nice", iata: "NCE", airport: "Nice Côte d'Azur Airport" },
@@ -234,7 +269,11 @@ db.serialize(() => {
       iata: "RMI",
       airport: "Federico Fellini International Airport",
     },
-    { city: "Rome (Ciampino)", iata: "CIA", airport: "Rome Ciampino Airport" },
+    {
+      city: "Rome (Ciampino)",
+      iata: "CIA",
+      airport: "Rome Ciampino Airport",
+    },
     {
       city: "Rome (Fiumicino)",
       iata: "FCO",
@@ -319,13 +358,64 @@ db.serialize(() => {
     { city: "Zurich", iata: "ZRH", airport: "Zurich Airport" },
   ];
 
-  cities.forEach((c) => {
-    db.run(
-      `INSERT OR IGNORE INTO destinations (city_name, iata_code, airport_name)
-       VALUES (?, ?, ?)`,
-      [c.city, c.iata, c.airport],
-    );
-  });
-});
+  return new Promise((resolve, reject) => {
+    db.serialize(() => {
+      db.run(
+        `
+        CREATE TABLE IF NOT EXISTS destinations (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          city_name TEXT NOT NULL,
+          iata_code TEXT UNIQUE NOT NULL,
+          airport_name TEXT NOT NULL
+        )
+        `,
+        (err) => {
+          if (err) {
+            return reject(err);
+          }
 
-module.exports = db;
+          const stmt = db.prepare(`
+            INSERT OR IGNORE INTO destinations
+            (city_name, iata_code, airport_name)
+            VALUES (?, ?, ?)
+          `);
+
+          cities.forEach((c) => {
+            stmt.run([c.city, c.iata, c.airport]);
+          });
+
+          stmt.finalize((err) => {
+            if (err) {
+              return reject(err);
+            }
+
+            console.log("Database initialized ✅");
+            resolve();
+          });
+        },
+      );
+    });
+  });
+}
+
+function closeDb() {
+  return new Promise((resolve, reject) => {
+    if (!db) {
+      return resolve();
+    }
+
+    db.close((err) => {
+      if (err) {
+        return reject(err);
+      }
+
+      resolve();
+    });
+  });
+}
+
+module.exports = {
+  getDb,
+  closeDb,
+  initDb,
+};
