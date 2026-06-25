@@ -15,10 +15,6 @@ test.describe("Flight Finder", () => {
     await page.goto(Env.test);
   });
 
-  test("should display page title", async ({ page }) => {
-    await expect(page).toHaveTitle(/Flight/);
-  });
-
   test("should toggle dark theme", async () => {
     await main.clickToggleTheme();
 

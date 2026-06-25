@@ -3,18 +3,24 @@ import { Locator, Page, expect } from "@playwright/test";
 export default class MainPage {
   readonly page: Page;
 
+  readonly heading: Locator;
+
   readonly toggleThemeButton: Locator;
   readonly searchButton: Locator;
-  readonly plusButton: Locator;
-  readonly minusButton: Locator;
+  readonly incrementButton: Locator;
+  readonly decrementButton: Locator;
 
   readonly airportInput: Locator;
+  readonly weekdaySelect: Locator;
+  readonly nightsInput: Locator;
   readonly autocompleteList: Locator;
   readonly selectedContainer: Locator;
   readonly autocompleteItem: Locator;
 
   constructor(page: Page) {
     this.page = page;
+
+    this.heading = page.getByRole("heading", { level: 1 });
 
     this.toggleThemeButton = page.getByRole("button", {
       name: /toggle theme/i,
@@ -24,17 +30,21 @@ export default class MainPage {
       name: /search/i,
     });
 
-    this.plusButton = page.getByRole("button", {
+    this.incrementButton = page.getByRole("button", {
       name: "+",
     });
 
-    this.minusButton = page.getByRole("button", {
-      name: "-",
+    this.decrementButton = page.getByRole("button", {
+      name: /^[−-]$/,
     });
 
     this.airportInput = page.getByRole("textbox", {
       name: "Type city or IATA code...",
     });
+
+    this.weekdaySelect = page.locator("#weekday");
+
+    this.nightsInput = page.locator("#nights");
 
     this.autocompleteList = page.locator("#autocomplete-list");
 
@@ -120,6 +130,14 @@ export default class MainPage {
     const iata = await this.getAutocompleteItemIata(index);
     await this.expectItemActive(index);
     return iata;
+  }
+
+  async expectPageTitle(text: string): Promise<void> {
+    await expect(this.page).toHaveTitle(new RegExp(text));
+  }
+
+  async expectVisible(element: Locator): Promise<void> {
+    await expect(element).toBeVisible();
   }
 
   async expectAutocompleteOpen(): Promise<void> {
