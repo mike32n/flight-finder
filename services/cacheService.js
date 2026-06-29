@@ -28,12 +28,19 @@ function generateKey(providerName, payload) {
 }
 
 function withTimeout(promise, ms = FETCH_TIMEOUT) {
-  return Promise.race([
-    promise,
-    new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("timeout")), ms),
-    ),
-  ]);
+  let timer;
+
+  const timeoutPromise = new Promise((_, reject) => {
+    timer = setTimeout(() => {
+      reject(new Error("timeout"));
+    }, ms);
+
+    timer.unref?.();
+  });
+
+  return Promise.race([promise, timeoutPromise]).finally(() => {
+    clearTimeout(timer);
+  });
 }
 
 async function set(key, value, ttl = DEFAULT_TTL) {
