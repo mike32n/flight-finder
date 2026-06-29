@@ -28,7 +28,7 @@ async function runWithConcurrencyLimit(tasks, limit, onResult) {
 
   await Promise.all(executing);
 
-  return results; // 🔥 EZ HIÁNYZOTT
+  return results;
 }
 
 module.exports = runWithConcurrencyLimit;
