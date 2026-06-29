@@ -22,7 +22,7 @@ function getRedis() {
       enableReadyCheck: true,
 
       // Optional: don't auto-connect immediately
-      // lazyConnect: true,
+      lazyConnect: true,
     });
 
     // Connection lifecycle events
