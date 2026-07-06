@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { test } from "@playwright/test";
 
 import Env from "../utils/env";
 import CommonPage from "../pages/common.page";
@@ -19,7 +19,7 @@ test.describe("Flight Finder UI", () => {
     await main.expectPageTitle("Perfect");
   });
 
-  test("should display page elements", async() => {
+  test("should display page elements", async () => {
     await main.expectVisible(main.heading);
     await main.expectVisible(main.airportInput);
     await main.expectVisible(main.weekdaySelect);
@@ -28,5 +28,5 @@ test.describe("Flight Finder UI", () => {
     await main.expectVisible(main.nightsInput);
     await main.expectVisible(main.searchButton);
     await main.expectVisible(main.toggleThemeButton);
-  })
+  });
 });

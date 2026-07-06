@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { test } from "@playwright/test";
 
 import Env from "../utils/env";
 import CommonPage from "../pages/common.page";
@@ -18,7 +18,7 @@ test.describe("Flight Finder", () => {
   test("should toggle dark theme", async () => {
     await main.clickToggleTheme();
 
-    await expect(common.body).toHaveClass(/dark/);
+    await common.expectDarkThemeIsActive();
   });
 
   test("should select active list item", async () => {
