@@ -37,4 +37,20 @@ test.describe("Flight Finder", () => {
     await main.selectAirportByEnter("tf");
     await main.expectAirportSelected("TFS");
   });
+
+  test("should deselect airport", async () => {
+    const iata = await main.selectAirportWithArrowKeys("e", 9, 10, 0);
+
+    await main.expectAirportSelected(iata);
+    await main.clickSelectedContainer(iata);
+    await main.expectAirportNotSelected(iata);
+  });
+
+  test("should select airport only once", async () => {
+    await main.selectAirportByEnter("ams");
+    await main.expectAirportSelected("AMS");
+
+    await main.selectAirportByEnter("ams");
+    await main.expectAirportSelectedOnlyOnce("AMS");
+  });
 });

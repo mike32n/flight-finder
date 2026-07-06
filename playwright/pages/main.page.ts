@@ -61,6 +61,10 @@ export default class MainPage {
     await this.airportInput.click();
   }
 
+  async clickSelectedContainer(code: string): Promise<void> {
+    await this.selectedContainer.getByText(code).click();
+  }
+
   async searchAirport(searchText: string): Promise<void> {
     await this.airportInput.fill(searchText);
   }
@@ -98,16 +102,16 @@ export default class MainPage {
 
   async selectAirportWithArrowKeys(
     searchText: string,
-    startIndex: number,
+    activeIndex: number,
     down: number,
     up: number,
   ): Promise<string> {
     await this.openAutocomplete(searchText);
 
-    const iata = await this.getAutocompleteItemIata(startIndex);
+    const iata = await this.getAutocompleteItemIata(activeIndex);
 
     await this.navigateAutocomplete(down, up);
-    await this.expectItemActive(startIndex);
+    await this.expectItemActive(activeIndex);
 
     await this.pressEnter();
 
@@ -126,6 +130,13 @@ export default class MainPage {
     return match[1];
   }
 
+  async selectAirportByEnter(searchText: string): Promise<void> {
+    await this.clickAirportInput();
+    await this.searchAirport(searchText);
+    await this.expectAutocompleteOpen();
+    await this.pressEnter();
+  }
+
   async selectActiveItemIata(index: number): Promise<string> {
     const iata = await this.getAutocompleteItemIata(index);
     await this.expectItemActive(index);
@@ -141,7 +152,7 @@ export default class MainPage {
   }
 
   async expectAutocompleteOpen(): Promise<void> {
-    await expect(this.autocompleteList).toContainClass("open");
+    await expect(this.autocompleteList).toHaveClass(/open/);
   }
 
   async expectItemActive(index: number): Promise<void> {
@@ -154,10 +165,15 @@ export default class MainPage {
     ).toBeVisible();
   }
 
-  async selectAirportByEnter(searchText: string): Promise<void> {
-    await this.clickAirportInput();
-    await this.searchAirport(searchText);
-    await this.expectAutocompleteOpen();
-    await this.pressEnter();
+  async expectAirportSelectedOnlyOnce(code: string): Promise<void> {
+    await expect(this.selectedContainer.filter({ hasText: code })).toHaveCount(
+      1,
+    );
+  }
+
+  async expectAirportNotSelected(code: string): Promise<void> {
+    await expect(this.selectedContainer.filter({ hasText: code })).toHaveCount(
+      0,
+    );
   }
 }
