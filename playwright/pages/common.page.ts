@@ -1,4 +1,4 @@
-import { Locator, Page } from "@playwright/test";
+import { Locator, Page, expect } from "@playwright/test";
 
 export default class CommonPage {
   readonly page: Page;
@@ -7,5 +7,9 @@ export default class CommonPage {
   constructor(page: Page) {
     this.page = page;
     this.body = page.locator("body");
+  }
+
+  async expectDarkThemeIsActive(): Promise<void> {
+    await expect(this.body).toHaveClass(/dark/);
   }
 }
