@@ -86,6 +86,7 @@ export default class MainPage {
   }
 
   async openAutocomplete(searchText: string): Promise<void> {
+    await this.clickAirportInput();
     await this.searchAirport(searchText);
     await this.expectAutocompleteOpen();
   }
