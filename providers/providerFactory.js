@@ -1,5 +1,7 @@
 const MockProvider = require("./mockProvider");
 const AmadeusProvider = require("./amadeusProvider");
+const SerpApiProvider = require("./serpApiProvider");
+
 const config = require("../config/providers");
 
 let provider;
@@ -12,6 +14,10 @@ function getProvider() {
   switch (config.type) {
     case "amadeus":
       provider = new AmadeusProvider(config);
+      break;
+
+    case "serpapi":
+      provider = new SerpApiProvider(config);
       break;
 
     case "mock":

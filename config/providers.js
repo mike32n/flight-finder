@@ -21,6 +21,13 @@ const providerConfigs = {
     concurrency: 5,
     retryDelay: 500,
   },
+  
+  "serpapi": {
+    type: "serpapi",
+    apiKey: process.env.SERPAPI_KEY,
+    concurrency: 5,
+    retryDelay: 500,
+  },
 };
 
 const providerKey = process.env.FLIGHT_PROVIDER || "mock";

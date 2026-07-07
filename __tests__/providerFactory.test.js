@@ -1,5 +1,5 @@
 describe("providerFactory", () => {
-  afterEach(() => {
+  beforeEach(() => {
     jest.resetModules();
   });
 
@@ -28,5 +28,18 @@ describe("providerFactory", () => {
     const provider = getProvider();
 
     expect(provider.constructor.name).toBe("AmadeusProvider");
+  });
+
+  test("creates serpapi provider", () => {
+    jest.doMock("../config/providers", () => ({
+      type: "serpapi",
+      apiKey: "test-key",
+    }));
+
+    const { getProvider } = require("../providers/providerFactory");
+
+    const provider = getProvider();
+
+    expect(provider.constructor.name).toBe("SerpApiProvider");
   });
 });
