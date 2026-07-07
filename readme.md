@@ -36,6 +36,7 @@ SSE events:
 
 - Node.js + Express
 - Amadeus API
+- SerpApi
 - Redis (cache + rate limit)
 - Vanilla JS frontend
 - Jest + Supertest
@@ -43,7 +44,7 @@ SSE events:
 
 ## Config (.env)
 
-FLIGHT_PROVIDER=mock | amadeus-test | amadeus-prod
+FLIGHT_PROVIDER=mock | amadeus-test | amadeus-prod | serpapi
 
 ## Limitations
 
