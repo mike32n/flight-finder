@@ -14,6 +14,7 @@
   --primary: #0066ff;
   --border: #ddd;
   --neon: #00f7ff;
+  --error: #ff6767;
 }
 
 /* ========================= */
@@ -237,6 +238,30 @@ body.dark .stepper button:hover {
   transform: translateY(-3px);
 }
 
+.error-card {
+  font-size: 15px;
+  padding: 10px 20px;
+  border-radius: 8px;
+  background: var(--error);
+  color: white;
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.25s ease;
+
+  animation: pulse-warning 0.5s infinite;
+}
+
+body.dark .error-card {
+  background: #000;
+  color: var(--primary);
+  text-shadow:
+    0 0 5px var(--primary),
+    0 0 20px var(--primary);
+  box-shadow:
+    0 0 10px var(--primary),
+    0 0 30px rgba(0, 247, 255, 0.6);
+}
+
 /* ========================= */
 /* IATA BADGES */
 /* ========================= */
@@ -436,4 +461,22 @@ body.dark .card {
 /* subtle glow on hover */
 body.dark .card:hover {
   box-shadow: 0 0 12px rgba(0, 247, 255, 0.2);
+}
+
+/* Animations */
+@keyframes pulse-warning {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(0.99);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
