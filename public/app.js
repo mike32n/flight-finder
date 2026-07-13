@@ -31,9 +31,10 @@ window.onload = async function () {
   nightsInput.addEventListener("input", () => {
     let value = Number(nightsInput.value);
 
-    if (isNaN(value)) value = 0;
-    if (value < 0) value = 0;
-    if (value > 99) value = 99;
+    if (!value || value < 1) {
+      value = 1;
+    }
+    if (value > 30) value = 30;
 
     nightsInput.value = value;
   });
@@ -207,8 +208,18 @@ async function search() {
   const weekday = Number(document.getElementById("weekday").value);
   const nights = Number(document.getElementById("nights").value);
 
-  const loading = document.getElementById("loading");
+  const container = document.getElementById("selected-container");
   const resultsDiv = document.getElementById("results");
+
+  // ✅ validation FIRST
+  if (selectedDestinations.length === 0) {
+    container.innerHTML = `
+    <div class="card error-card">
+      ⚠️ Please select at least one destination airport
+    </div>
+  `;
+    return;
+  }
 
   resultsDiv.innerHTML = "";
 
@@ -300,11 +311,11 @@ function loadTheme() {
 function changeNights(delta) {
   const input = document.getElementById("nights");
 
-  let value = Number(input.value) || 0;
+  let value = Number(input.value) || 1;
   value += delta;
 
-  if (value < 0) value = 0;
-  if (value > 99) value = 99;
+  if (value < 1) value = 1;
+  if (value > 30) value = 30;
 
   input.value = value;
 }

@@ -53,4 +53,14 @@ test.describe("Flight Finder", () => {
     await main.selectAirportByEnter("ams");
     await main.expectAirportSelectedOnlyOnce("AMS");
   });
+
+  test("e2e | one airport", async () => {
+    await main.selectAirportByEnter("ams");
+    await main.expectAirportSelected("AMS");
+
+    await main.selectWeekdayOption("5");
+    await main.clickIncrementButton(2);
+    await main.clickSearchButton();
+    await main.expectResultsFooterText("Finished");
+  });
 });
