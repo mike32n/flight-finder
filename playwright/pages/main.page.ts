@@ -16,6 +16,7 @@ export default class MainPage {
   readonly autocompleteList: Locator;
   readonly selectedContainer: Locator;
   readonly autocompleteItem: Locator;
+  readonly resultsFooter: Locator;
 
   constructor(page: Page) {
     this.page = page;
@@ -51,6 +52,8 @@ export default class MainPage {
     this.selectedContainer = page.locator("#selected-container");
 
     this.autocompleteItem = page.locator(".autocomplete-item");
+
+    this.resultsFooter = page.locator("#results-footer");
   }
 
   async clickToggleTheme(): Promise<void> {
@@ -63,6 +66,16 @@ export default class MainPage {
 
   async clickSelectedContainer(code: string): Promise<void> {
     await this.selectedContainer.getByText(code).click();
+  }
+
+  async clickIncrementButton(times = 1): Promise<void> {
+    for (let i = 0; i < times; i++) {
+      await this.incrementButton.click();
+    }
+  }
+
+  async clickSearchButton(): Promise<void> {
+    await this.searchButton.click();
   }
 
   async searchAirport(searchText: string): Promise<void> {
@@ -144,6 +157,10 @@ export default class MainPage {
     return iata;
   }
 
+  async selectWeekdayOption(option: string): Promise<void> {
+    await this.weekdaySelect.selectOption(option);
+  }
+
   async expectPageTitle(text: string): Promise<void> {
     await expect(this.page).toHaveTitle(new RegExp(text));
   }
@@ -176,5 +193,9 @@ export default class MainPage {
     await expect(this.selectedContainer.filter({ hasText: code })).toHaveCount(
       0,
     );
+  }
+
+  async expectResultsFooterText(text: string): Promise<void> {
+    await expect(this.resultsFooter.filter({ hasText: text })).toBeVisible();
   }
 }
