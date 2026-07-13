@@ -24,7 +24,7 @@ export default class MainPage {
     this.heading = page.getByRole("heading", { level: 1 });
 
     this.toggleThemeButton = page.getByRole("button", {
-      name: /toggle theme/i,
+      name: /theme/i,
     });
 
     this.searchButton = page.getByRole("button", {
