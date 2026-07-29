@@ -35,6 +35,7 @@ SSE events:
 ## Stack
 
 - Node.js + Express
+- SQLite
 - Amadeus API
 - SerpApi
 - Redis (cache + rate limit)
@@ -49,7 +50,6 @@ FLIGHT_PROVIDER=mock | amadeus-test | amadeus-prod | serpapi
 ## Limitations
 
 - fixed origin (BUD)
-- no database
 - no authentication
 
 ## Run
