@@ -215,7 +215,7 @@ async function search() {
   if (selectedDestinations.length === 0) {
     container.innerHTML = `
     <div class="card error-card">
-      ⚠️ Please select at least one destination airport
+      ⚠️ Please select destination airport(s)
     </div>
   `;
     return;

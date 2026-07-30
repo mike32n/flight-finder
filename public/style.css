@@ -79,7 +79,6 @@ body.dark .meta-info {
   text-shadow: 0 0 6px rgba(0, 247, 255, 0.6);
 }
 
-/* loading text fix */
 #loading {
   color: var(--muted);
 }
@@ -188,7 +187,6 @@ body.dark input[type="number"] {
   position: relative;
 }
 
-/* ha custom gombokat használsz később */
 .stepper {
   display: flex;
   align-items: center;
@@ -245,7 +243,7 @@ body.dark .stepper button:hover {
   background: var(--error);
   color: white;
   cursor: pointer;
-  font-weight: bold;
+  font-weight: normal;
   transition: all 0.25s ease;
 
   animation: pulse-warning 0.5s infinite;
@@ -308,7 +306,7 @@ body.dark .iata-badge {
 
 .autocomplete-wrapper {
   position: relative;
-  flex: 2; /* ez a kulcs */
+  flex: 2;
   width: 100%;
   min-width: 0; /* overflow fix */
 }
@@ -340,7 +338,7 @@ body.dark .iata-badge {
   transition: all 0.2s ease;
 }
 
-/* visible state (JS-ben add hozzá ezt a class-t) */
+/* visible state */
 .autocomplete-list.open {
   opacity: 1;
   transform: translateY(0);
@@ -441,8 +439,6 @@ body.dark .autocomplete-list {
     padding: 12px 24px;
   }
 }
-
-/* subtle UI polish */
 
 input::placeholder {
   color: var(--muted);
