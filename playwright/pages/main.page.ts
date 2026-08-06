@@ -18,6 +18,8 @@ export default class MainPage {
   readonly autocompleteItem: Locator;
   readonly resultsFooter: Locator;
 
+  readonly noAirportsSelectedWarning: Locator;
+
   constructor(page: Page) {
     this.page = page;
 
@@ -51,6 +53,8 @@ export default class MainPage {
 
     this.selectedContainer = page.locator("#selected-container");
 
+    this.noAirportsSelectedWarning = page.locator(".error-card");
+
     this.autocompleteItem = page.locator(".autocomplete-item");
 
     this.resultsFooter = page.locator("#results-footer");
@@ -64,8 +68,8 @@ export default class MainPage {
     await this.airportInput.click();
   }
 
-  async clickSelectedContainer(code: string): Promise<void> {
-    await this.selectedContainer.getByText(code).click();
+  async clickWeekdaySelect(): Promise<void> {
+    await this.weekdaySelect.click();
   }
 
   async clickIncrementButton(times = 1): Promise<void> {
@@ -78,6 +82,10 @@ export default class MainPage {
     await this.searchButton.click();
   }
 
+  async clickSelectedContainer(code: string): Promise<void> {
+    await this.selectedContainer.getByText(code).click();
+  }
+
   async searchAirport(searchText: string): Promise<void> {
     await this.airportInput.fill(searchText);
   }
@@ -86,15 +94,15 @@ export default class MainPage {
     await this.airportInput.press("Enter");
   }
 
-  async pressArrowDown(times = 1): Promise<void> {
+  async pressArrowDown(element: Locator, times = 1): Promise<void> {
     for (let i = 0; i < times; i++) {
-      await this.airportInput.press("ArrowDown");
+      await element.press("ArrowDown");
     }
   }
 
-  async pressArrowUp(times = 1): Promise<void> {
+  async pressArrowUp(element: Locator, times = 1): Promise<void> {
     for (let i = 0; i < times; i++) {
-      await this.airportInput.press("ArrowUp");
+      await element.press("ArrowUp");
     }
   }
 
@@ -106,11 +114,11 @@ export default class MainPage {
 
   async navigateAutocomplete(stepsDown: number, stepsUp = 0): Promise<void> {
     for (let i = 0; i < stepsDown; i++) {
-      await this.pressArrowDown();
+      await this.pressArrowDown(this.airportInput);
     }
 
     for (let i = 0; i < stepsUp; i++) {
-      await this.pressArrowUp();
+      await this.pressArrowUp(this.airportInput);
     }
   }
 
@@ -161,6 +169,16 @@ export default class MainPage {
     await this.weekdaySelect.selectOption(option);
   }
 
+  async selectWeekdayByName(weekDay: string): Promise<void> {
+    await this.clickWeekdaySelect();
+    await this.typeWeekday(weekDay);
+    await this.pressEnter();
+  }
+
+  async typeWeekday(weekDay: string): Promise<void> {
+    await this.weekdaySelect.type(weekDay);
+  }
+
   async expectPageTitle(text: string): Promise<void> {
     await expect(this.page).toHaveTitle(new RegExp(text));
   }
@@ -193,6 +211,16 @@ export default class MainPage {
     await expect(this.selectedContainer.filter({ hasText: code })).toHaveCount(
       0,
     );
+  }
+
+  async expectWeekdaySelected(weekDay: string): Promise<void> {
+    await expect(
+      this.weekdaySelect.filter({ hasText: weekDay }),
+    ).toBeVisible();
+  }
+
+  async expectNoAirportsSelectedWarning(): Promise<void> {
+    await expect(this.noAirportsSelectedWarning).toBeVisible();
   }
 
   async expectResultsFooterText(text: string): Promise<void> {

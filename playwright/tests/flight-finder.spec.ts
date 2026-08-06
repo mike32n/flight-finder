@@ -54,6 +54,24 @@ test.describe("Flight Finder", () => {
     await main.expectAirportSelectedOnlyOnce("AMS");
   });
 
+  test("should warn if no airports are selected", async () => {
+    await main.clickSearchButton();
+    await main.expectNoAirportsSelectedWarning();
+  });
+
+  test("should select weekday by typing", async () => {
+    await main.selectWeekdayByName("Friday");
+    await main.expectWeekdaySelected("Friday");
+  });
+
+  test("should select weekday by typing and arrows", async () => {
+    await main.selectWeekdayByName("Friday");
+    await main.pressArrowDown(main.weekdaySelect);
+    await main.expectWeekdaySelected("Saturday");
+    await main.pressArrowUp(main.weekdaySelect, 2);
+    await main.expectWeekdaySelected("Thursday");
+  });
+
   test("e2e | one airport", async () => {
     await main.selectAirportByEnter("ams");
     await main.expectAirportSelected("AMS");
