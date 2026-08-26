@@ -78,6 +78,12 @@ export default class MainPage {
     }
   }
 
+  async clickDecrementButton(times = 1): Promise<void> {
+    for (let i = 0; i < times; i++) {
+      await this.decrementButton.click();
+    }
+  }
+
   async clickSearchButton(): Promise<void> {
     await this.searchButton.click();
   }
@@ -217,6 +223,10 @@ export default class MainPage {
     await expect(
       this.weekdaySelect.filter({ hasText: weekDay }),
     ).toBeVisible();
+  }
+
+  async expectNightsValue(value: string): Promise<void> {
+    await expect(this.nightsInput).toHaveValue(value);
   }
 
   async expectNoAirportsSelectedWarning(): Promise<void> {

@@ -72,6 +72,23 @@ test.describe("Flight Finder", () => {
     await main.expectWeekdaySelected("Thursday");
   });
 
+  test("should not decrement nights when already at minimum", async () => {
+    await main.clickDecrementButton(1);
+    await main.expectNightsValue("1");
+  });
+
+  test("should not increment nights when already at maximum", async () => {
+    await main.clickIncrementButton(30);
+    await main.expectNightsValue("30");
+  });
+
+  test("should increment and decrement nights", async () => {
+    await main.clickIncrementButton(3);
+    await main.expectNightsValue("4");
+    await main.clickDecrementButton(1);
+    await main.expectNightsValue("3");
+  });
+
   test("e2e | one airport", async () => {
     await main.selectAirportByEnter("ams");
     await main.expectAirportSelected("AMS");
