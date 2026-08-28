@@ -410,6 +410,12 @@ function createCard(r) {
     💶 ${r.price.toLocaleString()}
   `;
 
+  div.style.cursor = "pointer";
+
+  div.addEventListener("click", () => {
+    openFlight(r);
+  });
+
   return div;
 }
 
@@ -441,4 +447,14 @@ function initFooter(container) {
   }
 
   el.textContent = "Loading...";
+}
+
+function openFlight(r) {
+  const departure = r.departure;
+  const returnDate = r.return;
+  const destination = r.destination.code;
+
+  const url = `https://www.google.com/travel/flights?hl=en`;
+
+  window.open(url, "_blank");
 }
