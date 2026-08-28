@@ -14,21 +14,21 @@ const {
 const router = express.Router();
 const flightProvider = getProvider();
 
-// ✅ CACHE
+// CACHE
 let destinationsList = [];
 let destinationMap = new Map();
 
-// ✅ LOAD ON START
+// LOAD ON START
 async function initDestinations() {
   destinationsList = await getAllDestinations();
 
-  // 🔥 build map AFTER data arrives
+  // build map AFTER data arrives
   destinationMap = new Map(destinationsList.map((d) => [d.iata_code, d]));
 
   console.log("Destinations loaded:", destinationsList.length);
 }
 
-// ✅ HELPER
+// HELPER
 function enrichAirport(code) {
   const d = destinationMap.get(code);
 
@@ -66,7 +66,7 @@ router.post("/search", validateSearch, async (req, res) => {
 
     const trips = generateTrips(weekday, nights);
 
-    // 1️⃣ BASE TASKS
+    // BASE TASKS
     const baseTasks = [];
 
     for (const destination of destinations) {
@@ -81,13 +81,13 @@ router.post("/search", validateSearch, async (req, res) => {
       }
     }
 
-    // 2️⃣ RUN BASE
+    // RUN BASE
     const baseResults = await runWithConcurrencyLimit(
       baseTasks,
       config.concurrency,
     );
 
-    // 3️⃣ SMART FLEX
+    // SMART FLEX
     let flexResults = [];
 
     if (flexibility === "smart" && shouldRunFlex(baseResults)) {
@@ -116,7 +116,7 @@ router.post("/search", validateSearch, async (req, res) => {
       );
     }
 
-    // 4️⃣ MERGE
+    // MERGE
     const results = [...baseResults, ...flexResults];
 
     console.log("RAW RESULTS:", JSON.stringify(results, null, 2));
@@ -134,7 +134,7 @@ router.post("/search", validateSearch, async (req, res) => {
 
     const deduped = Array.from(unique.values());
 
-    // ✅ ENRICH HERE
+    // ENRICH HERE
     const enriched = deduped.map((item) => ({
       origin: enrichAirport("BUD"), // still fixed
       destination: enrichAirport(item.destination),
@@ -164,7 +164,7 @@ router.post("/search-stream", validateSearch, async (req, res) => {
   try {
     const { destinations, weekday, nights, flexibility = "none" } = req.body;
 
-    // ✅ SSE HEADERS
+    // SSE HEADERS
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
@@ -185,7 +185,7 @@ router.post("/search-stream", validateSearch, async (req, res) => {
       }
     }
 
-    // 🔥 SMART FLEX EXTENSION (append tasks)
+    // SMART FLEX EXTENSION (append tasks)
     if (flexibility === "smart") {
       for (const destination of destinations) {
         for (const trip of trips) {
@@ -210,7 +210,7 @@ router.post("/search-stream", validateSearch, async (req, res) => {
     const sentKeys = new Set();
 
     await runWithConcurrencyLimit(tasks, config.concurrency, (result) => {
-      // 🔥 RAW DEBUG
+      // RAW DEBUG
       console.log("STREAM RESULT:", JSON.stringify(result, null, 2));
 
       if (!result.success) {
@@ -232,11 +232,11 @@ router.post("/search-stream", validateSearch, async (req, res) => {
         price: item.price,
       };
 
-      // ✅ STREAM KÜLDÉS
+      // STREAM SEND
       res.write(`data: ${JSON.stringify(enriched)}\n\n`);
     });
 
-    // ✅ END SIGNAL
+    // END SIGNAL
     res.write(`event: end\ndata: done\n\n`);
     res.end();
   } catch (err) {

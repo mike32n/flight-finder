@@ -1,7 +1,7 @@
 function shouldRunFlex(baseResults) {
   const successful = baseResults.filter((r) => r.success && r.data);
 
-  // ha nincs sikeres találat → próbáljuk a flexet
+  // if no successful results, we should run flex to try to find something
   if (successful.length === 0) return true;
 
   const prices = successful.map((r) => r.data.price);
@@ -9,10 +9,10 @@ function shouldRunFlex(baseResults) {
 
   const threshold = minPrice * 1.1;
 
-  // hány ár jelentősen drágább?
+  // how many prices are significantly more expensive?
   const expensiveCount = prices.filter((p) => p > threshold).length;
 
-  // akkor futtatjuk a flexet, ha az árak >70%-a jelentősen drágább
+  // run flex if more than 70% of prices are significantly more expensive
   return expensiveCount / prices.length > 0.7;
 }
 
@@ -34,13 +34,13 @@ function analyzePriceDelta(baseResults, flexResults) {
 
   const baseBest = [...baseOnly].sort((a, b) => a.price - b.price)[0];
 
-  // ha nem olcsóbb a flex → nincs mit kommunikálni
+  // if the flex option is not cheaper - no need to communicate
   if (best.price >= baseBest.price) return null;
 
   const diff = baseBest.price - best.price;
   const percent = Math.round((diff / baseBest.price) * 100);
 
-  // biztonságos dátum összehasonlítás
+  // safe date comparisons (avoid timezone issues)
   const bestDeparture = new Date(best.departure);
   const baseDeparture = new Date(baseBest.departure);
 

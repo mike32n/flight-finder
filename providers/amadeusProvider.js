@@ -25,7 +25,7 @@ class AmadeusProvider extends BaseProvider {
     const payload = { destination, departure, returnDate };
 
     return getOrSet("amadeus", payload, async () => {
-      // 1️⃣ Distributed rate limit
+      // Distributed rate limit
       const allowed = await acquireToken(
         "amadeus",
         this.rateLimit,

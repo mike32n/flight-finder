@@ -4,14 +4,14 @@ function generateTrips(weekday, nights, weeks = 8) {
   const trips = [];
   let current = dayjs();
 
-  // mai nap száma (0 = vasárnap, 1 = hétfő ...)
+  // todays number (0-6, Sunday-Saturday)
   const todayWeekday = current.day();
 
-  // hány nap múlva van a kívánt weekday
+  // how many days from now is the desired weekday
   let diff = weekday - todayWeekday;
   if (diff < 0) diff += 7;
 
-  // első indulási dátum
+  // first departure is the first desired weekday from now
   let firstDeparture = current.add(diff, "day");
 
   for (let i = 0; i < weeks; i++) {
@@ -20,7 +20,7 @@ function generateTrips(weekday, nights, weeks = 8) {
 
     trips.push({
       departure: departure.format("YYYY-MM-DD"),
-      return: returnDate.format("YYYY-MM-DD")
+      return: returnDate.format("YYYY-MM-DD"),
     });
   }
 

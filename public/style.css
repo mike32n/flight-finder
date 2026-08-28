@@ -127,7 +127,7 @@ body.dark select {
   color: var(--text);
 }
 
-/* 🔥 NEON FOCUS (DARK) */
+/* NEON FOCUS (DARK) */
 body.dark input:focus,
 body.dark select:focus {
   box-shadow:
@@ -331,7 +331,7 @@ body.dark .iata-badge {
   overflow-y: auto;
   z-index: 1000;
 
-  /* 🚀 smooth open */
+  /* smooth open */
   opacity: 0;
   transform: translateY(-5px);
   pointer-events: none;
@@ -373,7 +373,7 @@ body.dark .autocomplete-item.active {
 }
 
 /* ========================= */
-/* ✨ CUSTOM SCROLLBAR */
+/* CUSTOM SCROLLBAR */
 /* ========================= */
 
 .autocomplete-list::-webkit-scrollbar {

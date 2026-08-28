@@ -3,7 +3,7 @@ const redis = require("./redisClient");
 
 const PREFIX = "ff:v1";
 const DEFAULT_TTL = Number(process.env.CACHE_TTL) || 600; // fallback
-const FETCH_TIMEOUT = 10000; // 10s
+const FETCH_TIMEOUT = 10000;
 
 const inFlight = new Map();
 
@@ -61,22 +61,22 @@ async function get(key) {
 async function getOrSet(providerName, payload, fetcher) {
   const key = generateKey(providerName, payload);
 
-  // 1️⃣ In-flight dedupe
+  // In-flight dedupe
   if (inFlight.has(key)) {
     return inFlight.get(key);
   }
 
   const promise = (async () => {
-    // 2️⃣ Cache check
+    // Cache check
     const cached = await get(key);
     if (cached) return cached;
 
-    // 3️⃣ Fresh fetch (timeout protected)
+    // Fresh fetch (timeout protected)
     let fresh;
     try {
       fresh = await withTimeout(fetcher());
     } catch (err) {
-      // timeout vagy fetch error → nem cache-elünk
+      // timeout vagy fetch error - no cache
       throw err;
     }
 
@@ -94,7 +94,7 @@ async function getOrSet(providerName, payload, fetcher) {
   try {
     return await promise;
   } finally {
-    // 🔐 garantált cleanup még timeout esetén is
+    // cleanup guaranteed even if timeout or fetch error occurs
     inFlight.delete(key);
   }
 }

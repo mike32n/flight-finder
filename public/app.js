@@ -151,7 +151,7 @@ function addActive(items) {
   const activeItem = items[currentFocus];
   activeItem.classList.add("active");
 
-  /* 🔥 EZ A LÉNYEG: mindig látható legyen */
+  /* always visible */
   activeItem.scrollIntoView({
     block: "nearest",
     behavior: "auto",
@@ -211,7 +211,7 @@ async function search() {
   const container = document.getElementById("selected-container");
   const resultsDiv = document.getElementById("results");
 
-  // ✅ validation FIRST
+  // validation FIRST
   if (selectedDestinations.length === 0) {
     container.innerHTML = `
     <div class="card error-card">
@@ -226,7 +226,7 @@ async function search() {
   // footer reset
   initFooter(resultsDiv);
 
-  // ✅ STATE
+  // STATE
   currentResults = [];
   failedCount = 0;
   resultNodes = [];
@@ -260,20 +260,20 @@ async function search() {
 
       for (const part of parts) {
         console.log("RAW EVENT:", part);
-        // 🔚 END
+        // END
         if (part.includes("event: end")) {
           updateFooter(resultsDiv, true);
           return;
         }
 
-        // ❌ FAIL
+        // FAIL
         if (part.includes("event: fail")) {
           failedCount++;
           updateFooter(resultsDiv, false);
           continue;
         }
 
-        // ✅ DATA
+        // DATA
         if (part.includes("data:")) {
           const jsonStr = part.split("data: ")[1];
           if (!jsonStr) continue;
@@ -378,7 +378,7 @@ function insertSortedWithDOM(item, container) {
 
   const node = createCard(item);
 
-  // beszúrás DOM-ba
+  // insert into DOM
   const cards = container.querySelectorAll(".card");
   const footer = document.getElementById("results-footer");
 
@@ -390,7 +390,7 @@ function insertSortedWithDOM(item, container) {
 
   resultNodes.splice(index, 0, node);
 
-  // levágás
+  // cut off if more than 5
   if (currentResults.length > 5) {
     currentResults.pop();
     const removed = resultNodes.pop();

@@ -12,7 +12,7 @@ function generateMockPrice(destination, departure) {
 }
 
 async function searchMockFlights(destination, departure, returnDate) {
-  // 20% eséllyel hibázik
+  // 20% chance of error to simulate API issues
   if (Math.random() < 0.2) {
     throw new Error("Mock API hiba");
   }

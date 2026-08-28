@@ -9,12 +9,12 @@ function getRedis() {
       host: process.env.REDIS_HOST || "127.0.0.1",
       port: Number(process.env.REDIS_PORT) || 6379,
 
-      // 🔁 Retry strategy (progressive backoff, max 2s)
+      // Retry strategy (progressive backoff, max 2s)
       retryStrategy(times) {
         return Math.min(times * 50, 2000);
       },
 
-      // 🔐 Environment prefix (multi-env safe)
+      // Environment prefix (multi-env safe)
       keyPrefix: process.env.REDIS_PREFIX || "ff:dev:",
 
       // Stability options
@@ -38,5 +38,5 @@ function getRedis() {
   return redis;
 }
 
-module.exports = getRedis(); // 👈 singleton instance
+module.exports = getRedis(); // singleton instance
 module.exports.getRedis = getRedis; // optional
