@@ -225,11 +225,9 @@ router.post("/search-stream", validateSearch, async (req, res) => {
       sentKeys.add(key);
 
       const enriched = {
+        ...item,
         origin: enrichAirport("BUD"),
         destination: enrichAirport(item.destination),
-        departure: item.departure,
-        return: item.return,
-        price: item.price,
       };
 
       // STREAM SEND

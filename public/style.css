@@ -229,11 +229,12 @@ body.dark .stepper button:hover {
   background: var(--card);
   border: 1px solid var(--border);
   color: var(--text);
-  transition: all 0.25s ease;
+  cursor: pointer;
+  transition: transform 0.15s ease;
 }
 
 .card:hover {
-  transform: translateY(-3px);
+  transform: translateY(-2px);
 }
 
 .error-card {
