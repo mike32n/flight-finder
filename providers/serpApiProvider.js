@@ -55,7 +55,7 @@ class SerpApiProvider extends BaseProvider {
             return: returnDate,
             price: Number(cheapest.price),
             currency: "HUF",
-            bookingUrl: response.data.search_metadata.google_flights_url,
+            bookingUrl: response.data?.search_metadata?.google_flights_url,
           },
         };
       } catch (error) {
