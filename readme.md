@@ -1,87 +1,257 @@
 # ✈️ Flight Finder
 
-Simple tool for finding cheap flights for short trips (e.g. weekend getaways).
+A lightweight web application for finding cheap short round-trip flights (e.g. weekend getaways), with multi-destination search, flexible date expansion, live result streaming, caching, rate limiting, and automated testing.
 
 ## Features
 
-- Multi-destination search
-- Date generation (weekday + nights)
-- Smart Flex (controlled ±1 day)
+- Multi-destination flight search
+- Short-trip date generation based on weekday and number of nights
+- Smart Flex mode with controlled ±1 day date expansion
 - Top 5 cheapest results
-- Streaming results (live UI updates)
-- Partial failure handling
+- Live result streaming through Server-Sent Events (SSE)
+- Partial failure handling — one failed search does not stop the whole process
+- Result deduplication and price sorting
+- Clickable flight results that open the corresponding Google Flights search/booking page in a new tab
+- Provider abstraction supporting multiple flight-data providers
+- Redis caching and rate limiting
+- Jest + Supertest automated API/unit tests
 - Playwright end-to-end test automation
 
-## Flow
+## How it works
 
-- generate trips
-- build task list
-- run with Promise Pool (concurrency limit)
-- stream results (SSE)
-- deduplicate
-- sort by price
-- keep top 5
+The application generates possible trips from the selected weekday and number of nights, creates the required flight-search tasks, and executes them through a concurrency-limited Promise Pool.
 
-## API
+Results are streamed to the browser as soon as individual searches finish instead of waiting for the complete search to finish.
 
-POST /search-stream
+The final result pipeline is:
 
-SSE events:
+1. Generate possible trips
+2. Build flight-search tasks
+3. Execute tasks with a concurrency limit
+4. Stream successful results through SSE
+5. Handle failed searches without stopping the whole process
+6. Apply Smart Flex when required
+7. Deduplicate results
+8. Sort by price
+9. Keep the cheapest results
 
-- data → flight data
-- fail → failed request
-- end → finished
+## Smart Flex
 
-## Stack
+Smart Flex expands the search only when necessary.
 
-- Node.js + Express
+It is triggered when:
+
+- no suitable results are found, or
+- the current price is above the configured threshold compared with the best result
+
+The controlled flexibility currently checks:
+
+- Departure: -1 day, return date unchanged
+- Return: +1 day, departure date unchanged
+
+This keeps the number of additional API requests under control while still allowing the application to discover cheaper alternatives.
+
+## Live Search API
+
+### POST `/search-stream`
+
+The frontend starts a search with a POST request and receives results through an SSE stream.
+
+Typical SSE events:
+
+- `data` — successful flight result
+- `fail` — individual search failure
+- `end` — all searches completed
+
+Example result:
+
+```json
+{
+  "success": true,
+  "data": {
+    "destination": "LCA",
+    "departure": "2026-10-09",
+    "return": "2026-10-11",
+    "price": 79601,
+    "currency": "HUF",
+    "bookingUrl": "https://www.google.com/travel/flights/..."
+  }
+}
+```
+
+## Provider Architecture
+
+Flight data access is separated from the application logic through a provider abstraction.
+
+Available provider implementations:
+
+- `mock` — local development and testing
+- `serpapi` — currently supported provider
+- `amadeus-test` — legacy/deprecated
+- `amadeus-prod` — legacy/deprecated
+
+### Amadeus Provider Status
+
+The Amadeus Self-Service API provider is retained in the project for architectural and testing purposes, but is currently deprecated for this application.
+
+Access is not available to individual/private users under the current Amadeus Self-Service API offering.
+
+**SerpApi / Google Flights is therefore the currently supported provider for real flight searches.**
+
+The active provider can be selected through the environment configuration.
+
+This makes it possible to switch providers without changing the main search flow.
+
+## Caching and Rate Limiting
+
+Redis is used for:
+
+- API response caching
+- rate limiting
+- reducing unnecessary external API requests
+
+This is especially useful when multiple generated trip combinations result in similar searches.
+
+## Frontend
+
+The frontend is implemented with vanilla JavaScript and provides:
+
+- destination autocomplete
+- destination selection
+- configurable maximum number of destinations
+- live search progress
+- dynamically sorted flight results
+- clickable flight cards
+- light/dark theme support
+
+Search results are inserted into the UI while the backend is still processing other search combinations.
+
+## Tech Stack
+
+### Backend
+
+- Node.js
+- Express
 - SQLite
-- Amadeus API
-- SerpApi
-- Redis (cache + rate limit)
-- Vanilla JS frontend
-- Jest + Supertest
-- Playwright
+- Redis
+- REST API
+- Server-Sent Events (SSE)
 
-## Config (.env)
+### Flight APIs
 
-FLIGHT_PROVIDER=mock | amadeus-test | amadeus-prod | serpapi
+- SerpApi / Google Flights
+- Amadeus API (deprecated)
 
-## Limitations
+### Frontend
 
-- fixed origin (BUD)
-- no authentication
+- HTML
+- CSS
+- Vanilla JavaScript
 
-## Run
+### Testing
 
-- npm install
-- npm start
+- Jest
+- Supertest
+- Playwright / Typescript
+
+## Configuration
+
+Create a `.env` file and configure the flight provider:
+
+```env
+FLIGHT_PROVIDER=serpapi
+```
+
+Supported values:
+
+```text
+mock
+amadeus-test (deprecated)
+amadeus-prod (deprecated)
+serpapi
+```
+
+API credentials and other environment-specific configuration are kept outside the source code.
+
+## Running Locally
+
+1. Install dependencies:
+
+```bash
+npm install
+```
+
+2. Start Redis with Docker
+
+Make sure Docker Desktop is running, then start the Redis container:
+
+```bash
+docker compose -f docker-compose.redis.yml up -d
+```
+
+Check that the container is running:
+
+```bash
+docker ps
+```
+
+Redis should be available on the configured Redis port.
+
+3. Configure the required environment variables in `.env`.
+
+4. Start the application:
+
+```bash
+npm start
+```
+
+5. Then open:
+
+```text
+http://localhost:3000
+```
 
 ## Testing
 
+The project includes unit and integration tests using Jest and Supertest.
+
 Run unit/integration tests:
 
-- npm test
+```bash
+npm test
+```
+
+End-to-end tests are implemented with Playwright.
 
 Install Playwright browsers (first time only):
 
-- npx playwright install
+```bash
+npx playwright install
+```
 
 Run Playwright end-to-end tests:
 
-- npm run pw:test
+```bash
+npm run pw:test
+```
 
 Run Playwright in headed mode:
 
-- npm run pw:headed
+```bash
+npm run pw:headed
+```
 
 Open Playwright UI:
 
-- npm run pw:ui
+```bash
+npm run pw:ui
+```
 
 View Playwright report:
 
-- npm run pw:report
+```bash
+npm run pw:report
+```
 
 ## License
 
