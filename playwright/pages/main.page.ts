@@ -16,6 +16,7 @@ export default class MainPage {
   readonly autocompleteList: Locator;
   readonly selectedContainer: Locator;
   readonly autocompleteItem: Locator;
+  readonly firstResult: Locator;
   readonly resultsFooter: Locator;
 
   readonly noAirportsSelectedWarning: Locator;
@@ -56,6 +57,8 @@ export default class MainPage {
     this.noAirportsSelectedWarning = page.locator(".error-card");
 
     this.autocompleteItem = page.locator(".autocomplete-item");
+
+    this.firstResult = page.locator(".card").first();
 
     this.resultsFooter = page.locator("#results-footer");
   }
@@ -185,6 +188,10 @@ export default class MainPage {
     await this.weekdaySelect.type(weekDay);
   }
 
+  async clickFirstResult(): Promise<void> {
+    await this.firstResult.click();
+  }
+
   async expectPageTitle(text: string): Promise<void> {
     await expect(this.page).toHaveTitle(new RegExp(text));
   }
@@ -220,9 +227,7 @@ export default class MainPage {
   }
 
   async expectWeekdaySelected(weekDay: string): Promise<void> {
-    await expect(
-      this.weekdaySelect.filter({ hasText: weekDay }),
-    ).toBeVisible();
+    await expect(this.weekdaySelect.filter({ hasText: weekDay })).toBeVisible();
   }
 
   async expectNightsValue(value: string): Promise<void> {
@@ -233,7 +238,21 @@ export default class MainPage {
     await expect(this.noAirportsSelectedWarning).toBeVisible();
   }
 
+  async expectFirstResultVisible(): Promise<void> {
+    await expect(this.firstResult).toBeVisible();
+  }
+
   async expectResultsFooterText(text: string): Promise<void> {
     await expect(this.resultsFooter.filter({ hasText: text })).toBeVisible();
+  }
+
+  async expectBookingPageOpened(): Promise<void> {
+    const popupPromise = this.page.waitForEvent("popup");
+
+    await this.firstResult.click();
+
+    const popup = await popupPromise;
+
+    await expect(popup).toHaveURL(/google\.com\/travel\/flights/);
   }
 }

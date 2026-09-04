@@ -23,6 +23,8 @@ async function searchMockFlights(destination, departure, returnDate) {
     departure,
     return: returnDate,
     price,
+    currency: "HUF",
+    bookingUrl: "https://www.google.com/travel/flights?test",
   };
 }
 
