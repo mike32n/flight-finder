@@ -20,7 +20,7 @@ window.onload = async function () {
   try {
     const configRes = await fetch("/config");
     const config = await configRes.json();
-    maxDestinations = config.maxDestinations;
+    maxDestinations = config.destinations.maxSelected || 3;
   } catch {}
 
   setupAutocomplete();

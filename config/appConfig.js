@@ -1,3 +1,5 @@
 module.exports = {
-  maxDestinations: 3,
+  destinations: {
+    maxSelected: 3,
+  },
 };
