@@ -1,3 +1,5 @@
+const { smartFlex } = require("../config/appConfig");
+
 function shouldRunFlex(baseResults) {
   const successful = baseResults.filter((r) => r.success && r.data);
 
@@ -7,7 +9,7 @@ function shouldRunFlex(baseResults) {
   const prices = successful.map((r) => r.data.price);
   const minPrice = Math.min(...prices);
 
-  const threshold = minPrice * 1.1;
+  const threshold = minPrice * smartFlex.triggerMultiplier;
 
   // how many prices are significantly more expensive?
   const expensiveCount = prices.filter((p) => p > threshold).length;

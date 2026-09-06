@@ -9,4 +9,9 @@ module.exports = {
   dateGenerator: {
     weeksToGenerate: 8,
   },
+  smartFlex: {
+    triggerMultiplier: 1.1,
+    departureShiftDays: 1,
+    returnShiftDays: 1,
+  },
 };

@@ -1,4 +1,5 @@
 const dayjs = require("dayjs");
+const { smartFlex } = require("./config/appConfig");
 
 function expandControlledFlexibility(trip) {
   const results = [];
@@ -10,18 +11,24 @@ function expandControlledFlexibility(trip) {
 
   results.push(original);
 
-  const depMinus1 = dayjs(trip.departure).subtract(1, "day");
+  const depMinus = dayjs(trip.departure).subtract(
+    smartFlex.departureShiftDays,
+    "day",
+  );
 
   results.push({
-    departure: depMinus1.format("YYYY-MM-DD"),
+    departure: depMinus.format("YYYY-MM-DD"),
     return: trip.return,
   });
 
-  const retPlus1 = dayjs(trip.return).add(1, "day");
+  const retPlus = dayjs(trip.return).add(
+    smartFlex.returnShiftDays,
+    "day"
+  );
 
   results.push({
     departure: trip.departure,
-    return: retPlus1.format("YYYY-MM-DD"),
+    return: retPlus.format("YYYY-MM-DD"),
   });
 
   return results;
