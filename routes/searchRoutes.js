@@ -1,7 +1,8 @@
 const express = require("express");
 const generateTrips = require("../dateGenerator");
 const { getProvider } = require("../providers/providerFactory");
-const config = require("../config/providers");
+const provider = require("../config/providers");
+const appConfig = require("../config/appConfig");
 const runWithConcurrencyLimit = require("../promisePool");
 const validateSearch = require("../middlewares/validateSearch");
 const { getAllDestinations } = require("../models/destinationModel");
@@ -84,7 +85,7 @@ router.post("/search", validateSearch, async (req, res) => {
     // RUN BASE
     const baseResults = await runWithConcurrencyLimit(
       baseTasks,
-      config.concurrency,
+      provider.concurrency,
     );
 
     // SMART FLEX
@@ -112,7 +113,7 @@ router.post("/search", validateSearch, async (req, res) => {
 
       flexResults = await runWithConcurrencyLimit(
         flexTasks,
-        config.concurrency,
+        provider.concurrency,
       );
     }
 
@@ -151,7 +152,7 @@ router.post("/search", validateSearch, async (req, res) => {
         : null;
 
     return res.json({
-      results: enriched.slice(0, 5),
+      results: enriched.slice(0, appConfig.search.maxResults),
       failedRequests: results.filter((r) => !r.success).length,
       priceInsight,
     });
@@ -209,7 +210,7 @@ router.post("/search-stream", validateSearch, async (req, res) => {
 
     const sentKeys = new Set();
 
-    await runWithConcurrencyLimit(tasks, config.concurrency, (result) => {
+    await runWithConcurrencyLimit(tasks, provider.concurrency, (result) => {
       // RAW DEBUG
       console.log("STREAM RESULT:", JSON.stringify(result, null, 2));
 

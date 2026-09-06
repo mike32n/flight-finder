@@ -32,12 +32,12 @@ const providerConfigs = {
 
 const providerKey = process.env.FLIGHT_PROVIDER || "mock";
 
-const config = providerConfigs[providerKey];
+const provider = providerConfigs[providerKey];
 
-if (!config) {
+if (!provider) {
   throw new Error(`Unknown provider: ${providerKey}`);
 }
 
 console.log("Active provider:", providerKey);
 
-module.exports = config;
+module.exports = provider;

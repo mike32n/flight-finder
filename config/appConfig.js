@@ -1,4 +1,8 @@
 module.exports = {
+  search: {
+    maxResults: 5,
+    concurrency: 5,
+  },
   destinations: {
     maxSelected: 3,
   },
