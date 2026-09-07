@@ -49,14 +49,14 @@ function analyzePriceDelta(baseResults, flexResults) {
   const bestReturn = new Date(best.return);
   const baseReturn = new Date(baseBest.return);
 
-  let reason = "rugalmasabb dátum";
+  let reason = "flexible date";
   let type = "flex_generic";
 
   if (bestDeparture < baseDeparture) {
-    reason = "korábban indulsz";
+    reason = "leave earlier";
     type = "departure_shift";
   } else if (bestReturn > baseReturn) {
-    reason = "később jössz vissza";
+    reason = "return later";
     type = "return_shift";
   }
 
