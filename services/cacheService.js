@@ -1,10 +1,10 @@
 const crypto = require("crypto");
 const redis = require("./redisClient");
-const { cache: { ttlSeconds } } = require("../config/appConfig");
+const appConfig = require("../config/appConfig");
 
 const PREFIX = "ff:v1";
-const CACHE_TTL = ttlSeconds || 600; // fallback
-const FETCH_TIMEOUT = 10000;
+const CACHE_TTL = appConfig.cache.ttlSeconds || 600; // fallback
+const FETCH_TIMEOUT = appConfig.api.timeoutMs || 10000;
 
 const inFlight = new Map();
 

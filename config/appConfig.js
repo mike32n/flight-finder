@@ -17,4 +17,7 @@ module.exports = {
   cache: {
     ttlSeconds: 3600,
   },
+  api: {
+    timeoutMs: 15000,
+  },
 };
