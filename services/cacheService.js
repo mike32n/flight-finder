@@ -1,8 +1,9 @@
 const crypto = require("crypto");
 const redis = require("./redisClient");
+const { cache: { ttlSeconds } } = require("../config/appConfig");
 
 const PREFIX = "ff:v1";
-const DEFAULT_TTL = Number(process.env.CACHE_TTL) || 600; // fallback
+const CACHE_TTL = ttlSeconds || 600; // fallback
 const FETCH_TIMEOUT = 10000;
 
 const inFlight = new Map();
@@ -43,7 +44,7 @@ function withTimeout(promise, ms = FETCH_TIMEOUT) {
   });
 }
 
-async function set(key, value, ttl = DEFAULT_TTL) {
+async function set(key, value, ttl = CACHE_TTL) {
   await redis.set(key, stableStringify(value), "EX", ttl);
 }
 

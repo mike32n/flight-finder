@@ -14,4 +14,7 @@ module.exports = {
     departureShiftDays: 1,
     returnShiftDays: 1,
   },
+  cache: {
+    ttlSeconds: 3600,
+  },
 };
