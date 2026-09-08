@@ -91,7 +91,11 @@ router.post("/search", validateSearch, async (req, res) => {
     // SMART FLEX
     let flexResults = [];
 
-    if (flexibility === "smart" && shouldRunFlex(baseResults)) {
+    if (
+      appConfig.smartFlex.enabled &&
+      flexibility === "smart" &&
+      shouldRunFlex(baseResults)
+    ) {
       const flexTasks = [];
 
       for (const destination of destinations) {
@@ -187,7 +191,7 @@ router.post("/search-stream", validateSearch, async (req, res) => {
     }
 
     // SMART FLEX EXTENSION (append tasks)
-    if (flexibility === "smart") {
+    if (appConfig.smartFlex.enabled && flexibility === "smart") {
       for (const destination of destinations) {
         for (const trip of trips) {
           const variants = expandControlledFlexibility(trip);

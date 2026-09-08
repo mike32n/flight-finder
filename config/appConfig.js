@@ -10,6 +10,7 @@ module.exports = {
     weeksToGenerate: 8,
   },
   smartFlex: {
+    enabled: true,
     triggerMultiplier: 1.1,
     departureShiftDays: 1,
     returnShiftDays: 1,
