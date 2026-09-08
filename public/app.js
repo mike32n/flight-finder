@@ -1,6 +1,7 @@
 let destinationsData = [];
 let selectedDestinations = [];
-let maxDestinations = 3;
+let maxDestinations;
+let maxNights;
 
 let currentFocus = -1;
 let debounceTimer;
@@ -21,6 +22,7 @@ window.onload = async function () {
     const configRes = await fetch("/config");
     const config = await configRes.json();
     maxDestinations = config.destinations.maxSelected || 3;
+    maxNights = config.search.maxNights || 30;
   } catch {}
 
   setupAutocomplete();
@@ -34,7 +36,7 @@ window.onload = async function () {
     if (!value || value < 1) {
       value = 1;
     }
-    if (value > 30) value = 30;
+    if (value > maxNights) value = maxNights;
 
     nightsInput.value = value;
   });
@@ -315,7 +317,7 @@ function changeNights(delta) {
   value += delta;
 
   if (value < 1) value = 1;
-  if (value > 30) value = 30;
+  if (value > maxNights) value = maxNights;
 
   input.value = value;
 }

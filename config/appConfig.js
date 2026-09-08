@@ -1,11 +1,11 @@
 module.exports = {
-  search: {
-    weeksToGenerate: 8,
-    maxResults: 5,
-    concurrency: 5,
-  },
   destinations: {
     maxSelected: 3,
+  },
+  search: {
+    weeksToGenerate: 8,
+    maxNights: 30,
+    maxResults: 5,
   },
   smartFlex: {
     enabled: true,
