@@ -2,6 +2,7 @@ let destinationsData = [];
 let selectedDestinations = [];
 let maxDestinations;
 let maxNights;
+let maxResults;
 
 let currentFocus = -1;
 let debounceTimer;
@@ -23,6 +24,7 @@ window.onload = async function () {
     const config = await configRes.json();
     maxDestinations = config.destinations.maxSelected || 3;
     maxNights = config.search.maxNights || 30;
+    maxResults = config.search.maxResults || 5;
   } catch {}
 
   setupAutocomplete();
@@ -338,9 +340,9 @@ function insertSorted(arr, item) {
 
   arr.splice(left, 0, item);
 
-  // max 5
-  if (arr.length > 5) {
-    arr.length = 5;
+  // max results
+  if (arr.length > maxResults) {
+    arr.length = maxResults;
   }
 }
 
@@ -373,8 +375,8 @@ function insertSortedWithDOM(item, container) {
     index++;
   }
 
-  // max 5 limit
-  if (index >= 5) return;
+  // max results limit
+  if (index >= maxResults) return;
 
   currentResults.splice(index, 0, item);
 
@@ -392,8 +394,8 @@ function insertSortedWithDOM(item, container) {
 
   resultNodes.splice(index, 0, node);
 
-  // cut off if more than 5
-  if (currentResults.length > 5) {
+  // cut off if more than maxResults
+  if (currentResults.length > maxResults) {
     currentResults.pop();
     const removed = resultNodes.pop();
     removed.remove();
