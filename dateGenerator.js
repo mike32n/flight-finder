@@ -1,10 +1,10 @@
 const dayjs = require("dayjs");
-const appConfig = require("./config/appConfig");
+const { search } = require("./config/appConfig");
 
 function generateTrips(
   weekday,
   nights,
-  weeks = appConfig.dateGenerator.weeksToGenerate || 8,
+  weeks = search.weeksToGenerate || 8,
 ) {
   const trips = [];
   let current = dayjs();
