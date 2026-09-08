@@ -86,5 +86,5 @@ afterAll(async () => {
     await redis.quit();
   }
 
-  await new Promise((r) => setTimeout(r, 50)); // 👈 flush event loop
+  await new Promise((r) => setTimeout(r, 50)); // flush event loop
 });
