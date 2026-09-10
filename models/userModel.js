@@ -1,7 +1,7 @@
 const { getDb } = require("../db");
-const db = getDb();
 
 function createUser({ email, passwordHash, verificationToken }) {
+  const db = getDb();
   return new Promise((resolve, reject) => {
     db.run(
       `
@@ -28,6 +28,7 @@ function createUser({ email, passwordHash, verificationToken }) {
 }
 
 function findUserByEmail(email) {
+  const db = getDb();
   return new Promise((resolve, reject) => {
     db.get(
       `
@@ -48,6 +49,7 @@ function findUserByEmail(email) {
 }
 
 function findUserByVerificationToken(token) {
+  const db = getDb();
   return new Promise((resolve, reject) => {
     db.get(
       `
@@ -68,6 +70,7 @@ function findUserByVerificationToken(token) {
 }
 
 function verifyUser(userId) {
+  const db = getDb();
   return new Promise((resolve, reject) => {
     db.run(
       `
