@@ -3,7 +3,12 @@ const crypto = require("crypto");
 const bcrypt = require("bcrypt");
 const validator = require("validator");
 
-const { createUser, findUserByEmail } = require("../models/userModel");
+const {
+  createUser,
+  findUserByEmail,
+  findUserByVerificationToken,
+  verifyUser,
+} = require("../models/userModel");
 
 const router = express.Router();
 
@@ -71,6 +76,35 @@ router.post("/register", async (req, res) => {
     res.status(201).json({
       success: true,
       message: "User created.",
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      success: false,
+      message: "Internal server error.",
+    });
+  }
+});
+
+router.get("/verify/:token", async (req, res) => {
+  try {
+    const { token } = req.params;
+
+    const user = await findUserByVerificationToken(token);
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid verification token.",
+      });
+    }
+
+    await verifyUser(user.id);
+
+    res.status(200).json({
+      success: true,
+      message: "Email verified successfully.",
     });
   } catch (error) {
     console.error(error);
