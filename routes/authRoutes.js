@@ -1,6 +1,7 @@
 const express = require("express");
 const crypto = require("crypto");
 const bcrypt = require("bcrypt");
+const validator = require("validator");
 
 const { createUser, findUserByEmail } = require("../models/userModel");
 
@@ -17,10 +18,35 @@ router.post("/register", async (req, res) => {
       });
     }
 
+    if (!validator.isEmail(email)) {
+      return res.status(400).json({
+        success: false,
+        message: "Please enter a valid email address.",
+      });
+    }
+
     if (!password) {
       return res.status(400).json({
         success: false,
         message: "Password is required.",
+      });
+    }
+
+    if (password.length < 8) {
+      return res.status(400).json({
+        success: false,
+        message: "Password must be at least 8 characters.",
+      });
+    }
+
+    const hasUppercase = /[A-Z]/.test(password);
+    const hasLowercase = /[a-z]/.test(password);
+    const hasNumber = /\d/.test(password);
+
+    if (!hasUppercase || !hasLowercase || !hasNumber) {
+      return res.status(400).json({
+        success: false,
+        message: "Password must contain uppercase, lowercase and number.",
       });
     }
 
