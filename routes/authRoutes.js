@@ -10,6 +10,8 @@ const {
   verifyUser,
 } = require("../models/userModel");
 
+const { sendVerificationEmail } = require("../services/emailService");
+
 const router = express.Router();
 
 router.post("/register", async (req, res) => {
@@ -72,6 +74,8 @@ router.post("/register", async (req, res) => {
       passwordHash,
       verificationToken,
     });
+
+    sendVerificationEmail(email, verificationToken);
 
     res.status(201).json({
       success: true,
