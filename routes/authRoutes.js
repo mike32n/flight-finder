@@ -16,7 +16,9 @@ const router = express.Router();
 
 router.post("/register", async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { password } = req.body;
+
+    const email = req.body.email?.trim().toLowerCase();
 
     if (!email) {
       return res.status(400).json({
@@ -122,7 +124,9 @@ router.get("/verify/:token", async (req, res) => {
 
 router.post("/login", async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { password } = req.body;
+
+    const email = req.body.email?.trim().toLowerCase();
 
     if (!email) {
       return res.status(400).json({

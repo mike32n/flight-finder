@@ -173,4 +173,24 @@ describe("POST /api/auth/login", () => {
       message: "Internal server error.",
     });
   });
+
+  test("should normalize email before login", async () => {
+    bcrypt.compare.mockResolvedValue(true);
+
+    findUserByEmail.mockResolvedValue({
+      id: 1,
+      email: "test@test.com",
+      password_hash: "stored-password-hash",
+      email_verified: 1,
+    });
+
+    const response = await request(app).post("/api/auth/login").send({
+      email: "  TEST@TEST.COM  ",
+      password: "Password1",
+    });
+
+    expect(response.status).toBe(200);
+
+    expect(findUserByEmail).toHaveBeenCalledWith("test@test.com");
+  });
 });

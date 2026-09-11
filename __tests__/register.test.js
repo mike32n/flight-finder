@@ -110,4 +110,27 @@ describe("POST /api/auth/register", () => {
 
     expect(createUser).toHaveBeenCalledTimes(1);
   });
+
+  test("should normalize email before registration", async () => {
+    findUserByEmail.mockResolvedValue(null);
+
+    bcrypt.hash.mockResolvedValue("hashed-password");
+
+    createUser.mockResolvedValue({
+      id: 1,
+    });
+
+    await request(app).post("/api/auth/register").send({
+      email: "  TEST@TEST.COM  ",
+      password: "Password1",
+    });
+
+    expect(findUserByEmail).toHaveBeenCalledWith("test@test.com");
+
+    expect(createUser).toHaveBeenCalledWith(
+      expect.objectContaining({
+        email: "test@test.com",
+      }),
+    );
+  });
 });
