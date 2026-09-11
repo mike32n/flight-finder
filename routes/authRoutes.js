@@ -77,7 +77,7 @@ router.post("/register", async (req, res) => {
       verificationToken,
     });
 
-    sendVerificationEmail(email, verificationToken);
+    await sendVerificationEmail(email, verificationToken);
 
     res.status(201).json({
       success: true,
