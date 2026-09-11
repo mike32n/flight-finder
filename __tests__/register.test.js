@@ -10,7 +10,13 @@ jest.mock("bcrypt", () => ({
   hash: jest.fn(),
 }));
 
+jest.mock("../services/emailService", () => ({
+  sendVerificationEmail: jest.fn(),
+}));
+
 const bcrypt = require("bcrypt");
+
+const { sendVerificationEmail } = require("../services/emailService");
 
 const { createUser, findUserByEmail } = require("../models/userModel");
 
@@ -96,6 +102,8 @@ describe("POST /api/auth/register", () => {
       id: 1,
     });
 
+    sendVerificationEmail.mockResolvedValue();
+
     const response = await request(app).post("/api/auth/register").send({
       email: "test@test.com",
       password: "Password1",
@@ -109,6 +117,13 @@ describe("POST /api/auth/register", () => {
     });
 
     expect(createUser).toHaveBeenCalledTimes(1);
+
+    expect(sendVerificationEmail).toHaveBeenCalledTimes(1);
+
+    expect(sendVerificationEmail).toHaveBeenCalledWith(
+      "test@test.com",
+      expect.any(String),
+    );
   });
 
   test("should normalize email before registration", async () => {
