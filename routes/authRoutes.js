@@ -9,12 +9,16 @@ const {
   findUserByVerificationToken,
   verifyUser,
   savePasswordResetToken,
+  findUserByPasswordResetToken,
+  updatePassword,
 } = require("../models/userModel");
 
 const {
   sendVerificationEmail,
   sendPasswordResetEmail,
 } = require("../services/emailService");
+
+const { validatePassword } = require("../utils/passwordValidator");
 
 const router = express.Router();
 
@@ -38,28 +42,12 @@ router.post("/register", async (req, res) => {
       });
     }
 
-    if (!password) {
+    const passwordError = validatePassword(password);
+
+    if (passwordError) {
       return res.status(400).json({
         success: false,
-        message: "Password is required.",
-      });
-    }
-
-    if (password.length < 8) {
-      return res.status(400).json({
-        success: false,
-        message: "Password must be at least 8 characters.",
-      });
-    }
-
-    const hasUppercase = /[A-Z]/.test(password);
-    const hasLowercase = /[a-z]/.test(password);
-    const hasNumber = /\d/.test(password);
-
-    if (!hasUppercase || !hasLowercase || !hasNumber) {
-      return res.status(400).json({
-        success: false,
-        message: "Password must contain uppercase, lowercase and number.",
+        message: passwordError,
       });
     }
 
@@ -204,6 +192,57 @@ router.post("/forgot-password", async (req, res) => {
       success: true,
       message:
         "If the email address is registered, a password reset email has been sent.",
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      success: false,
+      message: "Internal server error.",
+    });
+  }
+});
+
+router.post("/reset-password/:token", async (req, res) => {
+  try {
+    const { token } = req.params;
+    const { password } = req.body;
+
+    const passwordError = validatePassword(password);
+
+    if (passwordError) {
+      return res.status(400).json({
+        success: false,
+        message: passwordError,
+      });
+    }
+
+    const user = await findUserByPasswordResetToken(token);
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or expired password reset token.",
+      });
+    }
+
+    if (
+      !user.password_reset_expires ||
+      new Date(user.password_reset_expires) < new Date()
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or expired password reset token.",
+      });
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    await updatePassword(user.id, passwordHash);
+
+    res.status(200).json({
+      success: true,
+      message: "Password reset successfully.",
     });
   } catch (error) {
     console.error(error);
