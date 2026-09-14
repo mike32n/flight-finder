@@ -402,6 +402,8 @@ async function initDb() {
       password_hash TEXT NOT NULL,
       email_verified INTEGER NOT NULL DEFAULT 0,
       verification_token TEXT,
+      password_reset_token TEXT,
+      password_reset_expires DATETIME,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
     `,

@@ -8,9 +8,13 @@ const {
   findUserByEmail,
   findUserByVerificationToken,
   verifyUser,
+  savePasswordResetToken,
 } = require("../models/userModel");
 
-const { sendVerificationEmail } = require("../services/emailService");
+const {
+  sendVerificationEmail,
+  sendPasswordResetEmail,
+} = require("../services/emailService");
 
 const router = express.Router();
 
@@ -170,6 +174,36 @@ router.post("/login", async (req, res) => {
     res.status(200).json({
       success: true,
       message: "Login successful.",
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      success: false,
+      message: "Internal server error.",
+    });
+  }
+});
+
+router.post("/forgot-password", async (req, res) => {
+  try {
+    const email = req.body.email?.trim().toLowerCase();
+
+    const user = await findUserByEmail(email);
+
+    if (user) {
+      const token = crypto.randomUUID();
+      const expires = new Date(Date.now() + 3600000); // 1 hour from now
+
+      await savePasswordResetToken(user.id, token, expires);
+
+      await sendPasswordResetEmail(email, token);
+    }
+
+    res.status(200).json({
+      success: true,
+      message:
+        "If the email address is registered, a password reset email has been sent.",
     });
   } catch (error) {
     console.error(error);

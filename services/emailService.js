@@ -25,6 +25,28 @@ async function sendVerificationEmail(email, verificationToken) {
   console.log(`[EMAIL] Verification email sent to ${email}`);
 }
 
+async function sendPasswordResetEmail(email, token) {
+  const resetUrl = `http://localhost:3000/reset-password/${token}`;
+
+  await transporter.sendMail({
+    from: process.env.EMAIL_FROM,
+    to: email,
+    subject: "Reset your Flight Finder password",
+    text: `
+      You requested a password reset for your Flight Finder account.
+
+      Click the following link to reset your password:
+
+      ${resetUrl}
+
+      This link expires in 1 hour.
+
+      If you did not request a password reset, you can safely ignore this email.
+    `,
+  });
+}
+
 module.exports = {
   sendVerificationEmail,
+  sendPasswordResetEmail,
 };

@@ -92,9 +92,84 @@ function verifyUser(userId) {
   });
 }
 
+function savePasswordResetToken(userId, token, expires) {
+  const db = getDb();
+
+  return new Promise((resolve, reject) => {
+    db.run(
+      `
+      UPDATE users
+      SET
+        password_reset_token = ?,
+        password_reset_expires = ?
+      WHERE id = ?
+      `,
+      [token, expires, userId],
+
+      function (err) {
+        if (err) {
+          return reject(err);
+        }
+
+        resolve();
+      },
+    );
+  });
+}
+
+function findUserByPasswordResetToken(token) {
+  const db = getDb();
+
+  return new Promise((resolve, reject) => {
+    db.get(
+      `
+      SELECT *
+      FROM users
+      WHERE password_reset_token = ?
+      `,
+      [token],
+      (err, row) => {
+        if (err) {
+          return reject(err);
+        }
+
+        resolve(row || null);
+      },
+    );
+  });
+}
+
+function updatePassword(userId, passwordHash) {
+  const db = getDb();
+
+  return new Promise((resolve, reject) => {
+    db.run(
+      `
+      UPDATE users
+      SET
+        password_hash = ?,
+        password_reset_token = NULL,
+        password_reset_expires = NULL
+      WHERE id = ?
+      `,
+      [passwordHash, userId],
+      function (err) {
+        if (err) {
+          return reject(err);
+        }
+
+        resolve();
+      },
+    );
+  });
+}
+
 module.exports = {
   createUser,
   findUserByEmail,
   findUserByVerificationToken,
   verifyUser,
+  savePasswordResetToken,
+  findUserByPasswordResetToken,
+  updatePassword,
 };
