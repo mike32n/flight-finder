@@ -2,6 +2,7 @@ const express = require("express");
 const crypto = require("crypto");
 const bcrypt = require("bcrypt");
 const validator = require("validator");
+const jwt = require("jsonwebtoken");
 
 const {
   createUser,
@@ -160,9 +161,21 @@ router.post("/login", async (req, res) => {
       });
     }
 
+    const token = jwt.sign(
+      {
+        userId: user.id,
+        email: user.email,
+      },
+      process.env.JWT_SECRET,
+      {
+        expiresIn: process.env.JWT_EXPIRES_IN || "1h",
+      },
+    );
+
     res.status(200).json({
       success: true,
       message: "Login successful.",
+      token,
     });
   } catch (error) {
     console.error(error);
