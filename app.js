@@ -1,3 +1,4 @@
+const path = require("path");
 const express = require("express");
 const { router: searchRoutes } = require("./routes/searchRoutes");
 const configRoutes = require("./routes/configRoutes");
@@ -7,6 +8,10 @@ const app = express();
 
 app.use(express.json());
 app.use(express.static("public"));
+
+app.get("/reset-password/:token", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "reset-password.html"));
+});
 
 app.use("/", searchRoutes);
 app.use("/config", configRoutes);

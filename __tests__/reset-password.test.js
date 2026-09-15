@@ -6,6 +6,10 @@ jest.mock("../models/userModel", () => ({
   updatePassword: jest.fn(),
 }));
 
+jest.mock("../services/emailService", () => ({
+  sendPasswordResetSuccessEmail: jest.fn(),
+}));
+
 jest.mock("bcrypt", () => ({
   hash: jest.fn(),
 }));
@@ -14,6 +18,8 @@ const {
   findUserByPasswordResetToken,
   updatePassword,
 } = require("../models/userModel");
+
+const { sendPasswordResetSuccessEmail } = require("../services/emailService");
 
 const bcrypt = require("bcrypt");
 
@@ -40,6 +46,7 @@ describe("POST /api/auth/reset-password/:token", () => {
     findUserByPasswordResetToken.mockResolvedValue(user);
     bcrypt.hash.mockResolvedValue("hashed-new-password");
     updatePassword.mockResolvedValue();
+    sendPasswordResetSuccessEmail.mockResolvedValue();
 
     const response = await request(app)
       .post("/api/auth/reset-password/valid-token")
@@ -59,6 +66,10 @@ describe("POST /api/auth/reset-password/:token", () => {
     expect(bcrypt.hash).toHaveBeenCalledWith("NewPassword123!", 10);
 
     expect(updatePassword).toHaveBeenCalledWith(1, "hashed-new-password");
+
+    expect(sendPasswordResetSuccessEmail).toHaveBeenCalledWith(
+      "test@example.com",
+    );
   });
 
   test("should reject an invalid token", async () => {

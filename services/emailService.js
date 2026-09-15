@@ -46,7 +46,19 @@ async function sendPasswordResetEmail(email, token) {
   });
 }
 
+async function sendPasswordResetSuccessEmail(email) {
+  await transporter.sendMail({
+    from: process.env.EMAIL_FROM,
+    to: email,
+    subject: "Your Flight Finder password has been reset",
+    text: `
+      Your password for your Flight Finder account has been successfully reset.
+    `,
+  });
+}
+
 module.exports = {
   sendVerificationEmail,
   sendPasswordResetEmail,
+  sendPasswordResetSuccessEmail,
 };

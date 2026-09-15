@@ -16,6 +16,7 @@ const {
 const {
   sendVerificationEmail,
   sendPasswordResetEmail,
+  sendPasswordResetSuccessEmail,
 } = require("../services/emailService");
 
 const { validatePassword } = require("../utils/passwordValidator");
@@ -239,6 +240,7 @@ router.post("/reset-password/:token", async (req, res) => {
     const passwordHash = await bcrypt.hash(password, 10);
 
     await updatePassword(user.id, passwordHash);
+    await sendPasswordResetSuccessEmail(user.email);
 
     res.status(200).json({
       success: true,
