@@ -72,6 +72,38 @@ describe("POST /api/auth/reset-password/:token", () => {
     );
   });
 
+  test("should reset password successfully even if email is not verified", async () => {
+    const user = {
+      id: 1,
+      email: "test@example.com",
+      email_verified: 0,
+      password_reset_token: "valid-token",
+      password_reset_expires: new Date(Date.now() + 3600000),
+    };
+
+    findUserByPasswordResetToken.mockResolvedValue(user);
+    bcrypt.hash.mockResolvedValue("hashed-new-password");
+    updatePassword.mockResolvedValue();
+    sendPasswordResetSuccessEmail.mockResolvedValue();
+
+    const response = await request(app)
+      .post("/api/auth/reset-password/valid-token")
+      .send({ password: "NewPassword123!" });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toEqual({
+      success: true,
+      message: "Password reset successfully.",
+    });
+
+    expect(findUserByPasswordResetToken).toHaveBeenCalledWith("valid-token");
+    expect(bcrypt.hash).toHaveBeenCalledWith("NewPassword123!", 10);
+    expect(updatePassword).toHaveBeenCalledWith(1, "hashed-new-password");
+    expect(sendPasswordResetSuccessEmail).toHaveBeenCalledWith(
+      "test@example.com",
+    );
+  });
+
   test("should reject an invalid token", async () => {
     findUserByPasswordResetToken.mockResolvedValue(null);
 
