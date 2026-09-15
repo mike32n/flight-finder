@@ -21,6 +21,7 @@ const {
 } = require("../services/emailService");
 
 const { validatePassword } = require("../utils/passwordValidator");
+const { authenticateToken } = require("../middlewares/authMiddleware");
 
 const router = express.Router();
 
@@ -258,6 +259,35 @@ router.post("/reset-password/:token", async (req, res) => {
     res.status(200).json({
       success: true,
       message: "Password reset successfully.",
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      success: false,
+      message: "Internal server error.",
+    });
+  }
+});
+
+router.get("/me", authenticateToken, async (req, res) => {
+  try {
+    const user = await findUserByEmail(req.user.email);
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "User not found.",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      user: {
+        id: user.id,
+        email: user.email,
+        emailVerified: Boolean(user.email_verified),
+      },
     });
   } catch (error) {
     console.error(error);
