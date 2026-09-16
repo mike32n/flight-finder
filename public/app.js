@@ -11,6 +11,8 @@ let currentResults = [];
 let failedCount = 0;
 let resultNodes = [];
 
+let authUser = null;
+
 /* ========================= */
 /* INIT */
 /* ========================= */
@@ -42,6 +44,9 @@ window.onload = async function () {
 
     nightsInput.value = value;
   });
+
+  await loadCurrentUser();
+  renderAuthUI();
 };
 
 /* ========================= */
@@ -457,4 +462,153 @@ function openFlight(r) {
   const url = r.bookingUrl;
 
   window.open(url, "_blank");
+}
+
+function saveToken(token) {
+  localStorage.setItem("authToken", token);
+}
+
+function getToken() {
+  return localStorage.getItem("authToken");
+}
+
+function removeToken() {
+  localStorage.removeItem("authToken");
+}
+
+async function loadCurrentUser() {
+  const token = getToken();
+
+  if (!token) {
+    authUser = null;
+    return;
+  }
+
+  try {
+    const response = await fetch("/api/auth/me", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      removeToken();
+      authUser = null;
+      return;
+    }
+
+    const data = await response.json();
+
+    authUser = data.user;
+  } catch {
+    removeToken();
+    authUser = null;
+  }
+}
+
+function renderAuthUI() {
+  const container = document.getElementById("auth-container");
+
+  if (!container) return;
+
+  if (authUser) {
+    container.innerHTML = `
+      <div class="auth-bar">
+        Logged in as: <strong>${authUser.email}</strong>
+        <button id="logout-btn">Logout</button>
+      </div>
+    `;
+
+    document.getElementById("logout-btn").addEventListener("click", logout);
+  } else {
+    container.innerHTML = `
+      <div class="auth-bar">
+        <button id="login-btn">Login</button>
+        <button id="register-btn">Register</button>
+      </div>
+    `;
+
+    document.getElementById("login-btn").addEventListener("click", loginPrompt);
+
+    document
+      .getElementById("register-btn")
+      .addEventListener("click", registerPrompt);
+  }
+}
+
+async function loginPrompt() {
+  const email = prompt("Email:");
+
+  if (!email) return;
+
+  const password = prompt("Password:");
+
+  if (!password) return;
+
+  try {
+    const response = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email,
+        password,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      alert(data.message);
+      return;
+    }
+
+    saveToken(data.token);
+
+    await loadCurrentUser();
+
+    renderAuthUI();
+
+    alert("Login successful.");
+  } catch {
+    alert("Login failed.");
+  }
+}
+
+function logout() {
+  removeToken();
+
+  authUser = null;
+
+  renderAuthUI();
+}
+
+async function registerPrompt() {
+  const email = prompt("Email:");
+
+  if (!email) return;
+
+  const password = prompt("Password:");
+
+  if (!password) return;
+
+  try {
+    const response = await fetch("/api/auth/register", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email,
+        password,
+      }),
+    });
+
+    const data = await response.json();
+
+    alert(data.message);
+  } catch {
+    alert("Registration failed.");
+  }
 }
