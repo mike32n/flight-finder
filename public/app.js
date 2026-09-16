@@ -513,8 +513,14 @@ function renderAuthUI() {
 
   if (authUser) {
     container.innerHTML = `
-      <div class="auth-bar">
-        Logged in as: <strong>${authUser.email}</strong>
+      <div class="auth-user-card">
+        <div class="auth-user-icon">🔐</div>
+
+        <div class="auth-user-info">
+          <div class="auth-user-label">Signed in</div>
+          <div class="auth-user-email">${authUser.email}</div>
+        </div>
+
         <button id="logout-btn">Logout</button>
       </div>
     `;
@@ -528,53 +534,156 @@ function renderAuthUI() {
       </div>
     `;
 
-    document.getElementById("login-btn").addEventListener("click", loginPrompt);
+    document
+      .getElementById("login-btn")
+      .addEventListener("click", () => openAuthModal("login"));
 
     document
       .getElementById("register-btn")
-      .addEventListener("click", registerPrompt);
+      .addEventListener("click", () => openAuthModal("register"));
   }
 }
 
-async function loginPrompt() {
-  const email = prompt("Email:");
+/* ========================= */
+/* AUTH MODAL */
+/* ========================= */
 
-  if (!email) return;
+function openAuthModal(mode) {
+  const modal = document.getElementById("auth-modal");
+  const loginContainer = document.getElementById("login-form-container");
+  const registerContainer = document.getElementById("register-form-container");
 
-  const password = prompt("Password:");
+  clearAuthMessages();
 
-  if (!password) return;
+  modal.classList.remove("hidden");
 
-  try {
-    const response = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        email,
-        password,
-      }),
-    });
+  if (mode === "register") {
+    loginContainer.classList.add("hidden");
+    registerContainer.classList.remove("hidden");
+  } else {
+    registerContainer.classList.add("hidden");
+    loginContainer.classList.remove("hidden");
+  }
+}
 
-    const data = await response.json();
+function closeAuthModal() {
+  document.getElementById("auth-modal").classList.add("hidden");
 
-    if (!response.ok) {
-      alert(data.message);
-      return;
+  clearAuthMessages();
+
+  document.getElementById("login-form").reset();
+  document.getElementById("register-form").reset();
+}
+
+function clearAuthMessages() {
+  document.getElementById("login-message").textContent = "";
+  document.getElementById("register-message").textContent = "";
+}
+
+function showAuthMessage(elementId, message, isError = true) {
+  const element = document.getElementById(elementId);
+
+  element.textContent = message;
+
+  element.classList.toggle("error", isError);
+  element.classList.toggle("success", !isError);
+}
+
+document
+  .getElementById("login-form")
+  .addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    const email = document.getElementById("login-email").value.trim();
+    const password = document.getElementById("login-password").value;
+
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        showAuthMessage("login-message", data.message);
+        return;
+      }
+
+      saveToken(data.token);
+
+      await loadCurrentUser();
+
+      renderAuthUI();
+
+      closeAuthModal();
+    } catch {
+      showAuthMessage("login-message", "Login failed.");
     }
+  });
 
-    saveToken(data.token);
+document
+  .getElementById("register-form")
+  .addEventListener("submit", async (event) => {
+    event.preventDefault();
 
-    await loadCurrentUser();
+    const email = document.getElementById("register-email").value.trim();
+    const password = document.getElementById("register-password").value;
 
-    renderAuthUI();
+    try {
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          password,
+        }),
+      });
 
-    alert("Login successful.");
-  } catch {
-    alert("Login failed.");
+      const data = await response.json();
+
+      if (!response.ok) {
+        showAuthMessage("register-message", data.message);
+        return;
+      }
+
+      showAuthMessage(
+        "register-message",
+        "Registration successful. Please check your email to verify your account.",
+        false,
+      );
+
+      document.getElementById("register-form").reset();
+    } catch {
+      showAuthMessage("register-message", "Registration failed.");
+    }
+  });
+
+document
+  .getElementById("auth-modal-close")
+  .addEventListener("click", closeAuthModal);
+
+document
+  .getElementById("show-register-btn")
+  .addEventListener("click", () => openAuthModal("register"));
+
+document
+  .getElementById("show-login-btn")
+  .addEventListener("click", () => openAuthModal("login"));
+
+document.getElementById("auth-modal").addEventListener("click", (event) => {
+  if (event.target.id === "auth-modal") {
+    closeAuthModal();
   }
-}
+});
 
 function logout() {
   removeToken();
@@ -582,33 +691,4 @@ function logout() {
   authUser = null;
 
   renderAuthUI();
-}
-
-async function registerPrompt() {
-  const email = prompt("Email:");
-
-  if (!email) return;
-
-  const password = prompt("Password:");
-
-  if (!password) return;
-
-  try {
-    const response = await fetch("/api/auth/register", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        email,
-        password,
-      }),
-    });
-
-    const data = await response.json();
-
-    alert(data.message);
-  } catch {
-    alert("Registration failed.");
-  }
 }
