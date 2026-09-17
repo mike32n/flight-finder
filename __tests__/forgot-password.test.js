@@ -145,4 +145,64 @@ describe("POST /api/auth/forgot-password", () => {
 
     consoleErrorSpy.mockRestore();
   });
+
+  test("should return 500 when saving reset token fails", async () => {
+    const user = {
+      id: 1,
+      email: "test@example.com",
+    };
+
+    findUserByEmail.mockResolvedValue(user);
+    savePasswordResetToken.mockRejectedValue(new Error("Database error"));
+
+    const consoleErrorSpy = jest
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+
+    const response = await request(app).post("/api/auth/forgot-password").send({
+      email: "test@example.com",
+    });
+
+    expect(response.statusCode).toBe(500);
+
+    expect(response.body).toEqual({
+      success: false,
+      message: "Internal server error.",
+    });
+
+    expect(sendPasswordResetEmail).not.toHaveBeenCalled();
+
+    consoleErrorSpy.mockRestore();
+  });
+
+  test("should return 500 when sending reset email fails", async () => {
+    const user = {
+      id: 1,
+      email: "test@example.com",
+    };
+
+    findUserByEmail.mockResolvedValue(user);
+    savePasswordResetToken.mockResolvedValue();
+    sendPasswordResetEmail.mockRejectedValue(new Error("Email sending failed"));
+
+    const consoleErrorSpy = jest
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+
+    const response = await request(app).post("/api/auth/forgot-password").send({
+      email: "test@example.com",
+    });
+
+    expect(response.statusCode).toBe(500);
+
+    expect(response.body).toEqual({
+      success: false,
+      message: "Internal server error.",
+    });
+
+    expect(savePasswordResetToken).toHaveBeenCalled();
+    expect(sendPasswordResetEmail).toHaveBeenCalled();
+
+    consoleErrorSpy.mockRestore();
+  });
 });

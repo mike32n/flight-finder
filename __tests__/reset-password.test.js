@@ -217,4 +217,114 @@ describe("POST /api/auth/reset-password/:token", () => {
 
     consoleErrorSpy.mockRestore();
   });
+
+  test("should return 500 when password hashing fails", async () => {
+    const user = {
+      id: 1,
+      email: "test@example.com",
+      password_reset_token: "valid-token",
+      password_reset_expires: new Date(Date.now() + 3600000),
+    };
+
+    findUserByPasswordResetToken.mockResolvedValue(user);
+    bcrypt.hash.mockRejectedValue(new Error("Hashing failed"));
+
+    const consoleErrorSpy = jest
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+
+    const response = await request(app)
+      .post("/api/auth/reset-password/valid-token")
+      .send({
+        password: "NewPassword123!",
+      });
+
+    expect(response.statusCode).toBe(500);
+
+    expect(response.body).toEqual({
+      success: false,
+      message: "Internal server error.",
+    });
+
+    expect(updatePassword).not.toHaveBeenCalled();
+    expect(sendPasswordResetSuccessEmail).not.toHaveBeenCalled();
+
+    consoleErrorSpy.mockRestore();
+  });
+
+  test("should return 500 when updating password fails", async () => {
+    const user = {
+      id: 1,
+      email: "test@example.com",
+      password_reset_token: "valid-token",
+      password_reset_expires: new Date(Date.now() + 3600000),
+    };
+
+    findUserByPasswordResetToken.mockResolvedValue(user);
+    bcrypt.hash.mockResolvedValue("hashed-new-password");
+    updatePassword.mockRejectedValue(new Error("Database error"));
+
+    const consoleErrorSpy = jest
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+
+    const response = await request(app)
+      .post("/api/auth/reset-password/valid-token")
+      .send({
+        password: "NewPassword123!",
+      });
+
+    expect(response.statusCode).toBe(500);
+
+    expect(response.body).toEqual({
+      success: false,
+      message: "Internal server error.",
+    });
+
+    expect(bcrypt.hash).toHaveBeenCalledWith("NewPassword123!", 10);
+    expect(sendPasswordResetSuccessEmail).not.toHaveBeenCalled();
+
+    consoleErrorSpy.mockRestore();
+  });
+
+  test("should return 500 when sending success email fails", async () => {
+    const user = {
+      id: 1,
+      email: "test@example.com",
+      password_reset_token: "valid-token",
+      password_reset_expires: new Date(Date.now() + 3600000),
+    };
+
+    findUserByPasswordResetToken.mockResolvedValue(user);
+    bcrypt.hash.mockResolvedValue("hashed-new-password");
+    updatePassword.mockResolvedValue();
+    sendPasswordResetSuccessEmail.mockRejectedValue(
+      new Error("Email sending failed"),
+    );
+
+    const consoleErrorSpy = jest
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+
+    const response = await request(app)
+      .post("/api/auth/reset-password/valid-token")
+      .send({
+        password: "NewPassword123!",
+      });
+
+    expect(response.statusCode).toBe(500);
+
+    expect(response.body).toEqual({
+      success: false,
+      message: "Internal server error.",
+    });
+
+    expect(updatePassword).toHaveBeenCalledWith(1, "hashed-new-password");
+
+    expect(sendPasswordResetSuccessEmail).toHaveBeenCalledWith(
+      "test@example.com",
+    );
+
+    consoleErrorSpy.mockRestore();
+  });
 });
