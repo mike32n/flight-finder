@@ -550,18 +550,26 @@ function renderAuthUI() {
 
 function openAuthModal(mode) {
   const modal = document.getElementById("auth-modal");
+
   const loginContainer = document.getElementById("login-form-container");
+
   const registerContainer = document.getElementById("register-form-container");
+
+  const forgotContainer = document.getElementById("forgot-form-container");
 
   clearAuthMessages();
 
   modal.classList.remove("hidden");
 
+  loginContainer.classList.add("hidden");
+  registerContainer.classList.add("hidden");
+  forgotContainer.classList.add("hidden");
+
   if (mode === "register") {
-    loginContainer.classList.add("hidden");
     registerContainer.classList.remove("hidden");
+  } else if (mode === "forgot") {
+    forgotContainer.classList.remove("hidden");
   } else {
-    registerContainer.classList.add("hidden");
     loginContainer.classList.remove("hidden");
   }
 }
@@ -573,11 +581,13 @@ function closeAuthModal() {
 
   document.getElementById("login-form").reset();
   document.getElementById("register-form").reset();
+  document.getElementById("forgot-form").reset();
 }
 
 function clearAuthMessages() {
   document.getElementById("login-message").textContent = "";
   document.getElementById("register-message").textContent = "";
+  document.getElementById("forgot-message").textContent = "";
 }
 
 function showAuthMessage(elementId, message, isError = true) {
@@ -668,6 +678,40 @@ document
   });
 
 document
+  .getElementById("forgot-form")
+  .addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    const email = document.getElementById("forgot-email").value.trim();
+
+    try {
+      const response = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        showAuthMessage("forgot-message", data.message);
+
+        return;
+      }
+
+      showAuthMessage("forgot-message", data.message, false);
+
+      document.getElementById("forgot-form").reset();
+    } catch {
+      showAuthMessage("forgot-message", "Request failed.");
+    }
+  });
+
+document
   .getElementById("auth-modal-close")
   .addEventListener("click", closeAuthModal);
 
@@ -677,6 +721,14 @@ document
 
 document
   .getElementById("show-login-btn")
+  .addEventListener("click", () => openAuthModal("login"));
+
+document
+  .getElementById("forgot-password-btn")
+  .addEventListener("click", () => openAuthModal("forgot"));
+
+document
+  .getElementById("back-to-login-btn")
   .addEventListener("click", () => openAuthModal("login"));
 
 document.getElementById("auth-modal").addEventListener("click", (event) => {

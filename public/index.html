@@ -134,6 +134,28 @@
             Already have an account?
           </button>
         </div>
+
+        <div id="forgot-form-container" class="hidden">
+          <h2>Forgot Password</h2>
+
+          <form id="forgot-form">
+            <input
+              id="forgot-email"
+              type="email"
+              placeholder="Email"
+              autocomplete="email"
+              required
+            />
+
+            <button type="submit">Send Reset Link</button>
+          </form>
+
+          <div id="forgot-message" class="auth-message"></div>
+
+          <button id="back-to-login-btn" class="auth-switch-btn">
+            Back to login
+          </button>
+        </div>
       </div>
     </div>
 
