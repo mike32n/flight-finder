@@ -517,7 +517,7 @@ function renderAuthUI() {
         <div class="auth-user-icon">🔐</div>
 
         <div class="auth-user-info">
-          <div class="auth-user-label">Signed in</div>
+          <div class="auth-user-label">Signed in as</div>
           <div class="auth-user-email">${authUser.email}</div>
         </div>
 
