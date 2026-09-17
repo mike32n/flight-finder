@@ -599,6 +599,22 @@ function showAuthMessage(elementId, message, isError = true) {
   element.classList.toggle("success", !isError);
 }
 
+function setAuthButtonLoading(button, loadingText) {
+  button.disabled = true;
+  button.dataset.originalText = button.textContent;
+
+  button.innerHTML = `
+    <span class="auth-spinner"></span>
+    ${loadingText}
+  `;
+}
+
+function resetAuthButton(button) {
+  button.disabled = false;
+  button.textContent = button.dataset.originalText || button.textContent;
+  delete button.dataset.originalText;
+}
+
 document
   .getElementById("login-form")
   .addEventListener("submit", async (event) => {
@@ -606,6 +622,9 @@ document
 
     const email = document.getElementById("login-email").value.trim();
     const password = document.getElementById("login-password").value;
+    const button = event.target.querySelector('button[type="submit"]');
+
+    setAuthButtonLoading(button, "Signing in...");
 
     try {
       const response = await fetch("/api/auth/login", {
@@ -635,6 +654,8 @@ document
       closeAuthModal();
     } catch {
       showAuthMessage("login-message", "Login failed.");
+    } finally {
+      resetAuthButton(button);
     }
   });
 
@@ -645,6 +666,9 @@ document
 
     const email = document.getElementById("register-email").value.trim();
     const password = document.getElementById("register-password").value;
+    const button = event.target.querySelector('button[type="submit"]');
+
+    setAuthButtonLoading(button, "Creating account...");
 
     try {
       const response = await fetch("/api/auth/register", {
@@ -674,6 +698,8 @@ document
       document.getElementById("register-form").reset();
     } catch {
       showAuthMessage("register-message", "Registration failed.");
+    } finally {
+      resetAuthButton(button);
     }
   });
 
@@ -683,6 +709,9 @@ document
     event.preventDefault();
 
     const email = document.getElementById("forgot-email").value.trim();
+    const button = event.target.querySelector('button[type="submit"]');
+
+    setAuthButtonLoading(button, "Sending reset link...");
 
     try {
       const response = await fetch("/api/auth/forgot-password", {
@@ -699,7 +728,6 @@ document
 
       if (!response.ok) {
         showAuthMessage("forgot-message", data.message);
-
         return;
       }
 
@@ -708,6 +736,8 @@ document
       document.getElementById("forgot-form").reset();
     } catch {
       showAuthMessage("forgot-message", "Request failed.");
+    } finally {
+      resetAuthButton(button);
     }
   });
 
