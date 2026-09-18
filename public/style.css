@@ -817,6 +817,23 @@ body.dark .auth-modal-content form button:disabled {
   font-size: 0.95rem;
 }
 
+.reset-password-back-link {
+  display: inline-block;
+  margin-top: 12px;
+  color: var(--primary);
+  text-decoration: underline;
+  font-weight: 600;
+}
+
+.reset-password-back-link:hover {
+  opacity: 0.8;
+}
+
+body.dark .reset-password-back-link {
+  color: var(--primary);
+  text-shadow: 0 0 6px rgba(0, 247, 255, 0.4);
+}
+
 .reset-password-message.success {
   color: #2e7d32;
 }
@@ -836,8 +853,11 @@ body.dark .reset-password-message.error {
 }
 
 .reset-password-button:disabled {
-  cursor: wait;
   opacity: 0.75;
+}
+
+.reset-password-button.loading {
+  cursor: wait;
 }
 
 body.dark .reset-password-button:disabled {

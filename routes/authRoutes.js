@@ -218,6 +218,37 @@ router.post("/forgot-password", async (req, res) => {
   }
 });
 
+router.get("/reset-password/:token", async (req, res) => {
+  try {
+    const { token } = req.params;
+
+    const user = await findUserByPasswordResetToken(token);
+
+    if (
+      !user ||
+      !user.password_reset_expires ||
+      new Date(user.password_reset_expires) < new Date()
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or expired password reset token.",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Token valid.",
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      success: false,
+      message: "Internal server error.",
+    });
+  }
+});
+
 router.post("/reset-password/:token", async (req, res) => {
   try {
     const { token } = req.params;
