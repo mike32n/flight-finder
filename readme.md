@@ -11,7 +11,7 @@ A lightweight web application for finding cheap short round-trip flights from Bu
 - Live results via Server-Sent Events (SSE)
 - Partial failure handling
 - Result deduplication and price sorting
-- Top cheapest results
+- Top 5 cheapest results (by default)
 - Google Flights booking links
 - Provider abstraction (`mock`, `serpapi`, legacy Amadeus)
 - Redis caching and rate limiting
@@ -25,9 +25,10 @@ A lightweight web application for finding cheap short round-trip flights from Bu
 1. Generate possible trip dates
 2. Create and execute search tasks through a concurrency-limited Promise Pool
 3. Stream results to the browser as they become available
-4. Apply Smart Flex when required
-5. Deduplicate and sort results
-6. Return the configured number of cheapest results
+4. Insert results into the UI in sorted order while the search is still running
+5. Apply Smart Flex when required
+6. Deduplicate and sort results
+7. Return the configured number of cheapest results
 
 Individual API failures do not stop the remaining searches.
 
@@ -42,19 +43,6 @@ Current variants:
 
 - Departure −1 day, return unchanged
 - Departure unchanged, return +1 day
-
-## Authentication
-
-The application includes:
-
-- Registration with email verification
-- Token-based login/logout
-- Current-user session check
-- Forgot-password flow
-- One-hour password-reset tokens
-- Password validation and bcrypt hashing
-
-Email verification and password recovery use an isolated email service with Mailtrap for development/testing.
 
 ## Flight Provider
 
@@ -77,17 +65,19 @@ FLIGHT_PROVIDER=serpapi
 
 ## Tech Stack
 
-**Backend:** Node.js, Express, SQLite, Redis, SSE
+**Backend:** Node.js, Express, SQLite, Redis
 
 **Frontend:** HTML, CSS, Vanilla JavaScript
 
 **Flight data:** SerpApi / Google Flights
 
-**Authentication:** bcrypt, crypto, validator, Nodemailer, Mailtrap
+**Authentication:** bcrypt, crypto, validator
+
+**Email:** Nodemailer, Mailtrap
 
 **Testing:** Jest, Supertest, Playwright, TypeScript
 
-**Development:** Docker / Docker Compose
+**Development Tools:** Docker Compose
 
 ## Running Locally
 
