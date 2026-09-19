@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✈️</text></svg>"
+    />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Flight Finder | Verify Email</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+
+  <body>
+    <script>
+      if (localStorage.getItem("theme") === "dark") {
+        document.body.classList.add("dark");
+      }
+    </script>
+
+    <div class="container reset-password-container">
+      <h1>Email Verification</h1>
+
+      <p id="message" class="reset-password-message">Verifying your email...</p>
+
+      <a href="/" class="reset-password-back-link"> ← Back to Login </a>
+    </div>
+
+    <script>
+      const token = window.location.pathname.split("/").pop();
+
+      const message = document.getElementById("message");
+
+      (async () => {
+        try {
+          const response = await fetch(`/api/auth/verify/${token}`);
+          const data = await response.json();
+
+          message.textContent = data.message;
+
+          message.classList.remove("success", "error");
+
+          if (response.ok) {
+            message.classList.add("success");
+          } else {
+            message.classList.add("error");
+          }
+        } catch {
+          message.textContent = "Unable to verify email.";
+          message.classList.remove("success");
+          message.classList.add("error");
+        }
+      })();
+    </script>
+  </body>
+</html>

@@ -55,6 +55,7 @@ Thumbs.db
 
 # SQLite database
 *.db
+*.sql
 *.sqlite
 *.sqlite3
 *.sqlite-journal

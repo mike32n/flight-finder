@@ -1,6 +1,10 @@
 <!doctype html>
 <html lang="en">
   <head>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✈️</text></svg>"
+    />
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Flight Finder | Perfect Weekend Getaways</title>
@@ -9,6 +13,8 @@
   <body>
     <div class="container">
       <h1>✈️ Flight Finder</h1>
+
+      <div id="auth-container"></div>
 
       <!-- Selected IATA badges -->
       <div id="selected-container" class="selected-container"></div>
@@ -54,6 +60,102 @@
       <div id="results"></div>
       <div style="text-align: center; margin-bottom: 20px">
         <button onclick="toggleTheme()">🌙 Theme</button>
+      </div>
+    </div>
+
+    <!-- Auth Modal -->
+    <div id="auth-modal" class="auth-modal hidden">
+      <div class="auth-modal-content">
+        <button id="auth-modal-close" class="auth-modal-close">×</button>
+
+        <div id="login-form-container">
+          <h2>Login</h2>
+
+          <form id="login-form">
+            <input
+              id="login-email"
+              type="email"
+              placeholder="Email"
+              autocomplete="email"
+              required
+            />
+
+            <input
+              id="login-password"
+              type="password"
+              placeholder="Password"
+              autocomplete="current-password"
+              required
+            />
+
+            <button type="submit">Login</button>
+            <button
+              type="button"
+              id="forgot-password-btn"
+              class="auth-switch-btn"
+            >
+              Forgot password?
+            </button>
+          </form>
+
+          <div id="login-message" class="auth-message"></div>
+
+          <button id="show-register-btn" class="auth-switch-btn">
+            Create an account
+          </button>
+        </div>
+
+        <div id="register-form-container" class="hidden">
+          <h2>Register</h2>
+
+          <form id="register-form">
+            <input
+              id="register-email"
+              type="email"
+              placeholder="Email"
+              autocomplete="email"
+              required
+            />
+
+            <input
+              id="register-password"
+              type="password"
+              placeholder="Password"
+              autocomplete="new-password"
+              required
+            />
+
+            <button type="submit">Register</button>
+          </form>
+
+          <div id="register-message" class="auth-message"></div>
+
+          <button id="show-login-btn" class="auth-switch-btn">
+            Already have an account?
+          </button>
+        </div>
+
+        <div id="forgot-form-container" class="hidden">
+          <h2>Forgot Password</h2>
+
+          <form id="forgot-form">
+            <input
+              id="forgot-email"
+              type="email"
+              placeholder="Email"
+              autocomplete="email"
+              required
+            />
+
+            <button type="submit">Send Reset Link</button>
+          </form>
+
+          <div id="forgot-message" class="auth-message"></div>
+
+          <button id="back-to-login-btn" class="auth-switch-btn">
+            ← Back to login
+          </button>
+        </div>
       </div>
     </div>
 
