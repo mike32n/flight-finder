@@ -9,6 +9,10 @@ const app = express();
 app.use(express.json());
 app.use(express.static("public"));
 
+app.get("/verify/:token", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "verify.html"));
+});
+
 app.get("/reset-password/:token", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "reset-password.html"));
 });
