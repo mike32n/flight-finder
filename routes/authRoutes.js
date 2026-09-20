@@ -72,7 +72,9 @@ router.post("/register", async (req, res) => {
       verificationToken,
     });
 
-    await sendVerificationEmail(email, verificationToken);
+    if (process.env.E2E_TEST !== "true") {
+      await sendVerificationEmail(email, verificationToken);
+    }
 
     res.status(201).json({
       success: true,
