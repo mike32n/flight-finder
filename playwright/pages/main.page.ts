@@ -5,6 +5,9 @@ export default class MainPage {
 
   readonly heading: Locator;
 
+  readonly authContainer: Locator;
+  readonly logoutButton: Locator;
+
   readonly toggleThemeButton: Locator;
   readonly searchButton: Locator;
   readonly incrementButton: Locator;
@@ -25,6 +28,12 @@ export default class MainPage {
     this.page = page;
 
     this.heading = page.getByRole("heading", { level: 1 });
+
+    this.authContainer = page.locator("#auth-container");
+    this.logoutButton = page.getByRole("button", {
+      name: "Logout",
+      exact: true,
+    });
 
     this.toggleThemeButton = page.getByRole("button", {
       name: /theme/i,
