@@ -209,6 +209,14 @@ export default class MainPage {
     await expect(element).toBeVisible();
   }
 
+  async expectHidden(element: Locator): Promise<void> {
+    await expect(element).not.toBeVisible();
+  }
+
+  async expectNotPresent(element: Locator): Promise<void> {
+    await expect(element).toHaveCount(0);
+  }
+
   async expectAutocompleteOpen(): Promise<void> {
     await expect(this.autocompleteList).toHaveClass(/open/);
   }

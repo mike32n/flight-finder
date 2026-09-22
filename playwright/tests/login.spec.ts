@@ -41,4 +41,27 @@ test.describe("Authentication - Login", () => {
     await main.expectVisible(main.authContainer);
     await main.expectVisible(main.logoutButton);
   });
+
+  test("should not login with invalid password", async () => {
+    const email = `e2e-login-${Date.now()}@example.com`;
+    const password = "TestPassword1";
+    const passwordHash = await bcrypt.hash(password, 10);
+    const verificationToken = crypto.randomUUID();
+
+    const user = await createUser({ email, passwordHash, verificationToken });
+
+    await verifyUser(user.id);
+
+    await auth.clickLoginButton();
+
+    await auth.expectAuthModalVisible();
+    await auth.expectLoginFormVisible();
+
+    await auth.fillLoginForm(email, "WrongPassword");
+    await auth.submitLoginForm();
+    await auth.expectAuthModalVisible();
+    await auth.expectLoginErrorMessage("Invalid email or password.");
+
+    await main.expectNotPresent(main.logoutButton);
+  });
 });
