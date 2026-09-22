@@ -64,4 +64,27 @@ test.describe("Authentication - Login", () => {
 
     await main.expectNotPresent(main.logoutButton);
   });
+
+  test("should not login with unverified user", async () => {
+    const email = `e2e-login-${Date.now()}@example.com`;
+    const password = "TestPassword1";
+    const passwordHash = await bcrypt.hash(password, 10);
+    const verificationToken = crypto.randomUUID();
+
+    await createUser({ email, passwordHash, verificationToken });
+
+    await auth.clickLoginButton();
+
+    await auth.expectAuthModalVisible();
+    await auth.expectLoginFormVisible();
+
+    await auth.fillLoginForm(email, password);
+    await auth.submitLoginForm();
+    await auth.expectAuthModalVisible();
+    await auth.expectLoginErrorMessage(
+      "Please verify your email before logging in.",
+    );
+
+    await main.expectNotPresent(main.logoutButton);
+  });
 });
