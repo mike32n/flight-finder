@@ -8,10 +8,12 @@ export async function createTestUser() {
   const password = "TestPassword1";
 
   const passwordHash = await bcrypt.hash(password, 10);
+  const verificationToken = crypto.randomUUID();
 
   const user = await createUser({
     email,
     passwordHash,
+    verificationToken,
   });
 
   return {
