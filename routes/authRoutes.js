@@ -202,7 +202,9 @@ router.post("/forgot-password", async (req, res) => {
 
       await savePasswordResetToken(user.id, token, expires);
 
-      await sendPasswordResetEmail(email, token);
+      if (process.env.E2E_TEST !== "true") {
+        await sendPasswordResetEmail(email, token);
+      }
     }
 
     res.status(200).json({
