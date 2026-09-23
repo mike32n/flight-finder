@@ -20,13 +20,13 @@ test.describe("Flight Finder UI", () => {
   });
 
   test("should display page elements", async () => {
-    await main.expectVisible(main.heading);
-    await main.expectVisible(main.airportInput);
-    await main.expectVisible(main.weekdaySelect);
-    await main.expectVisible(main.decrementButton);
-    await main.expectVisible(main.incrementButton);
-    await main.expectVisible(main.nightsInput);
-    await main.expectVisible(main.searchButton);
-    await main.expectVisible(main.toggleThemeButton);
+    await common.expectVisible(main.heading);
+    await common.expectVisible(main.airportInput);
+    await common.expectVisible(main.weekdaySelect);
+    await common.expectVisible(main.decrementButton);
+    await common.expectVisible(main.incrementButton);
+    await common.expectVisible(main.nightsInput);
+    await common.expectVisible(main.searchButton);
+    await common.expectVisible(main.toggleThemeButton);
   });
 });

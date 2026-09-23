@@ -12,4 +12,20 @@ export default class CommonPage {
   async expectDarkThemeIsActive(): Promise<void> {
     await expect(this.body).toHaveClass(/dark/);
   }
+
+  async expectLightThemeIsActive(): Promise<void> {
+    await expect(this.body).not.toHaveClass(/dark/);
+  }
+
+  async expectVisible(element: Locator): Promise<void> {
+    await expect(element).toBeVisible();
+  }
+
+  async expectHidden(element: Locator): Promise<void> {
+    await expect(element).not.toBeVisible();
+  }
+
+  async expectNotPresent(element: Locator): Promise<void> {
+    await expect(element).toHaveCount(0);
+  }
 }
