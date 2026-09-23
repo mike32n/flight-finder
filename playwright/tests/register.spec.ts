@@ -26,7 +26,9 @@ test.describe("Authentication - Register", () => {
     await auth.fillRegisterForm(email, password);
     await auth.submitRegisterForm();
 
-    await auth.expectRegistrationSuccessMessage();
+    await auth.expectRegistrationSuccessMessage(
+      "Registration successful. Please check your email to verify your account.",
+    );
     await auth.expectRegisterFormEmpty();
   });
 });
