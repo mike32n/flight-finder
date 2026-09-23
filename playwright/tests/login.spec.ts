@@ -23,7 +23,7 @@ test.describe("Authentication - Login", () => {
     await page.goto(Env.test);
   });
 
-  test("should login an existing user successfully", async () => {
+  test("TC-LOGIN-01 | should login an existing user successfully", async () => {
     const verifiedUser = await createVerifiedTestUser();
 
     await auth.clickLoginButton();
@@ -39,7 +39,7 @@ test.describe("Authentication - Login", () => {
     await common.expectVisible(main.logoutButton);
   });
 
-  test("should not login with invalid password", async () => {
+  test("TC-LOGIN-02 | should not login with invalid password", async () => {
     const verifiedUser = await createVerifiedTestUser();
 
     await auth.clickLoginButton();
@@ -55,7 +55,7 @@ test.describe("Authentication - Login", () => {
     await common.expectNotPresent(main.logoutButton);
   });
 
-  test("should not login with unverified user", async () => {
+  test("TC-LOGIN-03 | should not login with unverified user", async () => {
     const user = await createTestUser();
 
     await auth.clickLoginButton();
@@ -73,7 +73,7 @@ test.describe("Authentication - Login", () => {
     await common.expectNotPresent(main.logoutButton);
   });
 
-  test("should not login with non-existent user", async () => {
+  test("TC-LOGIN-04 | should not login with non-existent user", async () => {
     const email = `non-existent-${Date.now()}@example.com`;
 
     await auth.clickLoginButton();
