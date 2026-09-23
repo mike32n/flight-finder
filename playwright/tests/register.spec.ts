@@ -14,7 +14,7 @@ test.describe("Authentication - Register", () => {
     await page.goto(Env.test);
   });
 
-  test("should register a new user successfully", async () => {
+  test("TC-REGISTER-01 | should register a new user successfully", async () => {
     const email = `e2e-register-${Date.now()}@example.com`;
     const password = "TestPassword1";
 
