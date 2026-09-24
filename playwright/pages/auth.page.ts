@@ -21,6 +21,12 @@ export default class AuthPage {
   readonly registerSubmitButton: Locator;
   readonly registerMessage: Locator;
 
+  readonly forgotPasswordFormContainer: Locator;
+  readonly forgotPasswordForm: Locator;
+  readonly forgotPasswordEmailInput: Locator;
+  readonly forgotPasswordSubmitButton: Locator;
+  readonly forgotPasswordMessage: Locator;
+
   constructor(page: Page) {
     this.page = page;
 
@@ -53,6 +59,17 @@ export default class AuthPage {
       exact: true,
     });
     this.registerMessage = page.locator("#register-message");
+    this.forgotPasswordFormContainer = page.locator("#forgot-form-container");
+    this.forgotPasswordForm = page.locator("#forgot-form");
+    this.forgotPasswordEmailInput = page.locator("#forgot-email");
+    this.forgotPasswordSubmitButton = this.forgotPasswordForm.getByRole(
+      "button",
+      {
+        name: "Send Reset Link",
+        exact: true,
+      },
+    );
+    this.forgotPasswordMessage = page.locator("#forgot-message");
   }
 
   async clickLoginButton(): Promise<void> {
@@ -81,6 +98,18 @@ export default class AuthPage {
     await this.registerSubmitButton.click();
   }
 
+  async clickForgotPasswordButton(): Promise<void> {
+    await this.loginForgotPasswordButton.click();
+  }
+
+  async fillForgotPasswordForm(email: string): Promise<void> {
+    await this.forgotPasswordEmailInput.fill(email);
+  }
+
+  async submitForgotPasswordForm(): Promise<void> {
+    await this.forgotPasswordSubmitButton.click();
+  }
+
   async expectAuthModalVisible(): Promise<void> {
     await expect(this.authModal).toBeVisible();
   }
@@ -101,14 +130,20 @@ export default class AuthPage {
     await expect(this.registerFormContainer).toBeVisible();
   }
 
-  async expectRegistrationSuccessMessage(): Promise<void> {
-    await expect(this.registerMessage).toHaveText(
-      "Registration successful. Please check your email to verify your account.",
-    );
+  async expectRegistrationSuccessMessage(message: string): Promise<void> {
+    await expect(this.registerMessage).toContainText(message);
   }
 
   async expectRegisterFormEmpty(): Promise<void> {
     await expect(this.registerEmailInput).toHaveValue("");
     await expect(this.registerPasswordInput).toHaveValue("");
+  }
+
+  async expectForgotPasswordFormVisible(): Promise<void> {
+    await expect(this.forgotPasswordFormContainer).toBeVisible();
+  }
+
+  async expectForgotPasswordSuccessMessage(message: string): Promise<void> {
+    await expect(this.forgotPasswordMessage).toContainText(message);
   }
 }

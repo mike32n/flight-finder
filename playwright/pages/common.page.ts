@@ -9,6 +9,10 @@ export default class CommonPage {
     this.body = page.locator("body");
   }
 
+  async openPage(url: string): Promise<void> {
+    await this.page.goto(url);
+  }
+
   async expectDarkThemeIsActive(): Promise<void> {
     await expect(this.body).toHaveClass(/dark/);
   }
