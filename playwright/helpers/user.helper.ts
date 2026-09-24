@@ -73,3 +73,30 @@ export async function createTestUserWithResetToken() {
     userId: user.id,
   };
 }
+
+export async function createVerifiedTestUserWithResetToken() {
+  const email = `e2e-${Date.now()}@example.com`;
+  const password = "TestPassword1";
+
+  const passwordHash = await bcrypt.hash(password, 10);
+  const verificationToken = crypto.randomUUID();
+  const resetToken = crypto.randomUUID();
+  const resetExpires = new Date(Date.now() + 3600000);
+
+  const user = await createUser({
+    email,
+    passwordHash,
+    verificationToken,
+  });
+
+  await verifyUser(user.id);
+
+  await savePasswordResetToken(user.id, resetToken, resetExpires);
+
+  return {
+    email,
+    password,
+    resetToken,
+    userId: user.id,
+  };
+}

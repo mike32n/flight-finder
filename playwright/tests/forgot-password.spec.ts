@@ -7,6 +7,7 @@ import ResetPage from "../pages/reset.page";
 import {
   createTestUser,
   createTestUserWithResetToken,
+  createVerifiedTestUserWithResetToken,
 } from "../helpers/user.helper";
 
 test.describe("Authentication - Forgot Password", () => {
@@ -64,5 +65,73 @@ test.describe("Authentication - Forgot Password", () => {
   test("TC-FORGOT-04 | should get error on reset page with an invalid reset token", async () => {
     await common.openPage(`${Env.test}reset-password/i-n-v-a-l-i-d-t-o-k-e-n`);
     await reset.expectTokenError();
+  });
+
+  test("TC-FORGOT-05 | should reset password successfully", async () => {
+    const user = await createTestUserWithResetToken();
+    const newPassword = "NewPassword1";
+
+    await common.openPage(`${Env.test}reset-password/${user.resetToken}`);
+
+    await reset.expectResetFormEnabled();
+
+    await reset.fillNewPassword(newPassword);
+    await reset.submitPasswordReset();
+
+    await reset.expectPasswordResetSuccessMessage();
+    await reset.expectResetFormDisabled();
+  });
+
+  test("TC-FORGOT-06 | should login with new password after reset", async () => {
+    const user = await createVerifiedTestUserWithResetToken();
+    const newPassword = "NewPassword1";
+
+    await common.openPage(`${Env.test}reset-password/${user.resetToken}`);
+
+    await reset.expectResetFormEnabled();
+
+    await reset.fillNewPassword(newPassword);
+    await reset.submitPasswordReset();
+
+    await reset.expectPasswordResetSuccessMessage();
+
+    await common.openPage(Env.test);
+
+    await auth.clickLoginButton();
+    await auth.expectAuthModalVisible();
+    await auth.expectLoginFormVisible();
+
+    await auth.fillLoginForm(user.email, newPassword);
+    await auth.submitLoginForm();
+
+    await common.expectVisible(main.logoutButton);
+  });
+
+  test("TC-FORGOT-07 | should not login with old password after reset", async () => {
+    const user = await createVerifiedTestUserWithResetToken();
+    const newPassword = "NewPassword1";
+
+    await common.openPage(`${Env.test}reset-password/${user.resetToken}`);
+
+    await reset.expectResetFormEnabled();
+
+    await reset.fillNewPassword(newPassword);
+    await reset.submitPasswordReset();
+
+    await reset.expectPasswordResetSuccessMessage();
+
+    await common.openPage(Env.test);
+
+    await auth.clickLoginButton();
+    await auth.expectAuthModalVisible();
+    await auth.expectLoginFormVisible();
+
+    await auth.fillLoginForm(user.email, user.password);
+    await auth.submitLoginForm();
+
+    await auth.expectAuthModalVisible();
+    await auth.expectLoginErrorMessage("Invalid email or password.");
+
+    await common.expectNotPresent(main.logoutButton);
   });
 });
