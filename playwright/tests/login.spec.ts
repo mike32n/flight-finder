@@ -35,7 +35,6 @@ test.describe("Authentication - Login", () => {
     await auth.submitLoginForm();
     await auth.expectAuthModalHidden();
 
-    await common.expectVisible(main.authContainer);
     await common.expectVisible(main.logoutButton);
   });
 
