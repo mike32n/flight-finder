@@ -134,4 +134,34 @@ test.describe("Authentication - Forgot Password", () => {
 
     await common.expectNotPresent(main.logoutButton);
   });
+
+  test("TC-FORGOT-08 | should allow password reset for unverified user", async () => {
+    const user = await createTestUserWithResetToken();
+    const newPassword = "NewPassword1";
+
+    await common.openPage(`${Env.test}reset-password/${user.resetToken}`);
+
+    await reset.expectResetFormEnabled();
+
+    await reset.fillNewPassword(newPassword);
+    await reset.submitPasswordReset();
+
+    await reset.expectPasswordResetSuccessMessage();
+
+    await common.openPage(Env.test);
+
+    await auth.clickLoginButton();
+    await auth.expectAuthModalVisible();
+    await auth.expectLoginFormVisible();
+
+    await auth.fillLoginForm(user.email, newPassword);
+    await auth.submitLoginForm();
+
+    await auth.expectAuthModalVisible();
+    await auth.expectLoginErrorMessage(
+      "Please verify your email before logging in.",
+    );
+
+    await common.expectNotPresent(main.logoutButton);
+  });
 });
