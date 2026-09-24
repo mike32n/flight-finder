@@ -2,100 +2,100 @@ import { test } from "@playwright/test";
 
 import Env from "../utils/env";
 import CommonPage from "../pages/common.page";
-import MainPage from "../pages/main.page";
+import FlightFinderPage from "../pages/flight-finder.page";
 
 test.describe("Flight Finder", () => {
-  let main: MainPage;
+  let flightFinder: FlightFinderPage;
   let common: CommonPage;
 
   test.beforeEach(async ({ page }) => {
-    main = new MainPage(page);
+    flightFinder = new FlightFinderPage(page);
     common = new CommonPage(page);
 
     await page.goto(Env.test);
   });
 
   test("should toggle dark theme", async () => {
-    await main.clickToggleTheme();
+    await flightFinder.clickToggleTheme();
 
     await common.expectDarkThemeIsActive();
   });
 
   test("should select active list item", async () => {
-    const iata = await main.selectAirportWithArrowKeys("c", 1, 3, 1);
+    const iata = await flightFinder.selectAirportWithArrowKeys("c", 1, 3, 1);
 
-    await main.expectAirportSelected(iata);
+    await flightFinder.expectAirportSelected(iata);
   });
 
   test("should select multiple airports", async () => {
-    await main.selectAirportByEnter("ein");
-    await main.expectAirportSelected("EIN");
+    await flightFinder.selectAirportByEnter("ein");
+    await flightFinder.expectAirportSelected("EIN");
 
-    await main.selectAirportByEnter("lca");
-    await main.expectAirportSelected("LCA");
+    await flightFinder.selectAirportByEnter("lca");
+    await flightFinder.expectAirportSelected("LCA");
 
-    await main.selectAirportByEnter("tf");
-    await main.expectAirportSelected("TFS");
+    await flightFinder.selectAirportByEnter("tf");
+    await flightFinder.expectAirportSelected("TFS");
   });
 
   test("should deselect airport", async () => {
-    const iata = await main.selectAirportWithArrowKeys("e", 9, 10, 0);
+    const iata = await flightFinder.selectAirportWithArrowKeys("e", 9, 10, 0);
 
-    await main.expectAirportSelected(iata);
-    await main.clickSelectedContainer(iata);
-    await main.expectAirportNotSelected(iata);
+    await flightFinder.expectAirportSelected(iata);
+    await flightFinder.clickSelectedContainer(iata);
+    await flightFinder.expectAirportNotSelected(iata);
   });
 
   test("should select airport only once", async () => {
-    await main.selectAirportByEnter("ams");
-    await main.expectAirportSelected("AMS");
+    await flightFinder.selectAirportByEnter("ams");
+    await flightFinder.expectAirportSelected("AMS");
 
-    await main.selectAirportByEnter("ams");
-    await main.expectAirportSelectedOnlyOnce("AMS");
+    await flightFinder.selectAirportByEnter("ams");
+    await flightFinder.expectAirportSelectedOnlyOnce("AMS");
   });
 
   test("should warn if no airports are selected", async () => {
-    await main.clickSearchButton();
-    await main.expectNoAirportsSelectedWarning();
+    await flightFinder.clickSearchButton();
+    await flightFinder.expectNoAirportsSelectedWarning();
   });
 
   test("should select weekday by typing", async () => {
-    await main.selectWeekdayByName("Friday");
-    await main.expectWeekdaySelected("Friday");
+    await flightFinder.selectWeekdayByName("Friday");
+    await flightFinder.expectWeekdaySelected("Friday");
   });
 
   test("should select weekday by typing and arrows", async () => {
-    await main.selectWeekdayByName("Friday");
-    await main.pressArrowDown(main.weekdaySelect);
-    await main.expectWeekdaySelected("Saturday");
-    await main.pressArrowUp(main.weekdaySelect, 2);
-    await main.expectWeekdaySelected("Thursday");
+    await flightFinder.selectWeekdayByName("Friday");
+    await flightFinder.pressArrowDown(flightFinder.weekdaySelect);
+    await flightFinder.expectWeekdaySelected("Saturday");
+    await flightFinder.pressArrowUp(flightFinder.weekdaySelect, 2);
+    await flightFinder.expectWeekdaySelected("Thursday");
   });
 
   test("should not decrement nights when already at minimum", async () => {
-    await main.clickDecrementButton(1);
-    await main.expectNightsValue("1");
+    await flightFinder.clickDecrementButton(1);
+    await flightFinder.expectNightsValue("1");
   });
 
   test("should not increment nights when already at maximum", async () => {
-    await main.clickIncrementButton(30);
-    await main.expectNightsValue("30");
+    await flightFinder.clickIncrementButton(30);
+    await flightFinder.expectNightsValue("30");
   });
 
   test("should increment and decrement nights", async () => {
-    await main.clickIncrementButton(3);
-    await main.expectNightsValue("4");
-    await main.clickDecrementButton(1);
-    await main.expectNightsValue("3");
+    await flightFinder.clickIncrementButton(3);
+    await flightFinder.expectNightsValue("4");
+    await flightFinder.clickDecrementButton(1);
+    await flightFinder.expectNightsValue("3");
   });
 
   test("e2e | one airport", async () => {
-    await main.selectAirportByEnter("ams");
-    await main.expectAirportSelected("AMS");
+    await flightFinder.selectAirportByEnter("ams");
+    await flightFinder.expectAirportSelected("AMS");
 
-    await main.selectWeekdayOption("5");
-    await main.clickIncrementButton(2);
-    await main.clickSearchButton();
-    await main.expectResultsFooterText("Finished");
+    await flightFinder.selectWeekdayOption("5");
+    await flightFinder.clickIncrementButton(2);
+    await flightFinder.clickSearchButton();
+    await flightFinder.expectResultsFooterText("Finished");
   });
 });

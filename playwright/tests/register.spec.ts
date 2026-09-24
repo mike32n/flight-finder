@@ -1,14 +1,14 @@
 import { test } from "@playwright/test";
 import Env from "../utils/env";
-import MainPage from "../pages/main.page";
+import FlightFinderPage from "../pages/flight-finder.page";
 import AuthPage from "../pages/auth.page";
 
 test.describe("Authentication - Register", () => {
-  let main: MainPage;
+  let flightFinder: FlightFinderPage;
   let auth: AuthPage;
 
   test.beforeEach(async ({ page }) => {
-    main = new MainPage(page);
+    flightFinder = new FlightFinderPage(page);
     auth = new AuthPage(page);
 
     await page.goto(Env.test);

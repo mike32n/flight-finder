@@ -1,28 +1,28 @@
 import { test } from "@playwright/test";
 
 import Env from "../utils/env";
-import MainPage from "../pages/main.page";
+import FlightFinderPage from "../pages/flight-finder.page";
 
 test.describe("Booking links", () => {
-  let main: MainPage;
+  let flightFinder: FlightFinderPage;
 
   test.beforeEach(async ({ page }) => {
-    main = new MainPage(page);
+    flightFinder = new FlightFinderPage(page);
 
     await page.goto(Env.test);
   });
 
   test("opens booking page in new tab", async () => {
-    await main.selectAirportByEnter("ams");
-    await main.expectAirportSelected("AMS");
+    await flightFinder.selectAirportByEnter("ams");
+    await flightFinder.expectAirportSelected("AMS");
 
-    await main.selectWeekdayOption("5");
-    await main.clickIncrementButton(2);
+    await flightFinder.selectWeekdayOption("5");
+    await flightFinder.clickIncrementButton(2);
 
-    await main.clickSearchButton();
+    await flightFinder.clickSearchButton();
 
-    await main.expectFirstResultVisible();
+    await flightFinder.expectFirstResultVisible();
 
-    await main.expectBookingPageOpened();
+    await flightFinder.expectBookingPageOpened();
   });
 });

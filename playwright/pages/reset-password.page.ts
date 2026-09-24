@@ -1,6 +1,6 @@
 import { Locator, Page, expect } from "@playwright/test";
 
-export default class ResetPage {
+export default class ResetPasswordPage {
   readonly page: Page;
 
   readonly newPasswordInput: Locator;

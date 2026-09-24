@@ -1,9 +1,9 @@
 import { test } from "@playwright/test";
 import Env from "../utils/env";
 import CommonPage from "../pages/common.page";
-import MainPage from "../pages/main.page";
+import FlightFinderPage from "../pages/flight-finder.page";
 import AuthPage from "../pages/auth.page";
-import ResetPage from "../pages/reset.page";
+import ResetPasswordPage from "../pages/reset-password.page";
 import {
   createTestUser,
   createTestUserWithResetToken,
@@ -11,16 +11,16 @@ import {
 } from "../helpers/user.helper";
 
 test.describe("Authentication - Forgot Password", () => {
-  let main: MainPage;
+  let flightFinder: FlightFinderPage;
   let auth: AuthPage;
   let common: CommonPage;
-  let reset: ResetPage;
+  let resetPassword: ResetPasswordPage;
 
   test.beforeEach(async ({ page }) => {
-    main = new MainPage(page);
+    flightFinder = new FlightFinderPage(page);
     auth = new AuthPage(page);
     common = new CommonPage(page);
-    reset = new ResetPage(page);
+    resetPassword = new ResetPasswordPage(page);
 
     await page.goto(Env.test);
   });
@@ -61,15 +61,15 @@ test.describe("Authentication - Forgot Password", () => {
     const user = await createTestUserWithResetToken();
 
     await common.openPage(`${Env.test}reset-password/${user.resetToken}`);
-    await reset.expectResetFormEnabled();
+    await resetPassword.expectResetFormEnabled();
   });
 
   test("TC-FORGOT-04 | should get error on reset page with an invalid reset token", async () => {
     await common.openPage(`${Env.test}reset-password/i-n-v-a-l-i-d-t-o-k-e-n`);
-    await reset.expectPasswordResetMessage(
+    await resetPassword.expectPasswordResetMessage(
       "Invalid or expired password reset token.",
     );
-    await reset.expectResetFormDisabled();
+    await resetPassword.expectResetFormDisabled();
   });
 
   test("TC-FORGOT-05 | should reset password successfully", async () => {
@@ -78,13 +78,15 @@ test.describe("Authentication - Forgot Password", () => {
 
     await common.openPage(`${Env.test}reset-password/${user.resetToken}`);
 
-    await reset.expectResetFormEnabled();
+    await resetPassword.expectResetFormEnabled();
 
-    await reset.fillNewPassword(newPassword);
-    await reset.submitPasswordReset();
+    await resetPassword.fillNewPassword(newPassword);
+    await resetPassword.submitPasswordReset();
 
-    await reset.expectPasswordResetMessage("Password reset successfully.");
-    await reset.expectResetFormDisabled();
+    await resetPassword.expectPasswordResetMessage(
+      "Password reset successfully.",
+    );
+    await resetPassword.expectResetFormDisabled();
   });
 
   test("TC-FORGOT-06 | should login with new password after reset", async () => {
@@ -93,12 +95,14 @@ test.describe("Authentication - Forgot Password", () => {
 
     await common.openPage(`${Env.test}reset-password/${user.resetToken}`);
 
-    await reset.expectResetFormEnabled();
+    await resetPassword.expectResetFormEnabled();
 
-    await reset.fillNewPassword(newPassword);
-    await reset.submitPasswordReset();
+    await resetPassword.fillNewPassword(newPassword);
+    await resetPassword.submitPasswordReset();
 
-    await reset.expectPasswordResetMessage("Password reset successfully.");
+    await resetPassword.expectPasswordResetMessage(
+      "Password reset successfully.",
+    );
 
     await common.openPage(Env.test);
 
@@ -109,7 +113,7 @@ test.describe("Authentication - Forgot Password", () => {
     await auth.fillLoginForm(user.email, newPassword);
     await auth.submitLoginForm();
 
-    await common.expectVisible(main.logoutButton);
+    await common.expectVisible(flightFinder.logoutButton);
   });
 
   test("TC-FORGOT-07 | should not login with old password after reset", async () => {
@@ -118,12 +122,14 @@ test.describe("Authentication - Forgot Password", () => {
 
     await common.openPage(`${Env.test}reset-password/${user.resetToken}`);
 
-    await reset.expectResetFormEnabled();
+    await resetPassword.expectResetFormEnabled();
 
-    await reset.fillNewPassword(newPassword);
-    await reset.submitPasswordReset();
+    await resetPassword.fillNewPassword(newPassword);
+    await resetPassword.submitPasswordReset();
 
-    await reset.expectPasswordResetMessage("Password reset successfully.");
+    await resetPassword.expectPasswordResetMessage(
+      "Password reset successfully.",
+    );
 
     await common.openPage(Env.test);
 
@@ -137,7 +143,7 @@ test.describe("Authentication - Forgot Password", () => {
     await auth.expectAuthModalVisible();
     await auth.expectLoginErrorMessage("Invalid email or password.");
 
-    await common.expectNotPresent(main.logoutButton);
+    await common.expectNotPresent(flightFinder.logoutButton);
   });
 
   test("TC-FORGOT-08 | should allow password reset for unverified user", async () => {
@@ -146,12 +152,14 @@ test.describe("Authentication - Forgot Password", () => {
 
     await common.openPage(`${Env.test}reset-password/${user.resetToken}`);
 
-    await reset.expectResetFormEnabled();
+    await resetPassword.expectResetFormEnabled();
 
-    await reset.fillNewPassword(newPassword);
-    await reset.submitPasswordReset();
+    await resetPassword.fillNewPassword(newPassword);
+    await resetPassword.submitPasswordReset();
 
-    await reset.expectPasswordResetMessage("Password reset successfully.");
+    await resetPassword.expectPasswordResetMessage(
+      "Password reset successfully.",
+    );
 
     await common.openPage(Env.test);
 
@@ -167,7 +175,7 @@ test.describe("Authentication - Forgot Password", () => {
       "Please verify your email before logging in.",
     );
 
-    await common.expectNotPresent(main.logoutButton);
+    await common.expectNotPresent(flightFinder.logoutButton);
   });
 
   test("TC-FORGOT-09 | should allow password reset token to be used only once", async () => {
@@ -176,19 +184,21 @@ test.describe("Authentication - Forgot Password", () => {
 
     await common.openPage(`${Env.test}reset-password/${user.resetToken}`);
 
-    await reset.expectResetFormEnabled();
+    await resetPassword.expectResetFormEnabled();
 
-    await reset.fillNewPassword(newPassword);
-    await reset.submitPasswordReset();
+    await resetPassword.fillNewPassword(newPassword);
+    await resetPassword.submitPasswordReset();
 
-    await reset.expectPasswordResetMessage("Password reset successfully.");
+    await resetPassword.expectPasswordResetMessage(
+      "Password reset successfully.",
+    );
 
     await common.openPage(`${Env.test}reset-password/${user.resetToken}`);
 
-    await reset.expectPasswordResetMessage(
+    await resetPassword.expectPasswordResetMessage(
       "Invalid or expired password reset token.",
     );
 
-    await reset.expectResetFormDisabled();
+    await resetPassword.expectResetFormDisabled();
   });
 });

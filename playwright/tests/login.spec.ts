@@ -1,7 +1,7 @@
 import { test } from "@playwright/test";
 import Env from "../utils/env";
 import CommonPage from "../pages/common.page";
-import MainPage from "../pages/main.page";
+import FlightFinderPage from "../pages/flight-finder.page";
 import AuthPage from "../pages/auth.page";
 import { createTestUser, createVerifiedTestUser } from "../helpers/user.helper";
 
@@ -12,12 +12,12 @@ const { createUser, verifyUser } = require("../../models/userModel");
 
 test.describe("Authentication - Login", () => {
   let common: CommonPage;
-  let main: MainPage;
+  let flightFinder: FlightFinderPage;
   let auth: AuthPage;
 
   test.beforeEach(async ({ page }) => {
     common = new CommonPage(page);
-    main = new MainPage(page);
+    flightFinder = new FlightFinderPage(page);
     auth = new AuthPage(page);
 
     await page.goto(Env.test);
@@ -35,7 +35,7 @@ test.describe("Authentication - Login", () => {
     await auth.submitLoginForm();
     await auth.expectAuthModalHidden();
 
-    await common.expectVisible(main.logoutButton);
+    await common.expectVisible(flightFinder.logoutButton);
   });
 
   test("TC-LOGIN-02 | should not login with invalid password", async () => {
@@ -51,7 +51,7 @@ test.describe("Authentication - Login", () => {
     await auth.expectAuthModalVisible();
     await auth.expectLoginErrorMessage("Invalid email or password.");
 
-    await common.expectNotPresent(main.logoutButton);
+    await common.expectNotPresent(flightFinder.logoutButton);
   });
 
   test("TC-LOGIN-03 | should not login with unverified user", async () => {
@@ -69,7 +69,7 @@ test.describe("Authentication - Login", () => {
       "Please verify your email before logging in.",
     );
 
-    await common.expectNotPresent(main.logoutButton);
+    await common.expectNotPresent(flightFinder.logoutButton);
   });
 
   test("TC-LOGIN-04 | should not login with non-existent user", async () => {
@@ -84,6 +84,6 @@ test.describe("Authentication - Login", () => {
     await auth.expectAuthModalVisible();
     await auth.expectLoginErrorMessage("Invalid email or password.");
 
-    await common.expectNotPresent(main.logoutButton);
+    await common.expectNotPresent(flightFinder.logoutButton);
   });
 });
