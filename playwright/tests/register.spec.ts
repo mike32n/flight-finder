@@ -1,14 +1,12 @@
 import { test } from "@playwright/test";
 import Env from "../utils/env";
-import FlightFinderPage from "../pages/flight-finder.page";
 import AuthPage from "../pages/auth.page";
+import { createTestUser } from "../helpers/user.helper";
 
 test.describe("Authentication - Register", () => {
-  let flightFinder: FlightFinderPage;
   let auth: AuthPage;
 
   test.beforeEach(async ({ page }) => {
-    flightFinder = new FlightFinderPage(page);
     auth = new AuthPage(page);
 
     await page.goto(Env.test);
@@ -26,9 +24,26 @@ test.describe("Authentication - Register", () => {
     await auth.fillRegisterForm(email, password);
     await auth.submitRegisterForm();
 
-    await auth.expectRegistrationSuccessMessage(
+    await auth.expectRegisterMessage(
       "Registration successful. Please check your email to verify your account.",
     );
     await auth.expectRegisterFormEmpty();
+  });
+
+  test("TC-REGISTER-02 | should not register with an already registered email", async () => {
+    const user = await createTestUser();
+
+    await auth.clickRegisterButton();
+
+    await auth.expectAuthModalVisible();
+    await auth.expectRegisterFormVisible();
+
+    await auth.fillRegisterForm(user.email, user.password);
+    await auth.submitRegisterForm();
+
+    await auth.expectRegisterMessage("Email already registered.");
+
+    await auth.expectAuthModalVisible();
+    await auth.expectRegisterFormVisible();
   });
 });

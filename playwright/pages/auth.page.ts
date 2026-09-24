@@ -130,7 +130,7 @@ export default class AuthPage {
     await expect(this.registerFormContainer).toBeVisible();
   }
 
-  async expectRegistrationSuccessMessage(message: string): Promise<void> {
+  async expectRegisterMessage(message: string): Promise<void> {
     await expect(this.registerMessage).toContainText(message);
   }
 
