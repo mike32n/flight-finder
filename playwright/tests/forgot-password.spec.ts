@@ -42,13 +42,15 @@ test.describe("Authentication - Forgot Password", () => {
   });
 
   test("TC-FORGOT-02 | should show success message for non-existing email", async () => {
+    const email = `e2e-nonexistent-${Date.now()}@example.com`;
+
     await auth.clickLoginButton();
     await auth.expectAuthModalVisible();
     await auth.expectLoginFormVisible();
 
     await auth.clickForgotPasswordButton();
     await auth.expectForgotPasswordFormVisible();
-    await auth.fillForgotPasswordForm("nonexistent-email@example.com");
+    await auth.fillForgotPasswordForm(email);
     await auth.submitForgotPasswordForm();
     await auth.expectForgotPasswordSuccessMessage(
       "If the email address is registered, a password reset email has been sent.",
@@ -64,7 +66,10 @@ test.describe("Authentication - Forgot Password", () => {
 
   test("TC-FORGOT-04 | should get error on reset page with an invalid reset token", async () => {
     await common.openPage(`${Env.test}reset-password/i-n-v-a-l-i-d-t-o-k-e-n`);
-    await reset.expectTokenError();
+    await reset.expectPasswordResetMessage(
+      "Invalid or expired password reset token.",
+    );
+    await reset.expectResetFormDisabled();
   });
 
   test("TC-FORGOT-05 | should reset password successfully", async () => {
@@ -78,7 +83,7 @@ test.describe("Authentication - Forgot Password", () => {
     await reset.fillNewPassword(newPassword);
     await reset.submitPasswordReset();
 
-    await reset.expectPasswordResetSuccessMessage();
+    await reset.expectPasswordResetMessage("Password reset successfully.");
     await reset.expectResetFormDisabled();
   });
 
@@ -93,7 +98,7 @@ test.describe("Authentication - Forgot Password", () => {
     await reset.fillNewPassword(newPassword);
     await reset.submitPasswordReset();
 
-    await reset.expectPasswordResetSuccessMessage();
+    await reset.expectPasswordResetMessage("Password reset successfully.");
 
     await common.openPage(Env.test);
 
@@ -118,7 +123,7 @@ test.describe("Authentication - Forgot Password", () => {
     await reset.fillNewPassword(newPassword);
     await reset.submitPasswordReset();
 
-    await reset.expectPasswordResetSuccessMessage();
+    await reset.expectPasswordResetMessage("Password reset successfully.");
 
     await common.openPage(Env.test);
 
@@ -146,7 +151,7 @@ test.describe("Authentication - Forgot Password", () => {
     await reset.fillNewPassword(newPassword);
     await reset.submitPasswordReset();
 
-    await reset.expectPasswordResetSuccessMessage();
+    await reset.expectPasswordResetMessage("Password reset successfully.");
 
     await common.openPage(Env.test);
 
@@ -163,5 +168,27 @@ test.describe("Authentication - Forgot Password", () => {
     );
 
     await common.expectNotPresent(main.logoutButton);
+  });
+
+  test("TC-FORGOT-09 | should allow password reset token to be used only once", async () => {
+    const user = await createTestUserWithResetToken();
+    const newPassword = "NewPassword1";
+
+    await common.openPage(`${Env.test}reset-password/${user.resetToken}`);
+
+    await reset.expectResetFormEnabled();
+
+    await reset.fillNewPassword(newPassword);
+    await reset.submitPasswordReset();
+
+    await reset.expectPasswordResetMessage("Password reset successfully.");
+
+    await common.openPage(`${Env.test}reset-password/${user.resetToken}`);
+
+    await reset.expectPasswordResetMessage(
+      "Invalid or expired password reset token.",
+    );
+
+    await reset.expectResetFormDisabled();
   });
 });

@@ -28,14 +28,8 @@ export default class ResetPage {
     await expect(this.resetButton).toBeEnabled();
   }
 
-  async expectTokenError(): Promise<void> {
-    await expect(this.resetMessage).toContainText(
-      "Invalid or expired password reset token.",
-    );
-  }
-
-  async expectPasswordResetSuccessMessage(): Promise<void> {
-    await expect(this.resetMessage).toHaveText("Password reset successfully.");
+  async expectPasswordResetMessage(message: string): Promise<void> {
+    await expect(this.resetMessage).toContainText(message);
   }
 
   async expectResetFormDisabled(): Promise<void> {
