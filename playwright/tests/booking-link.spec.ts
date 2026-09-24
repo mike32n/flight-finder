@@ -12,7 +12,7 @@ test.describe("Booking links", () => {
     await page.goto(Env.test);
   });
 
-  test("opens booking page in new tab", async () => {
+  test("TC-BOOKING-01 | should open booking page in new tab", async () => {
     await flightFinder.selectAirportByEnter("ams");
     await flightFinder.expectAirportSelected("AMS");
 
@@ -23,6 +23,8 @@ test.describe("Booking links", () => {
 
     await flightFinder.expectFirstResultVisible();
 
-    await flightFinder.expectBookingPageOpened();
+    const bookingPage = await flightFinder.clickFirstResultAndGetBookingPage();
+
+    await flightFinder.expectBookingPageOpened(bookingPage);
   });
 });

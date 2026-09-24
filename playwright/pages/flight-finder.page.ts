@@ -251,13 +251,15 @@ export default class MainPage {
     await expect(this.resultsFooter.filter({ hasText: text })).toBeVisible();
   }
 
-  async expectBookingPageOpened(): Promise<void> {
+  async clickFirstResultAndGetBookingPage(): Promise<Page> {
     const popupPromise = this.page.waitForEvent("popup");
 
     await this.firstResult.click();
 
-    const popup = await popupPromise;
+    return popupPromise;
+  }
 
+  async expectBookingPageOpened(popup: Page): Promise<void> {
     await expect(popup).toHaveURL(/google\.com\/travel\/flights/);
   }
 }
