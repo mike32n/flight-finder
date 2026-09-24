@@ -202,7 +202,7 @@ export default class MainPage {
   }
 
   async expectPageTitle(text: string): Promise<void> {
-    await expect(this.page).toHaveTitle(new RegExp(text));
+    await expect(this.page).toHaveTitle(text);
   }
 
   async expectAutocompleteOpen(): Promise<void> {

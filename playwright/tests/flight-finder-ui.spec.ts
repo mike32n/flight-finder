@@ -15,11 +15,13 @@ test.describe("Flight Finder UI", () => {
     await page.goto(Env.test);
   });
 
-  test("should display page title", async () => {
-    await flightFinder.expectPageTitle("Perfect");
+  test("TC-UI-01 | should display page title", async () => {
+    await flightFinder.expectPageTitle(
+      "Flight Finder | Perfect Weekend Getaways",
+    );
   });
 
-  test("should display page elements", async () => {
+  test("TC-UI-02 | should display main page elements", async () => {
     await common.expectVisible(flightFinder.heading);
     await common.expectVisible(flightFinder.airportInput);
     await common.expectVisible(flightFinder.weekdaySelect);
