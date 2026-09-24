@@ -289,7 +289,10 @@ router.post("/reset-password/:token", async (req, res) => {
     const passwordHash = await bcrypt.hash(password, 10);
 
     await updatePassword(user.id, passwordHash);
-    await sendPasswordResetSuccessEmail(user.email);
+
+    if (process.env.E2E_TEST !== "true") {
+      await sendPasswordResetSuccessEmail(user.email);
+    }
 
     res.status(200).json({
       success: true,
