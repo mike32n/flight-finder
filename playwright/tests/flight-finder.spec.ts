@@ -15,19 +15,24 @@ test.describe("Flight Finder", () => {
     await page.goto(Env.test);
   });
 
-  test("should toggle dark theme", async () => {
+  test("TC-FLIGHT-01 | should toggle dark theme", async () => {
     await flightFinder.clickToggleTheme();
 
     await common.expectDarkThemeIsActive();
   });
 
-  test("should select active list item", async () => {
-    const iata = await flightFinder.selectAirportWithArrowKeys("c", 1, 3, 1);
+  test("TC-FLIGHT-02 | should select active autocomplete item", async () => {
+    await flightFinder.openAutocomplete("c");
+    await flightFinder.pressArrowDown(flightFinder.airportInput, 2);
+
+    const iata = await flightFinder.getActiveAutocompleteItemIata();
+
+    await flightFinder.pressEnter();
 
     await flightFinder.expectAirportSelected(iata);
   });
 
-  test("should select multiple airports", async () => {
+  test("TC-FLIGHT-03 | should select multiple airports", async () => {
     await flightFinder.selectAirportByEnter("ein");
     await flightFinder.expectAirportSelected("EIN");
 
@@ -38,15 +43,15 @@ test.describe("Flight Finder", () => {
     await flightFinder.expectAirportSelected("TFS");
   });
 
-  test("should deselect airport", async () => {
-    const iata = await flightFinder.selectAirportWithArrowKeys("e", 9, 10, 0);
+  test("TC-FLIGHT-04 | should deselect airport", async () => {
+    await flightFinder.selectAirportByEnter("ams");
+    await flightFinder.expectAirportSelected("AMS");
 
-    await flightFinder.expectAirportSelected(iata);
-    await flightFinder.clickSelectedContainer(iata);
-    await flightFinder.expectAirportNotSelected(iata);
+    await flightFinder.clickSelectedContainer("AMS");
+    await flightFinder.expectAirportNotSelected("AMS");
   });
 
-  test("should select airport only once", async () => {
+  test("TC-FLIGHT-05 | should not select the same airport more than once", async () => {
     await flightFinder.selectAirportByEnter("ams");
     await flightFinder.expectAirportSelected("AMS");
 
@@ -54,48 +59,57 @@ test.describe("Flight Finder", () => {
     await flightFinder.expectAirportSelectedOnlyOnce("AMS");
   });
 
-  test("should warn if no airports are selected", async () => {
+  test("TC-FLIGHT-06 | should warn if no airports are selected", async () => {
     await flightFinder.clickSearchButton();
+
     await flightFinder.expectNoAirportsSelectedWarning();
   });
 
-  test("should select weekday by typing", async () => {
+  test("TC-FLIGHT-07 | should select weekday by typing", async () => {
     await flightFinder.selectWeekdayByName("Friday");
+
     await flightFinder.expectWeekdaySelected("Friday");
   });
 
-  test("should select weekday by typing and arrows", async () => {
+  test("TC-FLIGHT-08 | should navigate weekdays with arrow keys", async () => {
     await flightFinder.selectWeekdayByName("Friday");
     await flightFinder.pressArrowDown(flightFinder.weekdaySelect);
     await flightFinder.expectWeekdaySelected("Saturday");
+
     await flightFinder.pressArrowUp(flightFinder.weekdaySelect, 2);
     await flightFinder.expectWeekdaySelected("Thursday");
   });
 
-  test("should not decrement nights when already at minimum", async () => {
+  test("TC-FLIGHT-09 | should not decrement nights below minimum", async () => {
     await flightFinder.clickDecrementButton(1);
+
     await flightFinder.expectNightsValue("1");
   });
 
-  test("should not increment nights when already at maximum", async () => {
+  test("TC-FLIGHT-10 | should not increment nights above maximum", async () => {
     await flightFinder.clickIncrementButton(30);
+
     await flightFinder.expectNightsValue("30");
   });
 
-  test("should increment and decrement nights", async () => {
+  test("TC-FLIGHT-11 | should increment and decrement nights", async () => {
     await flightFinder.clickIncrementButton(3);
     await flightFinder.expectNightsValue("4");
-    await flightFinder.clickDecrementButton(1);
+
+    await flightFinder.clickDecrementButton();
     await flightFinder.expectNightsValue("3");
   });
 
-  test("e2e | one airport", async () => {
+  test("TC-FLIGHT-12 | should complete search for one airport", async () => {
     await flightFinder.selectAirportByEnter("ams");
     await flightFinder.expectAirportSelected("AMS");
 
     await flightFinder.selectWeekdayOption("5");
     await flightFinder.clickIncrementButton(2);
+
     await flightFinder.clickSearchButton();
+
+    await flightFinder.expectFirstResultVisible();
     await flightFinder.expectResultsFooterText("Finished");
   });
 });

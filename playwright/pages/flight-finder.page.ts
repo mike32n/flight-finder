@@ -19,6 +19,7 @@ export default class MainPage {
   readonly autocompleteList: Locator;
   readonly selectedContainer: Locator;
   readonly autocompleteItem: Locator;
+  readonly activeAutocompleteItem: Locator;
   readonly firstResult: Locator;
   readonly resultsFooter: Locator;
 
@@ -66,6 +67,8 @@ export default class MainPage {
     this.noAirportsSelectedWarning = page.locator(".error-card");
 
     this.autocompleteItem = page.locator(".autocomplete-item");
+
+    this.activeAutocompleteItem = page.locator(".autocomplete-item.active");
 
     this.firstResult = page.locator(".card").first();
 
@@ -130,32 +133,16 @@ export default class MainPage {
     await this.expectAutocompleteOpen();
   }
 
-  async navigateAutocomplete(stepsDown: number, stepsUp = 0): Promise<void> {
-    for (let i = 0; i < stepsDown; i++) {
-      await this.pressArrowDown(this.airportInput);
+  async getActiveAutocompleteItemIata(): Promise<string> {
+    const text =
+      (await this.activeAutocompleteItem.textContent())?.trim() ?? "";
+    const match = text.match(/\(([A-Z]{3})\)/);
+
+    if (!match) {
+      throw new Error("No IATA found in active autocomplete item");
     }
 
-    for (let i = 0; i < stepsUp; i++) {
-      await this.pressArrowUp(this.airportInput);
-    }
-  }
-
-  async selectAirportWithArrowKeys(
-    searchText: string,
-    activeIndex: number,
-    down: number,
-    up: number,
-  ): Promise<string> {
-    await this.openAutocomplete(searchText);
-
-    const iata = await this.getAutocompleteItemIata(activeIndex);
-
-    await this.navigateAutocomplete(down, up);
-    await this.expectItemActive(activeIndex);
-
-    await this.pressEnter();
-
-    return iata;
+    return match[1];
   }
 
   async getAutocompleteItemText(index: number): Promise<string> {
@@ -163,24 +150,11 @@ export default class MainPage {
     return (await item.textContent())?.trim() ?? "";
   }
 
-  async getAutocompleteItemIata(index: number): Promise<string> {
-    const text = await this.getAutocompleteItemText(index);
-    const match = text.match(/\(([A-Z]{3})\)/);
-    if (!match) throw new Error("No IATA found");
-    return match[1];
-  }
-
   async selectAirportByEnter(searchText: string): Promise<void> {
     await this.clickAirportInput();
     await this.searchAirport(searchText);
     await this.expectAutocompleteOpen();
     await this.pressEnter();
-  }
-
-  async selectActiveItemIata(index: number): Promise<string> {
-    const iata = await this.getAutocompleteItemIata(index);
-    await this.expectItemActive(index);
-    return iata;
   }
 
   async selectWeekdayOption(option: string): Promise<void> {
