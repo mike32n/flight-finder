@@ -1,6 +1,6 @@
-const redis = require("../services/redisClient");
+const redis = require("../../services/redisClient");
 
-jest.mock("../services/redisClient", () => {
+jest.mock("../../services/redisClient", () => {
   let store = {};
 
   return {
@@ -19,7 +19,7 @@ jest.mock("../services/redisClient", () => {
   };
 });
 
-const cache = require("../services/cacheService");
+const cache = require("../../services/cacheService");
 
 describe("cacheService", () => {
   beforeEach(() => {

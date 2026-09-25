@@ -1,7 +1,7 @@
 const {
   shouldRunFlex,
   analyzePriceDelta,
-} = require("../services/smartFlexService");
+} = require("../../services/smartFlexService");
 
 describe("shouldRunFlex", () => {
   test("returns true when no successful results", () => {
