@@ -2,13 +2,13 @@ const request = require("supertest");
 const express = require("express");
 const jwt = require("jsonwebtoken");
 
-jest.mock("../models/userModel", () => ({
+jest.mock("../../models/userModel", () => ({
   findUserByEmail: jest.fn(),
 }));
 
-const { findUserByEmail } = require("../models/userModel");
+const { findUserByEmail } = require("../../models/userModel");
 
-const authRoutes = require("../routes/authRoutes");
+const authRoutes = require("../../routes/authRoutes");
 
 const app = express();
 

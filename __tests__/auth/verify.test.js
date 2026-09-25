@@ -1,7 +1,7 @@
 const request = require("supertest");
 const express = require("express");
 
-jest.mock("../models/userModel", () => ({
+jest.mock("../../models/userModel", () => ({
   findUserByVerificationToken: jest.fn(),
   verifyUser: jest.fn(),
 }));
@@ -9,9 +9,9 @@ jest.mock("../models/userModel", () => ({
 const {
   findUserByVerificationToken,
   verifyUser,
-} = require("../models/userModel");
+} = require("../../models/userModel");
 
-const authRoutes = require("../routes/authRoutes");
+const authRoutes = require("../../routes/authRoutes");
 
 const app = express();
 

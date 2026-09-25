@@ -1,23 +1,23 @@
 const request = require("supertest");
 const express = require("express");
 
-jest.mock("../models/userModel", () => ({
+jest.mock("../../models/userModel", () => ({
   findUserByEmail: jest.fn(),
   savePasswordResetToken: jest.fn(),
 }));
 
-jest.mock("../services/emailService", () => ({
+jest.mock("../../services/emailService", () => ({
   sendPasswordResetEmail: jest.fn(),
 }));
 
 const {
   findUserByEmail,
   savePasswordResetToken,
-} = require("../models/userModel");
+} = require("../../models/userModel");
 
-const { sendPasswordResetEmail } = require("../services/emailService");
+const { sendPasswordResetEmail } = require("../../services/emailService");
 
-const authRoutes = require("../routes/authRoutes");
+const authRoutes = require("../../routes/authRoutes");
 
 const app = express();
 

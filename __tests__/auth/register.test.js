@@ -1,7 +1,7 @@
 const request = require("supertest");
 const express = require("express");
 
-jest.mock("../models/userModel", () => ({
+jest.mock("../../models/userModel", () => ({
   createUser: jest.fn(),
   findUserByEmail: jest.fn(),
 }));
@@ -10,17 +10,17 @@ jest.mock("bcrypt", () => ({
   hash: jest.fn(),
 }));
 
-jest.mock("../services/emailService", () => ({
+jest.mock("../../services/emailService", () => ({
   sendVerificationEmail: jest.fn(),
 }));
 
 const bcrypt = require("bcrypt");
 
-const { sendVerificationEmail } = require("../services/emailService");
+const { sendVerificationEmail } = require("../../services/emailService");
 
-const { createUser, findUserByEmail } = require("../models/userModel");
+const { createUser, findUserByEmail } = require("../../models/userModel");
 
-const authRoutes = require("../routes/authRoutes");
+const authRoutes = require("../../routes/authRoutes");
 
 const app = express();
 

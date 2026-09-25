@@ -1,4 +1,4 @@
-const { validatePassword } = require("../utils/passwordValidator");
+const { validatePassword } = require("../../utils/passwordValidator");
 
 describe("validatePassword", () => {
   test("should accept a valid password", () => {

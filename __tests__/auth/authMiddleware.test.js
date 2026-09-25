@@ -1,6 +1,6 @@
 const jwt = require("jsonwebtoken");
 
-const { authenticateToken } = require("../middlewares/authMiddleware");
+const { authenticateToken } = require("../../middlewares/authMiddleware");
 
 describe("authenticateToken", () => {
   beforeEach(() => {

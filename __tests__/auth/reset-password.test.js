@@ -1,12 +1,12 @@
 const request = require("supertest");
 const express = require("express");
 
-jest.mock("../models/userModel", () => ({
+jest.mock("../../models/userModel", () => ({
   findUserByPasswordResetToken: jest.fn(),
   updatePassword: jest.fn(),
 }));
 
-jest.mock("../services/emailService", () => ({
+jest.mock("../../services/emailService", () => ({
   sendPasswordResetSuccessEmail: jest.fn(),
 }));
 
@@ -17,13 +17,13 @@ jest.mock("bcrypt", () => ({
 const {
   findUserByPasswordResetToken,
   updatePassword,
-} = require("../models/userModel");
+} = require("../../models/userModel");
 
-const { sendPasswordResetSuccessEmail } = require("../services/emailService");
+const { sendPasswordResetSuccessEmail } = require("../../services/emailService");
 
 const bcrypt = require("bcrypt");
 
-const authRoutes = require("../routes/authRoutes");
+const authRoutes = require("../../routes/authRoutes");
 
 const app = express();
 
