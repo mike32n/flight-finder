@@ -1,5 +1,5 @@
 const express = require("express");
-const generateTrips = require("../dateGenerator");
+const generateTrips = require("../utils/dateGenerator");
 const { getProvider } = require("../providers/providerFactory");
 const provider = require("../config/providers");
 const appConfig = require("../config/appConfig");

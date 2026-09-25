@@ -1,5 +1,5 @@
 const dayjs = require("dayjs");
-const { search } = require("./config/appConfig");
+const { search } = require("../config/appConfig");
 
 function generateTrips(
   weekday,
