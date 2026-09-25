@@ -11,7 +11,7 @@ describe("generateMockPrice", () => {
     expect(price).toBeGreaterThan(0);
   });
 
-  test("same input gives deterministic result (optional)", () => {
+  test("same input gives deterministic result", () => {
     const a = generateMockPrice("Paris", "2026-06-01");
     const b = generateMockPrice("Paris", "2026-06-01");
 
