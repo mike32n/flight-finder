@@ -1,12 +1,12 @@
-const AmadeusProvider = require("../providers/amadeusProvider");
+const AmadeusProvider = require("../../providers/amadeusProvider");
 
 // Prevent real rate limiter / timers
-jest.mock("../services/rateLimiter", () => ({
+jest.mock("../../services/rateLimiter", () => ({
   acquireToken: jest.fn().mockResolvedValue(true),
 }));
 
-jest.mock("../services/cacheService", () => ({
-  getOrSet: jest.fn((_, __, fetcher) => fetcher()), 
+jest.mock("../../services/cacheService", () => ({
+  getOrSet: jest.fn((_, __, fetcher) => fetcher()),
 }));
 
 describe("AmadeusProvider", () => {
@@ -28,7 +28,7 @@ describe("AmadeusProvider", () => {
         clientSecret: "test",
         hostname: "test",
       },
-      mockAmadeus // ✅ injected here
+      mockAmadeus, // ✅ injected here
     );
   });
 
@@ -44,7 +44,7 @@ describe("AmadeusProvider", () => {
     const result = await provider.searchFlights(
       "BCN",
       "2026-06-01",
-      "2026-06-04"
+      "2026-06-04",
     );
 
     expect(result.success).toBe(true);
@@ -60,7 +60,7 @@ describe("AmadeusProvider", () => {
     const result = await provider.searchFlights(
       "BCN",
       "2026-06-01",
-      "2026-06-04"
+      "2026-06-04",
     );
 
     expect(result.success).toBe(false);
@@ -86,7 +86,7 @@ describe("AmadeusProvider", () => {
     const result = await provider.searchFlights(
       "BCN",
       "2026-06-01",
-      "2026-06-04"
+      "2026-06-04",
     );
 
     expect(callCount).toBe(1);
@@ -95,13 +95,13 @@ describe("AmadeusProvider", () => {
 
   test("returns failure on unexpected error", async () => {
     mockAmadeus.shopping.flightOffersSearch.get.mockRejectedValue(
-      new Error("API down")
+      new Error("API down"),
     );
 
     const result = await provider.searchFlights(
       "BCN",
       "2026-06-01",
-      "2026-06-04"
+      "2026-06-04",
     );
 
     expect(result.success).toBe(false);

@@ -1,4 +1,4 @@
-const MockProvider = require("../providers/mockProvider");
+const MockProvider = require("../../providers/mockProvider");
 const { generateMockPrice } = MockProvider;
 
 describe("generateMockPrice", () => {

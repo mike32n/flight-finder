@@ -1,9 +1,9 @@
 const axios = require("axios");
-const SerpApiProvider = require("../providers/serpApiProvider");
+const SerpApiProvider = require("../../providers/serpApiProvider");
 
 jest.mock("axios");
 
-jest.mock("../services/cacheService", () => ({
+jest.mock("../../services/cacheService", () => ({
   getOrSet: jest.fn((_, __, fetcher) => fetcher()),
 }));
 
