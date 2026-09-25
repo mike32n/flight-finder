@@ -1,4 +1,4 @@
-jest.mock("../services/redisClient", () => ({
+jest.mock("../../services/redisClient", () => ({
   get: jest.fn().mockResolvedValue(null),
   set: jest.fn().mockResolvedValue("OK"),
   quit: jest.fn().mockResolvedValue("OK"),
@@ -6,11 +6,11 @@ jest.mock("../services/redisClient", () => ({
   defineCommand: jest.fn(),
 }));
 
-jest.mock("../services/rateLimiter", () => ({
+jest.mock("../../services/rateLimiter", () => ({
   acquireToken: jest.fn().mockResolvedValue(true),
 }));
 
-jest.mock("../db", () => ({
+jest.mock("../../db", () => ({
   getDb: jest.fn(() => ({
     all: jest.fn((_, __, cb) => cb(null, [])),
   })),
@@ -18,7 +18,7 @@ jest.mock("../db", () => ({
 }));
 
 const request = require("supertest");
-const app = require("../app");
+const app = require("../../app");
 
 describe("POST /search", () => {
   test("returns 400 if parameters missing", async () => {
@@ -77,8 +77,8 @@ describe("POST /search", () => {
 });
 
 afterAll(async () => {
-  const redis = require("../services/redisClient");
-  const { closeDb } = require("../db");
+  const redis = require("../../services/redisClient");
+  const { closeDb } = require("../../db");
 
   await closeDb();
 

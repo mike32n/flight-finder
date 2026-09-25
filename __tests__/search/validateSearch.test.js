@@ -1,4 +1,4 @@
-const validateSearch = require("../middlewares/validateSearch");
+const validateSearch = require("../../middlewares/validateSearch");
 
 describe("validateSearch", () => {
   let req;
