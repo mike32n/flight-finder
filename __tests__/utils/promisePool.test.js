@@ -1,4 +1,4 @@
-const runWithConcurrencyLimit = require("../utils/promisePool");
+const runWithConcurrencyLimit = require("../../utils/promisePool");
 
 describe("promisePool", () => {
   test("returns successful results", async () => {
