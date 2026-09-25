@@ -6,7 +6,7 @@ const appConfig = require("../config/appConfig");
 const runWithConcurrencyLimit = require("../promisePool");
 const validateSearch = require("../middlewares/validateSearch");
 const { getAllDestinations } = require("../models/destinationModel");
-const { expandControlledFlexibility } = require("../dateFlexibility");
+const { expandControlledFlexibility } = require("../services/flexDateService");
 const {
   shouldRunFlex,
   analyzePriceDelta,

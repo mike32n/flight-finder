@@ -1,5 +1,5 @@
 const dayjs = require("dayjs");
-const { smartFlex } = require("./config/appConfig");
+const { smartFlex } = require("../config/appConfig");
 
 function expandControlledFlexibility(trip) {
   const results = [];
