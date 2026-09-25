@@ -1,4 +1,4 @@
-const { generateMockPrice } = require("../flightService");
+const { generateMockPrice } = require("../providers/mockProvider");
 
 describe("generateMockPrice", () => {
   test("returns a number", () => {

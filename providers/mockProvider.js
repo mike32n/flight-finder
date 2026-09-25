@@ -1,5 +1,37 @@
 const BaseProvider = require("./baseProvider");
-const { searchMockFlights } = require("../flightService");
+
+function generateMockPrice(destination, departure) {
+  const input = destination + departure;
+
+  let hash = 0;
+
+  for (let i = 0; i < input.length; i++) {
+    hash = input.charCodeAt(i) + ((hash << 5) - hash);
+    hash |= 0;
+  }
+
+  const normalized = Math.abs(hash % 60000);
+
+  return 20000 + normalized;
+}
+
+async function searchMockFlights(destination, departure, returnDate) {
+  // 20% chance of error to simulate API issues
+  if (Math.random() < 0.2) {
+    throw new Error("Mock API error");
+  }
+
+  const price = generateMockPrice(destination, departure);
+
+  return {
+    destination,
+    departure,
+    return: returnDate,
+    price,
+    currency: "HUF",
+    bookingUrl: "https://www.google.com/travel/flights?test",
+  };
+}
 
 class MockProvider extends BaseProvider {
   async searchFlights(destination, departure, returnDate) {
@@ -24,3 +56,4 @@ class MockProvider extends BaseProvider {
 }
 
 module.exports = MockProvider;
+module.exports.generateMockPrice = generateMockPrice;
