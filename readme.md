@@ -18,7 +18,8 @@ A lightweight web application for finding cheap short round-trip flights from Bu
 - User registration, email verification and login
 - Forgot-password and secure password-reset flow
 - Light/dark theme
-- Jest/Supertest and Playwright test automation
+- Jest/Supertest and Playwright + TypeScript test automation
+- Automated test execution with GitHub Actions
 
 ## How It Works
 
@@ -65,19 +66,23 @@ FLIGHT_PROVIDER=serpapi
 
 ## Tech Stack
 
-**Backend:** Node.js, Express, SQLite, Redis
-
-**Frontend:** HTML, CSS, Vanilla JavaScript
-
-**Flight data:** SerpApi / Google Flights
-
-**Authentication:** bcrypt, crypto, validator
-
-**Email:** Nodemailer, Mailtrap
-
-**Testing:** Jest, Supertest, Playwright, TypeScript
-
+**Backend:** Node.js, Express, SQLite, Redis  
+**Frontend:** HTML, CSS, Vanilla JavaScript  
+**Flight data:** SerpApi / Google Flights  
+**Authentication:** bcrypt, crypto, validator  
+**Email:** Nodemailer, Mailtrap  
+**Testing:** Playwright + TypeScript, Jest, Supertest  
+**CI:** GitHub Actions  
 **Development Tools:** Docker Compose
+
+## Test Automation
+
+- Playwright + TypeScript E2E tests
+- Page Object Model (POM) with reusable page objects and helpers
+- Authentication, flight search, UI and booking-link coverage
+- Jest/Supertest unit and integration tests
+- Automated Jest and Playwright execution in GitHub Actions
+- Playwright HTML reports available as CI artifacts
 
 ## Running Locally
 
