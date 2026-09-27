@@ -20,6 +20,7 @@ const {
 } = require("../services/emailService");
 
 const { validatePassword } = require("../utils/passwordValidator");
+const { auth } = require("../config/appConfig");
 
 async function register(req, res) {
   try {
@@ -167,7 +168,7 @@ async function login(req, res) {
       },
       process.env.JWT_SECRET,
       {
-        expiresIn: process.env.JWT_EXPIRES_IN || "1h",
+        expiresIn: auth.jwtExpiresIn,
       },
     );
 
@@ -194,7 +195,7 @@ async function forgotPassword(req, res) {
 
     if (user) {
       const token = crypto.randomUUID();
-      const expires = new Date(Date.now() + 3600000); // 1 hour from now
+      const expires = new Date(Date.now() + auth.passwordResetTokenLifetimeMs);
 
       await savePasswordResetToken(user.id, token, expires);
 

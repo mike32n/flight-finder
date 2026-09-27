@@ -19,4 +19,8 @@ module.exports = {
   api: {
     timeoutMs: 15000,
   },
+  auth: {
+    passwordResetTokenLifetimeMs: 60 * 60 * 1000,
+    jwtExpiresIn: process.env.JWT_EXPIRES_IN || "1h",
+  },
 };
