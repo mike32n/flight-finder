@@ -69,9 +69,7 @@ async function register(req, res) {
       verificationToken,
     });
 
-    if (process.env.E2E_TEST !== "true") {
-      await sendVerificationEmail(email, verificationToken);
-    }
+    await sendVerificationEmail(email, verificationToken);
 
     res.status(201).json({
       success: true,
@@ -199,9 +197,7 @@ async function forgotPassword(req, res) {
 
       await savePasswordResetToken(user.id, token, expires);
 
-      if (process.env.E2E_TEST !== "true") {
-        await sendPasswordResetEmail(email, token);
-      }
+      await sendPasswordResetEmail(email, token);
     }
 
     res.status(200).json({
@@ -287,9 +283,7 @@ async function resetPassword(req, res) {
 
     await updatePassword(user.id, passwordHash);
 
-    if (process.env.E2E_TEST !== "true") {
-      await sendPasswordResetSuccessEmail(user.email);
-    }
+    await sendPasswordResetSuccessEmail(user.email);
 
     res.status(200).json({
       success: true,

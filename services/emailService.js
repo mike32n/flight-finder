@@ -9,7 +9,13 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+function isEmailSendingDisabled() {
+  return process.env.E2E_TEST === "true";
+}
+
 async function sendVerificationEmail(email, verificationToken) {
+  if (isEmailSendingDisabled()) return;
+
   const verificationUrl = `${process.env.APP_BASE_URL}/verify/${verificationToken}`;
 
   await transporter.sendMail({
@@ -26,6 +32,8 @@ async function sendVerificationEmail(email, verificationToken) {
 }
 
 async function sendPasswordResetEmail(email, token) {
+  if (isEmailSendingDisabled()) return;
+
   const resetUrl = `http://localhost:3000/reset-password/${token}`;
 
   await transporter.sendMail({
@@ -47,6 +55,8 @@ async function sendPasswordResetEmail(email, token) {
 }
 
 async function sendPasswordResetSuccessEmail(email) {
+  if (isEmailSendingDisabled()) return;
+
   await transporter.sendMail({
     from: process.env.EMAIL_FROM,
     to: email,
