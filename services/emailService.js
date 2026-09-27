@@ -34,10 +34,10 @@ async function sendVerificationEmail(email, verificationToken) {
 async function sendPasswordResetEmail(email, token) {
   if (isEmailSendingDisabled()) return;
 
-  const resetUrl = `http://localhost:3000/reset-password/${token}`;
+  const resetUrl = `${process.env.APP_BASE_URL}/reset-password/${token}`;
 
   await transporter.sendMail({
-    from: process.env.EMAIL_FROM,
+    from: process.env.MAIL_FROM,
     to: email,
     subject: "Reset your Flight Finder password",
     text: `
@@ -58,7 +58,7 @@ async function sendPasswordResetSuccessEmail(email) {
   if (isEmailSendingDisabled()) return;
 
   await transporter.sendMail({
-    from: process.env.EMAIL_FROM,
+    from: process.env.MAIL_FROM,
     to: email,
     subject: "Your Flight Finder password has been reset",
     text: `
