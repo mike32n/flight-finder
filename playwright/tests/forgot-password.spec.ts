@@ -141,7 +141,7 @@ test.describe("Authentication - Forgot Password", () => {
     await auth.submitLoginForm();
 
     await auth.expectAuthModalVisible();
-    await auth.expectLoginErrorMessage("Invalid email or password.");
+    await auth.expectLoginMessage("Invalid email or password.");
 
     await common.expectNotPresent(flightFinder.logoutButton);
   });
@@ -171,7 +171,7 @@ test.describe("Authentication - Forgot Password", () => {
     await auth.submitLoginForm();
 
     await auth.expectAuthModalVisible();
-    await auth.expectLoginErrorMessage(
+    await auth.expectLoginMessage(
       "Please verify your email before logging in.",
     );
 

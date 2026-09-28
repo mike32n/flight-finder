@@ -24,10 +24,11 @@ test.describe("Authentication - Register", () => {
     await auth.fillRegisterForm(email, password);
     await auth.submitRegisterForm();
 
-    await auth.expectRegisterMessage(
+    await auth.expectLoginFormVisible();
+
+    await auth.expectLoginMessage(
       "Registration successful. Please check your email to verify your account.",
     );
-    await auth.expectRegisterFormEmpty();
   });
 
   test("TC-REGISTER-02 | should not register with an already registered email", async () => {
