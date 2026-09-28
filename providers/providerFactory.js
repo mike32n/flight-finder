@@ -2,7 +2,7 @@ const MockProvider = require("./mockProvider");
 const AmadeusProvider = require("./amadeusProvider");
 const SerpApiProvider = require("./serpApiProvider");
 
-const config = require("../config/providers");
+const config = require("../config/providerConfig");
 
 let provider;
 
