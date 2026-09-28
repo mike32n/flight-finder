@@ -7,11 +7,13 @@ const {
   savePasswordResetToken,
 } = require("../../models/userModel");
 
+const { auth } = require("../../config/appConfig");
+
 export async function createTestUser() {
   const email = `e2e-${Date.now()}@example.com`;
   const password = "TestPassword1";
 
-  const passwordHash = await bcrypt.hash(password, 10);
+  const passwordHash = await bcrypt.hash(password, auth.bcryptSaltRounds);
   const verificationToken = crypto.randomUUID();
 
   const user = await createUser({
@@ -31,7 +33,7 @@ export async function createVerifiedTestUser() {
   const email = `e2e-${Date.now()}@example.com`;
   const password = "TestPassword1";
 
-  const passwordHash = await bcrypt.hash(password, 10);
+  const passwordHash = await bcrypt.hash(password, auth.bcryptSaltRounds);
   const verificationToken = crypto.randomUUID();
 
   const user = await createUser({
@@ -53,7 +55,7 @@ export async function createTestUserWithResetToken() {
   const email = `e2e-${Date.now()}@example.com`;
   const password = "TestPassword1";
 
-  const passwordHash = await bcrypt.hash(password, 10);
+  const passwordHash = await bcrypt.hash(password, auth.bcryptSaltRounds);
   const verificationToken = crypto.randomUUID();
   const resetToken = crypto.randomUUID();
   const resetExpires = new Date(Date.now() + 3600000);
@@ -78,7 +80,7 @@ export async function createVerifiedTestUserWithResetToken() {
   const email = `e2e-${Date.now()}@example.com`;
   const password = "TestPassword1";
 
-  const passwordHash = await bcrypt.hash(password, 10);
+  const passwordHash = await bcrypt.hash(password, auth.bcryptSaltRounds);
   const verificationToken = crypto.randomUUID();
   const resetToken = crypto.randomUUID();
   const resetExpires = new Date(Date.now() + 3600000);

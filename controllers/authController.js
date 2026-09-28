@@ -66,7 +66,7 @@ async function register(req, res) {
       });
     }
 
-    const passwordHash = await bcrypt.hash(password, 10);
+    const passwordHash = await bcrypt.hash(password, auth.bcryptSaltRounds);
     const verificationToken = auth.emailVerificationRequired
       ? crypto.randomUUID()
       : null;
@@ -276,7 +276,7 @@ async function resetPassword(req, res) {
       });
     }
 
-    const passwordHash = await bcrypt.hash(password, 10);
+    const passwordHash = await bcrypt.hash(password, auth.bcryptSaltRounds);
 
     await updatePassword(user.id, passwordHash);
 
