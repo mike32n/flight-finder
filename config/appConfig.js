@@ -20,7 +20,7 @@ module.exports = {
     timeoutMs: 15000,
   },
   auth: {
-    emailVerificationRequired: true,
+    emailVerificationRequired: false,
     passwordResetTokenLifetimeMs: 60 * 60 * 1000,
     jwtExpiresIn: process.env.JWT_EXPIRES_IN || "1h",
   },
