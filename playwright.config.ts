@@ -79,11 +79,12 @@ export default defineConfig({
   webServer: {
     command: "npm start",
     url: "http://localhost:3000",
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false,
     timeout: 120_000,
     env: {
       ...process.env,
       E2E_TEST: "true",
+      EMAIL_VERIFICATION_REQUIRED: "true",
     },
   },
 });
