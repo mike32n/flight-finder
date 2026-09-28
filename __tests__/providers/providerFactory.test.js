@@ -4,7 +4,7 @@ describe("providerFactory", () => {
   });
 
   test("creates mock provider", () => {
-    jest.doMock("../../config/providers", () => ({
+    jest.doMock("../../config/providerConfig", () => ({
       type: "mock",
     }));
 
@@ -16,7 +16,7 @@ describe("providerFactory", () => {
   });
 
   test("creates amadeus provider", () => {
-    jest.doMock("../../config/providers", () => ({
+    jest.doMock("../../config/providerConfig", () => ({
       type: "amadeus",
       clientId: "x",
       clientSecret: "y",
@@ -31,7 +31,7 @@ describe("providerFactory", () => {
   });
 
   test("creates serpapi provider", () => {
-    jest.doMock("../../config/providers", () => ({
+    jest.doMock("../../config/providerConfig", () => ({
       type: "serpapi",
       apiKey: "test-key",
     }));

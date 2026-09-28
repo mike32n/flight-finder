@@ -1,12 +1,12 @@
 const express = require("express");
 const generateTrips = require("../utils/dateGenerator");
 const { getProvider } = require("../providers/providerFactory");
-const provider = require("../config/providers");
+const provider = require("../config/providerConfig");
 const appConfig = require("../config/appConfig");
 const runWithConcurrencyLimit = require("../utils/promisePool");
 const validateSearch = require("../middlewares/validateSearch");
 const { getAllDestinations } = require("../models/destinationModel");
-const { expandControlledFlexibility } = require("../services/flexDateService");
+const { expandControlledFlexibility } = require("../services/flexDateGenerator");
 const {
   shouldRunFlex,
   analyzePriceDelta,

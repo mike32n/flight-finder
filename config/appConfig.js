@@ -24,5 +24,6 @@ module.exports = {
       process.env.EMAIL_VERIFICATION_REQUIRED !== "false",
     passwordResetTokenLifetimeMs: 60 * 60 * 1000,
     jwtExpiresIn: process.env.JWT_EXPIRES_IN || "1h",
+    bcryptSaltRounds: 10,
   },
 };
