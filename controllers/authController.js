@@ -22,6 +22,10 @@ const {
 const { validatePassword } = require("../utils/passwordValidator");
 const { auth } = require("../config/appConfig");
 
+const {
+  hasValidPasswordResetToken,
+} = require("../utils/passwordResetTokenValidator");
+
 async function register(req, res) {
   try {
     const { password } = req.body;
@@ -226,11 +230,7 @@ async function validateResetToken(req, res) {
 
     const user = await findUserByPasswordResetToken(token);
 
-    if (
-      !user ||
-      !user.password_reset_expires ||
-      new Date(user.password_reset_expires) < new Date()
-    ) {
+    if (!hasValidPasswordResetToken(user)) {
       return res.status(400).json({
         success: false,
         message: "Invalid or expired password reset token.",
@@ -267,17 +267,7 @@ async function resetPassword(req, res) {
 
     const user = await findUserByPasswordResetToken(token);
 
-    if (!user) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid or expired password reset token.",
-      });
-    }
-
-    if (
-      !user.password_reset_expires ||
-      new Date(user.password_reset_expires) < new Date()
-    ) {
+    if (!hasValidPasswordResetToken(user)) {
       return res.status(400).json({
         success: false,
         message: "Invalid or expired password reset token.",
