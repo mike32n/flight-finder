@@ -1,6 +1,11 @@
 const { getDb } = require("../db");
 
-function createUser({ email, passwordHash, verificationToken }) {
+function createUser({
+  email,
+  passwordHash,
+  verificationToken,
+  emailVerified = false,
+}) {
   const db = getDb();
   return new Promise((resolve, reject) => {
     db.run(
@@ -9,11 +14,12 @@ function createUser({ email, passwordHash, verificationToken }) {
       (
         email,
         password_hash,
+        email_verified,
         verification_token
       )
-      VALUES (?, ?, ?)
+      VALUES (?, ?, ?, ?)
       `,
-      [email, passwordHash, verificationToken],
+      [email, passwordHash, emailVerified ? 1 : 0, verificationToken],
       function (err) {
         if (err) {
           return reject(err);

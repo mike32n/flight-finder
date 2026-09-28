@@ -20,6 +20,8 @@ const { sendVerificationEmail } = require("../../services/emailService");
 
 const { createUser, findUserByEmail } = require("../../models/userModel");
 
+const { auth } = require("../../config/appConfig");
+
 const authRoutes = require("../../routes/authRoutes");
 
 const app = express();
@@ -30,6 +32,7 @@ app.use("/api/auth", authRoutes);
 describe("POST /api/auth/register", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    auth.emailVerificationRequired = true;
   });
 
   test("should reject missing email", async () => {
@@ -118,6 +121,13 @@ describe("POST /api/auth/register", () => {
 
     expect(createUser).toHaveBeenCalledTimes(1);
 
+    expect(createUser).toHaveBeenCalledWith({
+      email: "test@test.com",
+      passwordHash: "hashed-password",
+      verificationToken: expect.any(String),
+      emailVerified: false,
+    });
+
     expect(sendVerificationEmail).toHaveBeenCalledTimes(1);
 
     expect(sendVerificationEmail).toHaveBeenCalledWith(
@@ -125,7 +135,37 @@ describe("POST /api/auth/register", () => {
       expect.any(String),
     );
   });
+  test("should create verified user without verification email when email verification is disabled", async () => {
+    auth.emailVerificationRequired = false;
 
+    findUserByEmail.mockResolvedValue(null);
+    bcrypt.hash.mockResolvedValue("hashed-password");
+
+    createUser.mockResolvedValue({
+      id: 1,
+    });
+
+    const response = await request(app).post("/api/auth/register").send({
+      email: "test@test.com",
+      password: "Password1",
+    });
+
+    expect(response.status).toBe(201);
+
+    expect(response.body).toEqual({
+      success: true,
+      message: "User created.",
+    });
+
+    expect(createUser).toHaveBeenCalledWith({
+      email: "test@test.com",
+      passwordHash: "hashed-password",
+      verificationToken: null,
+      emailVerified: true,
+    });
+
+    expect(sendVerificationEmail).not.toHaveBeenCalled();
+  });
   test("should normalize email before registration", async () => {
     findUserByEmail.mockResolvedValue(null);
 

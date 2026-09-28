@@ -61,15 +61,20 @@ async function register(req, res) {
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
-    const verificationToken = crypto.randomUUID();
+    const verificationToken = auth.emailVerificationRequired
+      ? crypto.randomUUID()
+      : null;
 
     await createUser({
       email,
       passwordHash,
       verificationToken,
+      emailVerified: !auth.emailVerificationRequired,
     });
 
-    await sendVerificationEmail(email, verificationToken);
+    if (auth.emailVerificationRequired) {
+      await sendVerificationEmail(email, verificationToken);
+    }
 
     res.status(201).json({
       success: true,
