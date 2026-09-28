@@ -11,6 +11,8 @@ let currentResults = [];
 let failedCount = 0;
 let resultNodes = [];
 
+window.emailVerificationRequired = true;
+
 /* ========================= */
 /* INIT */
 /* ========================= */
@@ -22,9 +24,13 @@ window.onload = async function () {
   try {
     const configRes = await fetch("/config");
     const config = await configRes.json();
+
     maxDestinations = config.destinations.maxSelected || 3;
     maxNights = config.search.maxNights || 30;
     maxResults = config.search.maxResults || 5;
+
+    window.emailVerificationRequired =
+      config.auth?.emailVerificationRequired ?? true;
   } catch {}
 
   setupAutocomplete();

@@ -225,13 +225,16 @@ document
         return;
       }
 
-      showAuthMessage(
-        "register-message",
-        "Registration successful. Please check your email to verify your account.",
-        false,
-      );
-
       document.getElementById("register-form").reset();
+
+      openAuthModal("login");
+
+      const message = window.emailVerificationRequired
+        ? "Registration successful. Please check your email to verify your account."
+        : "Registration successful. You can now log in.";
+
+      showAuthMessage("login-message", message, false);
+      
     } catch {
       showAuthMessage("register-message", "Registration failed.");
     } finally {
