@@ -26,11 +26,13 @@ const {
   hasValidPasswordResetToken,
 } = require("../utils/passwordResetTokenValidator");
 
+const { normalizeEmail } = require("../utils/emailNormalizer");
+
 async function register(req, res) {
   try {
     const { password } = req.body;
 
-    const email = req.body.email?.trim().toLowerCase();
+    const email = normalizeEmail(req.body.email);
 
     if (!email) {
       return res.status(400).json({
@@ -127,7 +129,7 @@ async function login(req, res) {
   try {
     const { password } = req.body;
 
-    const email = req.body.email?.trim().toLowerCase();
+    const email = normalizeEmail(req.body.email);
 
     if (!email) {
       return res.status(400).json({
@@ -196,7 +198,7 @@ async function login(req, res) {
 
 async function forgotPassword(req, res) {
   try {
-    const email = req.body.email?.trim().toLowerCase();
+    const email = normalizeEmail(req.body.email);
 
     const user = await findUserByEmail(email);
 
