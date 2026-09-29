@@ -147,11 +147,17 @@ export default class AuthPage {
     await expect(this.forgotPasswordMessage).toContainText(message);
   }
 
-  async expectAuthTokenRemoved(): Promise<void> {
-    const token = await this.page.evaluate(() =>
-      localStorage.getItem("authToken"),
-    );
+  async setInvalidAuthToken(): Promise<void> {
+    await this.page.evaluate(() => {
+      localStorage.setItem("authToken", "invalid-token");
+    });
+  }
 
-    expect(token).toBeNull();
+  async expectAuthTokenRemoved(): Promise<void> {
+    await expect
+      .poll(async () =>
+        this.page.evaluate(() => localStorage.getItem("authToken")),
+      )
+      .toBeNull();
   }
 }

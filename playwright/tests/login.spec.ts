@@ -109,4 +109,36 @@ test.describe("Authentication - Login", () => {
 
     await auth.expectAuthTokenRemoved();
   });
+
+  test("TC-LOGIN-06 | should restore authenticated session after page reload", async () => {
+    const user = await createTestUser();
+
+    await verifyUser(user.userId);
+
+    await auth.clickLoginButton();
+
+    await auth.expectAuthModalVisible();
+    await auth.expectLoginFormVisible();
+
+    await auth.fillLoginForm(user.email, user.password);
+    await auth.submitLoginForm();
+
+    await auth.expectAuthModalHidden();
+
+    await common.expectVisible(flightFinder.logoutButton);
+
+    await common.reloadPage();
+
+    await common.expectVisible(flightFinder.logoutButton);
+  });
+
+  test("TC-LOGIN-07 | should clear invalid session after page reload", async () => {
+    await auth.setInvalidAuthToken();
+
+    await common.reloadPage();
+
+    await common.expectHidden(flightFinder.logoutButton);
+
+    await auth.expectAuthTokenRemoved();
+  });
 });

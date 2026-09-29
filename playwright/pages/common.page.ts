@@ -13,6 +13,10 @@ export default class CommonPage {
     await this.page.goto(url);
   }
 
+  async reloadPage(): Promise<void> {
+    await this.page.reload();
+  }
+
   async expectDarkThemeIsActive(): Promise<void> {
     await expect(this.body).toHaveClass(/dark/);
   }
