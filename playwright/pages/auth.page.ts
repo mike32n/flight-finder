@@ -146,4 +146,12 @@ export default class AuthPage {
   async expectForgotPasswordSuccessMessage(message: string): Promise<void> {
     await expect(this.forgotPasswordMessage).toContainText(message);
   }
+
+  async expectAuthTokenRemoved(): Promise<void> {
+    const token = await this.page.evaluate(() =>
+      localStorage.getItem("authToken"),
+    );
+
+    expect(token).toBeNull();
+  }
 }

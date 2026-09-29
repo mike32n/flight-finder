@@ -86,4 +86,27 @@ test.describe("Authentication - Login", () => {
 
     await common.expectNotPresent(flightFinder.logoutButton);
   });
+
+  test("TC-LOGIN-05 | should logout successfully", async () => {
+    const user = await createTestUser();
+    await verifyUser(user.userId);
+
+    await auth.clickLoginButton();
+
+    await auth.expectAuthModalVisible();
+    await auth.expectLoginFormVisible();
+
+    await auth.fillLoginForm(user.email, user.password);
+    await auth.submitLoginForm();
+
+    await auth.expectAuthModalHidden();
+
+    await common.expectVisible(flightFinder.logoutButton);
+
+    await flightFinder.clickLogoutButton();
+
+    await common.expectHidden(flightFinder.logoutButton);
+
+    await auth.expectAuthTokenRemoved();
+  });
 });

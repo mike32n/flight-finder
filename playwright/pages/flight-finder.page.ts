@@ -175,6 +175,10 @@ export default class MainPage {
     await this.firstResult.click();
   }
 
+  async clickLogoutButton(): Promise<void> {
+    await this.logoutButton.click();
+  }
+
   async expectPageTitle(text: string): Promise<void> {
     await expect(this.page).toHaveTitle(text);
   }
