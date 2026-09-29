@@ -25,6 +25,7 @@ export async function createTestUser() {
   return {
     email,
     password,
+    verificationToken,
     userId: user.id,
   };
 }
