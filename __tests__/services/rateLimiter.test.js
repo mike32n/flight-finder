@@ -1,0 +1,51 @@
+const mockDefineCommand = jest.fn();
+const mockAcquireToken = jest.fn();
+
+jest.mock("../../services/redisClient", () => ({
+  defineCommand: mockDefineCommand,
+  acquireToken: mockAcquireToken,
+}));
+
+const { acquireToken } = require("../../services/rateLimiter");
+
+describe("rateLimiter", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  test("should call Redis with correct rate limit parameters", async () => {
+    mockAcquireToken.mockResolvedValue(1);
+
+    const now = 1_700_000_000_000;
+    jest.spyOn(Date, "now").mockReturnValue(now);
+
+    await acquireToken("serpapi", 10, 60);
+
+    expect(mockAcquireToken).toHaveBeenCalledWith(
+      "ratelimit:serpapi",
+      now,
+      60_000,
+      10,
+    );
+  });
+
+  test("should return true when token is acquired", async () => {
+    mockAcquireToken.mockResolvedValue(1);
+
+    const result = await acquireToken("serpapi", 10, 60);
+
+    expect(result).toBe(true);
+  });
+
+  test("should return false when rate limit is reached", async () => {
+    mockAcquireToken.mockResolvedValue(0);
+
+    const result = await acquireToken("serpapi", 10, 60);
+
+    expect(result).toBe(false);
+  });
+});
