@@ -269,10 +269,9 @@ async function search() {
       buffer += decoder.decode(value, { stream: true });
 
       const parts = buffer.split("\n\n");
-      buffer = parts.pop(); // maradék
+      buffer = parts.pop();
 
       for (const part of parts) {
-        console.log("RAW EVENT:", part);
         // END
         if (part.includes("event: end")) {
           updateFooter(resultsDiv, true);
@@ -331,47 +330,6 @@ function changeNights(delta) {
   if (value > maxNights) value = maxNights;
 
   input.value = value;
-}
-
-function insertSorted(arr, item) {
-  let left = 0;
-  let right = arr.length;
-
-  while (left < right) {
-    const mid = Math.floor((left + right) / 2);
-
-    if (arr[mid].price < item.price) {
-      left = mid + 1;
-    } else {
-      right = mid;
-    }
-  }
-
-  arr.splice(left, 0, item);
-
-  // max results
-  if (arr.length > maxResults) {
-    arr.length = maxResults;
-  }
-}
-
-function renderResults(results, container) {
-  container.innerHTML = "";
-
-  results.forEach((r) => {
-    const div = document.createElement("div");
-    div.className = "card";
-
-    div.innerHTML = `
-      <strong>→ ${r.destination.city} (${r.destination.code})</strong><br/>
-      <span class="meta-info">
-        ${r.departure} → ${r.return}
-      </span><br/>
-      💶 ${r.price.toLocaleString()}
-    `;
-
-    container.appendChild(div);
-  });
 }
 
 function insertSortedWithDOM(item, container) {
