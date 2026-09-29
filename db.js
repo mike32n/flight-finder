@@ -5,8 +5,10 @@ let db;
 
 function getDb() {
   if (!db) {
-    console.log("DB file:", path.resolve("./database.sqlite"));
-    db = new sqlite3.Database("./database.sqlite");
+    const dbPath = process.env.DB_PATH || "./database.sqlite";
+
+    console.log("DB file:", path.resolve(dbPath));
+    db = new sqlite3.Database(dbPath);
   }
   return db;
 }
@@ -434,6 +436,7 @@ function closeDb() {
         return reject(err);
       }
 
+      db = null;
       resolve();
     });
   });
