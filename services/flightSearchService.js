@@ -108,6 +108,80 @@ async function searchFlights({
   };
 }
 
+async function searchFlightsStream({
+  destinations,
+  weekday,
+  nights,
+  flexibility = "none",
+  enrichAirport,
+  onResult,
+}) {
+  const trips = generateTrips(weekday, nights);
+
+  const tasks = [];
+
+  for (const destination of destinations) {
+    for (const trip of trips) {
+      tasks.push(() =>
+        flightProvider.searchFlights(destination, trip.departure, trip.return),
+      );
+    }
+  }
+
+  // SMART FLEX EXTENSION
+  if (appConfig.smartFlex.enabled && flexibility === "smart") {
+    for (const destination of destinations) {
+      for (const trip of trips) {
+        const variants = expandControlledFlexibility(trip);
+        const onlyFlex = variants.slice(1);
+
+        for (const variant of onlyFlex) {
+          tasks.push(() =>
+            flightProvider.searchFlights(
+              destination,
+              variant.departure,
+              variant.return,
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  const sentKeys = new Set();
+
+  await runWithConcurrencyLimit(tasks, provider.concurrency, (result) => {
+    console.log("STREAM RESULT:", JSON.stringify(result, null, 2));
+
+    if (!result.success) {
+      onResult({
+        type: "fail",
+      });
+
+      return;
+    }
+
+    const item = result.data;
+    const key = `${item.destination}-${item.departure}-${item.return}`;
+
+    if (sentKeys.has(key)) return;
+
+    sentKeys.add(key);
+
+    const enriched = {
+      ...item,
+      origin: enrichAirport("BUD"),
+      destination: enrichAirport(item.destination),
+    };
+
+    onResult({
+      type: "data",
+      data: enriched,
+    });
+  });
+}
+
 module.exports = {
   searchFlights,
+  searchFlightsStream,
 };

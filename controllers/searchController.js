@@ -1,15 +1,8 @@
-const generateTrips = require("../utils/dateGenerator");
-const { getProvider } = require("../providers/providerFactory");
-const provider = require("../config/providerConfig");
-const appConfig = require("../config/appConfig");
-const runWithConcurrencyLimit = require("../utils/promisePool");
 const { getAllDestinations } = require("../models/destinationModel");
 const {
-  expandControlledFlexibility,
-} = require("../services/flexDateGenerator");
-const { searchFlights } = require("../services/flightSearchService");
-
-const flightProvider = getProvider();
+  searchFlights,
+  searchFlightsStream,
+} = require("../services/flightSearchService");
 
 // CACHE
 let destinationsList = [];
@@ -77,77 +70,27 @@ async function searchStream(req, res) {
   try {
     const { destinations, weekday, nights, flexibility = "none" } = req.body;
 
-    // SSE HEADERS
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
 
-    const trips = generateTrips(weekday, nights);
+    await searchFlightsStream({
+      destinations,
+      weekday,
+      nights,
+      flexibility,
+      enrichAirport,
 
-    const tasks = [];
-
-    for (const destination of destinations) {
-      for (const trip of trips) {
-        tasks.push(() =>
-          flightProvider.searchFlights(
-            destination,
-            trip.departure,
-            trip.return,
-          ),
-        );
-      }
-    }
-
-    // SMART FLEX EXTENSION (append tasks)
-    if (appConfig.smartFlex.enabled && flexibility === "smart") {
-      for (const destination of destinations) {
-        for (const trip of trips) {
-          const variants = expandControlledFlexibility(trip);
-
-          // skip original (index 0), mert az már benne van base tasks-ben
-          const onlyFlex = variants.slice(1);
-
-          for (const variant of onlyFlex) {
-            tasks.push(() =>
-              flightProvider.searchFlights(
-                destination,
-                variant.departure,
-                variant.return,
-              ),
-            );
-          }
+      onResult(result) {
+        if (result.type === "fail") {
+          res.write(`event: fail\ndata: fail\n\n`);
+          return;
         }
-      }
-    }
 
-    const sentKeys = new Set();
-
-    await runWithConcurrencyLimit(tasks, provider.concurrency, (result) => {
-      // RAW DEBUG
-      console.log("STREAM RESULT:", JSON.stringify(result, null, 2));
-
-      if (!result.success) {
-        res.write(`event: fail\ndata: fail\n\n`);
-        return;
-      }
-
-      const item = result.data;
-      const key = `${item.destination}-${item.departure}-${item.return}`;
-
-      if (sentKeys.has(key)) return;
-      sentKeys.add(key);
-
-      const enriched = {
-        ...item,
-        origin: enrichAirport("BUD"),
-        destination: enrichAirport(item.destination),
-      };
-
-      // STREAM SEND
-      res.write(`data: ${JSON.stringify(enriched)}\n\n`);
+        res.write(`data: ${JSON.stringify(result.data)}\n\n`);
+      },
     });
 
-    // END SIGNAL
     res.write(`event: end\ndata: done\n\n`);
     res.end();
   } catch (err) {
