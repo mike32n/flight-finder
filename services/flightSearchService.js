@@ -123,31 +123,9 @@ async function searchFlightsStream({
 }) {
   const trips = generateTrips(weekday, nights);
 
-  const tasks = createBaseTasks(destinations, trips);
-
-  // SMART FLEX EXTENSION
-  if (appConfig.smartFlex.enabled && flexibility === "smart") {
-    for (const destination of destinations) {
-      for (const trip of trips) {
-        const variants = expandControlledFlexibility(trip);
-        const onlyFlex = variants.slice(1);
-
-        for (const variant of onlyFlex) {
-          tasks.push(() =>
-            flightProvider.searchFlights(
-              destination,
-              variant.departure,
-              variant.return,
-            ),
-          );
-        }
-      }
-    }
-  }
-
   const sentKeys = new Set();
 
-  await runWithConcurrencyLimit(tasks, provider.concurrency, (result) => {
+  function handleResult(result) {
     console.log("STREAM RESULT:", JSON.stringify(result, null, 2));
 
     if (!result.success) {
@@ -175,7 +153,48 @@ async function searchFlightsStream({
       type: "data",
       data: enriched,
     });
-  });
+  }
+
+  // BASE SEARCH
+  const baseTasks = createBaseTasks(destinations, trips);
+
+  const baseResults = await runWithConcurrencyLimit(
+    baseTasks,
+    provider.concurrency,
+    handleResult,
+  );
+
+  // SMART FLEX
+  if (
+    appConfig.smartFlex.enabled &&
+    flexibility === "smart" &&
+    shouldRunFlex(baseResults)
+  ) {
+    const flexTasks = [];
+
+    for (const destination of destinations) {
+      for (const trip of trips) {
+        const variants = expandControlledFlexibility(trip);
+        const onlyFlex = variants.slice(1);
+
+        for (const variant of onlyFlex) {
+          flexTasks.push(() =>
+            flightProvider.searchFlights(
+              destination,
+              variant.departure,
+              variant.return,
+            ),
+          );
+        }
+      }
+    }
+
+    await runWithConcurrencyLimit(
+      flexTasks,
+      provider.concurrency,
+      handleResult,
+    );
+  }
 }
 
 module.exports = {
