@@ -22,6 +22,29 @@ function createBaseTasks(destinations, trips) {
   return tasks;
 }
 
+function createFlexTasks(destinations, trips) {
+  const tasks = [];
+
+  for (const destination of destinations) {
+    for (const trip of trips) {
+      const variants = expandControlledFlexibility(trip);
+      const onlyFlex = variants.slice(1);
+
+      for (const variant of onlyFlex) {
+        tasks.push(() =>
+          flightProvider.searchFlights(
+            destination,
+            variant.departure,
+            variant.return,
+          ),
+        );
+      }
+    }
+  }
+
+  return tasks;
+}
+
 async function searchFlights({
   destinations,
   weekday,
@@ -47,24 +70,7 @@ async function searchFlights({
     flexibility === "smart" &&
     shouldRunFlex(baseResults)
   ) {
-    const flexTasks = [];
-
-    for (const destination of destinations) {
-      for (const trip of trips) {
-        const variants = expandControlledFlexibility(trip);
-        const onlyFlex = variants.slice(1);
-
-        for (const variant of onlyFlex) {
-          flexTasks.push(() =>
-            flightProvider.searchFlights(
-              destination,
-              variant.departure,
-              variant.return,
-            ),
-          );
-        }
-      }
-    }
+    const flexTasks = createFlexTasks(destinations, trips);
 
     flexResults = await runWithConcurrencyLimit(
       flexTasks,
@@ -170,24 +176,7 @@ async function searchFlightsStream({
     flexibility === "smart" &&
     shouldRunFlex(baseResults)
   ) {
-    const flexTasks = [];
-
-    for (const destination of destinations) {
-      for (const trip of trips) {
-        const variants = expandControlledFlexibility(trip);
-        const onlyFlex = variants.slice(1);
-
-        for (const variant of onlyFlex) {
-          flexTasks.push(() =>
-            flightProvider.searchFlights(
-              destination,
-              variant.departure,
-              variant.return,
-            ),
-          );
-        }
-      }
-    }
+    const flexTasks = createFlexTasks(destinations, trips);
 
     await runWithConcurrencyLimit(
       flexTasks,
