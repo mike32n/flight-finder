@@ -4,7 +4,7 @@ const provider = require("../config/providerConfig");
 const appConfig = require("../config/appConfig");
 const runWithConcurrencyLimit = require("../utils/promisePool");
 const { expandControlledFlexibility } = require("./flexDateGenerator");
-const { shouldRunFlex, analyzePriceDelta } = require("./smartFlexService");
+const { analyzePriceDelta } = require("./smartFlexService");
 
 const flightProvider = getProvider();
 
@@ -53,13 +53,7 @@ function enrichFlightResult(item, enrichAirport) {
   };
 }
 
-async function searchFlights({
-  destinations,
-  weekday,
-  nights,
-  flexibility = "none",
-  enrichAirport,
-}) {
+async function searchFlights({ destinations, weekday, nights, enrichAirport }) {
   const trips = generateTrips(weekday, nights);
 
   const baseTasks = createBaseTasks(destinations, trips);
@@ -73,11 +67,7 @@ async function searchFlights({
   // SMART FLEX
   let flexResults = [];
 
-  if (
-    appConfig.smartFlex.enabled &&
-    flexibility === "smart" &&
-    shouldRunFlex(baseResults)
-  ) {
+  if (appConfig.smartFlex.enabled) {
     const flexTasks = createFlexTasks(destinations, trips);
 
     flexResults = await runWithConcurrencyLimit(
@@ -111,10 +101,9 @@ async function searchFlights({
 
   enriched.sort((a, b) => a.price - b.price);
 
-  const priceInsight =
-    flexibility === "smart"
-      ? analyzePriceDelta(baseResults, flexResults)
-      : null;
+  const priceInsight = appConfig.smartFlex.enabled
+    ? analyzePriceDelta(baseResults, flexResults)
+    : null;
 
   return {
     results: enriched.slice(0, appConfig.search.maxResults),
@@ -127,7 +116,6 @@ async function searchFlightsStream({
   destinations,
   weekday,
   nights,
-  flexibility = "none",
   enrichAirport,
   onResult,
 }) {
@@ -164,18 +152,10 @@ async function searchFlightsStream({
   // BASE SEARCH
   const baseTasks = createBaseTasks(destinations, trips);
 
-  const baseResults = await runWithConcurrencyLimit(
-    baseTasks,
-    provider.concurrency,
-    handleResult,
-  );
+  await runWithConcurrencyLimit(baseTasks, provider.concurrency, handleResult);
 
   // SMART FLEX
-  if (
-    appConfig.smartFlex.enabled &&
-    flexibility === "smart" &&
-    shouldRunFlex(baseResults)
-  ) {
+  if (appConfig.smartFlex.enabled) {
     const flexTasks = createFlexTasks(destinations, trips);
 
     await runWithConcurrencyLimit(
