@@ -45,6 +45,14 @@ function createFlexTasks(destinations, trips) {
   return tasks;
 }
 
+function enrichFlightResult(item, enrichAirport) {
+  return {
+    ...item,
+    origin: enrichAirport("BUD"),
+    destination: enrichAirport(item.destination),
+  };
+}
+
 async function searchFlights({
   destinations,
   weekday,
@@ -97,13 +105,9 @@ async function searchFlights({
 
   const deduped = Array.from(unique.values());
 
-  const enriched = deduped.map((item) => ({
-    origin: enrichAirport("BUD"),
-    destination: enrichAirport(item.destination),
-    departure: item.departure,
-    return: item.return,
-    price: item.price,
-  }));
+  const enriched = deduped.map((item) =>
+    enrichFlightResult(item, enrichAirport),
+  );
 
   enriched.sort((a, b) => a.price - b.price);
 
@@ -149,11 +153,7 @@ async function searchFlightsStream({
 
     sentKeys.add(key);
 
-    const enriched = {
-      ...item,
-      origin: enrichAirport("BUD"),
-      destination: enrichAirport(item.destination),
-    };
+    const enriched = enrichFlightResult(item, enrichAirport);
 
     onResult({
       type: "data",
