@@ -36,8 +36,10 @@ class SerpApiProvider extends BaseProvider {
           },
         });
 
-        const flights =
-          response.data?.best_flights || response.data?.other_flights || [];
+        const flights = [
+          ...(response.data?.best_flights || []),
+          ...(response.data?.other_flights || []),
+        ];
 
         if (!flights.length) {
           return { success: false };

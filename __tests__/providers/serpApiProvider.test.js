@@ -53,6 +53,24 @@ describe("SerpApiProvider", () => {
     expect(result.data.price).toBe(73000);
   });
 
+  test("returns cheapest price across best_flights and other_flights", async () => {
+    axios.get.mockResolvedValue({
+      data: {
+        best_flights: [{ price: 42000 }, { price: 34000 }],
+        other_flights: [{ price: 29000 }, { price: 55000 }],
+      },
+    });
+
+    const result = await provider.searchFlights(
+      "BCN",
+      "2026-06-01",
+      "2026-06-04",
+    );
+
+    expect(result.success).toBe(true);
+    expect(result.data.price).toBe(29000);
+  });
+
   test("returns failure when no flights found", async () => {
     axios.get.mockResolvedValue({
       data: {
