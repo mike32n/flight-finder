@@ -127,4 +127,114 @@ describe("flightSearchService", () => {
     expect(runWithConcurrencyLimit).toHaveBeenCalledTimes(1);
     expect(expandControlledFlexibility).not.toHaveBeenCalled();
   });
+
+  test("returns cheaper flex result before the base result", async () => {
+    runWithConcurrencyLimit
+      .mockResolvedValueOnce([
+        {
+          success: true,
+          data: {
+            destination: "CFU",
+            departure: "2026-10-09",
+            return: "2026-10-11",
+            price: 34316,
+          },
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          success: true,
+          data: {
+            destination: "CFU",
+            departure: "2026-10-08",
+            return: "2026-10-11",
+            price: 40000,
+          },
+        },
+        {
+          success: true,
+          data: {
+            destination: "CFU",
+            departure: "2026-10-09",
+            return: "2026-10-12",
+            price: 22966,
+          },
+        },
+      ]);
+
+    const result = await searchFlights({
+      destinations: ["CFU"],
+      weekday: 5,
+      nights: 2,
+      enrichAirport: (code) => ({ code }),
+    });
+
+    expect(result.results).toHaveLength(3);
+
+    expect(result.results[0]).toEqual(
+      expect.objectContaining({
+        destination: { code: "CFU" },
+        departure: "2026-10-09",
+        return: "2026-10-12",
+        price: 22966,
+      }),
+    );
+
+    expect(result.results[1].price).toBe(34316);
+    expect(result.results[2].price).toBe(40000);
+  });
+
+  test("streams flex results when Smart Flex is enabled", async () => {
+    const onResult = jest.fn();
+
+    runWithConcurrencyLimit
+      .mockImplementationOnce(async (_, __, callback) => {
+        callback({
+          success: true,
+          data: {
+            destination: "CFU",
+            departure: "2026-10-09",
+            return: "2026-10-11",
+            price: 34316,
+            currency: "HUF",
+            bookingUrl: "https://example.com/base-flight",
+          },
+        });
+      })
+      .mockImplementationOnce(async (_, __, callback) => {
+        callback({
+          success: true,
+          data: {
+            destination: "CFU",
+            departure: "2026-10-09",
+            return: "2026-10-12",
+            price: 22966,
+            currency: "HUF",
+            bookingUrl: "https://example.com/flex-flight",
+          },
+        });
+      });
+
+    await searchFlightsStream({
+      destinations: ["CFU"],
+      weekday: 5,
+      nights: 2,
+      enrichAirport: (code) => ({ code }),
+      onResult,
+    });
+
+    expect(runWithConcurrencyLimit).toHaveBeenCalledTimes(2);
+
+    expect(onResult).toHaveBeenCalledWith({
+      type: "data",
+      data: expect.objectContaining({
+        destination: { code: "CFU" },
+        departure: "2026-10-09",
+        return: "2026-10-12",
+        price: 22966,
+        currency: "HUF",
+        bookingUrl: "https://example.com/flex-flight",
+      }),
+    });
+  });
 });
