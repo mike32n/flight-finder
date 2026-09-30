@@ -8,6 +8,20 @@ const { shouldRunFlex, analyzePriceDelta } = require("./smartFlexService");
 
 const flightProvider = getProvider();
 
+function createBaseTasks(destinations, trips) {
+  const tasks = [];
+
+  for (const destination of destinations) {
+    for (const trip of trips) {
+      tasks.push(() =>
+        flightProvider.searchFlights(destination, trip.departure, trip.return),
+      );
+    }
+  }
+
+  return tasks;
+}
+
 async function searchFlights({
   destinations,
   weekday,
@@ -17,16 +31,7 @@ async function searchFlights({
 }) {
   const trips = generateTrips(weekday, nights);
 
-  // BASE TASKS
-  const baseTasks = [];
-
-  for (const destination of destinations) {
-    for (const trip of trips) {
-      baseTasks.push(() =>
-        flightProvider.searchFlights(destination, trip.departure, trip.return),
-      );
-    }
-  }
+  const baseTasks = createBaseTasks(destinations, trips);
 
   // RUN BASE
   const baseResults = await runWithConcurrencyLimit(
@@ -118,15 +123,7 @@ async function searchFlightsStream({
 }) {
   const trips = generateTrips(weekday, nights);
 
-  const tasks = [];
-
-  for (const destination of destinations) {
-    for (const trip of trips) {
-      tasks.push(() =>
-        flightProvider.searchFlights(destination, trip.departure, trip.return),
-      );
-    }
-  }
+  const tasks = createBaseTasks(destinations, trips);
 
   // SMART FLEX EXTENSION
   if (appConfig.smartFlex.enabled && flexibility === "smart") {
