@@ -1,4 +1,4 @@
-function shouldRunFlex(baseResults) {
+function shouldRunFallbackFlex(baseResults) {
   return !baseResults.some((r) => r.success && r.data);
 }
 
@@ -55,6 +55,6 @@ function analyzePriceDelta(baseResults, flexResults) {
 }
 
 module.exports = {
-  shouldRunFlex,
+  shouldRunFallbackFlex,
   analyzePriceDelta,
 };

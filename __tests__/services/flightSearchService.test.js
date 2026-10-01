@@ -11,7 +11,7 @@ jest.mock("../../services/flexDateGenerator", () => ({
 }));
 
 jest.mock("../../services/smartFlexService", () => ({
-  shouldRunFlex: jest.fn(),
+  shouldRunFallbackFlex: jest.fn(),
   analyzePriceDelta: jest.fn(),
 }));
 
@@ -34,12 +34,12 @@ const {
   searchFlightsStream,
 } = require("../../services/flightSearchService");
 
-const { shouldRunFlex } = require("../../services/smartFlexService");
+const { shouldRunFallbackFlex } = require("../../services/smartFlexService");
 
 describe("flightSearchService", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    shouldRunFlex.mockReturnValue(false);
+    shouldRunFallbackFlex.mockReturnValue(false);
 
     appConfig.smartFlex.enabled = true;
 
@@ -135,7 +135,7 @@ describe("flightSearchService", () => {
   test("runs fallback flex search when Smart Flex is disabled and base search has no results", async () => {
     appConfig.smartFlex.enabled = false;
 
-    shouldRunFlex.mockReturnValue(true);
+    shouldRunFallbackFlex.mockReturnValue(true);
 
     runWithConcurrencyLimit
       .mockResolvedValueOnce([
@@ -246,7 +246,7 @@ describe("flightSearchService", () => {
 
   test("streams fallback flex results when Smart Flex is disabled and base search has no results", async () => {
     appConfig.smartFlex.enabled = false;
-    shouldRunFlex.mockReturnValue(true);
+    shouldRunFallbackFlex.mockReturnValue(true);
 
     const onResult = jest.fn();
 
@@ -292,7 +292,7 @@ describe("flightSearchService", () => {
 
     expect(runWithConcurrencyLimit).toHaveBeenCalledTimes(2);
 
-    expect(shouldRunFlex).toHaveBeenCalledWith([
+    expect(shouldRunFallbackFlex).toHaveBeenCalledWith([
       {
         success: false,
       },

@@ -4,7 +4,10 @@ const provider = require("../config/providerConfig");
 const appConfig = require("../config/appConfig");
 const runWithConcurrencyLimit = require("../utils/promisePool");
 const { expandControlledFlexibility } = require("./flexDateGenerator");
-const { shouldRunFlex, analyzePriceDelta } = require("./smartFlexService");
+const {
+  shouldRunFallbackFlex,
+  analyzePriceDelta,
+} = require("./smartFlexService");
 
 const flightProvider = getProvider();
 
@@ -68,7 +71,7 @@ async function searchFlights({ destinations, weekday, nights, enrichAirport }) {
   let flexResults = [];
 
   const shouldSearchFlex =
-    appConfig.smartFlex.enabled || shouldRunFlex(baseResults);
+    appConfig.smartFlex.enabled || shouldRunFallbackFlex(baseResults);
 
   if (shouldSearchFlex) {
     const flexTasks = createFlexTasks(destinations, trips);
@@ -180,7 +183,7 @@ async function searchFlightsStream({
 
   // SMART FLEX / FALLBACK FLEX
   const shouldSearchFlex =
-    appConfig.smartFlex.enabled || shouldRunFlex(baseResults);
+    appConfig.smartFlex.enabled || shouldRunFallbackFlex(baseResults);
 
   if (shouldSearchFlex) {
     const flexTasks = createFlexTasks(destinations, trips);

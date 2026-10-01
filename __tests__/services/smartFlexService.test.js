@@ -1,11 +1,11 @@
 const {
-  shouldRunFlex,
+  shouldRunFallbackFlex,
   analyzePriceDelta,
 } = require("../../services/smartFlexService");
 
-describe("shouldRunFlex", () => {
+describe("shouldRunFallbackFlex", () => {
   test("returns true when no successful results", () => {
-    expect(shouldRunFlex([])).toBe(true);
+    expect(shouldRunFallbackFlex([])).toBe(true);
   });
 
   test("returns false when prices are similar", () => {
@@ -15,7 +15,7 @@ describe("shouldRunFlex", () => {
       { success: true, data: { price: 108 } },
     ];
 
-    expect(shouldRunFlex(results)).toBe(false);
+    expect(shouldRunFallbackFlex(results)).toBe(false);
   });
 });
 
