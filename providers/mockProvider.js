@@ -1,27 +1,27 @@
 const BaseProvider = require("./baseProvider");
 
-function generateMockPrice(destination, departure) {
-  const input = destination + departure;
+function generateMockPrice(destination, departure, returnDate) {
+  const input = `${departure}-${destination}-${returnDate}`;
 
-  let hash = 0;
+  let hash = 2166136261;
 
   for (let i = 0; i < input.length; i++) {
-    hash = input.charCodeAt(i) + ((hash << 5) - hash);
-    hash |= 0;
+    hash ^= input.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
   }
 
-  const normalized = Math.abs(hash % 60000);
+  const normalized = (hash >>> 0) % 60000;
 
   return 20000 + normalized;
 }
 
 async function searchMockFlights(destination, departure, returnDate) {
-  // 20% chance of error to simulate API issues
-  if (Math.random() < 0.2) {
+  // 15% chance of error to simulate API issues
+  if (Math.random() < 0.15) {
     throw new Error("Mock API error");
   }
 
-  const price = generateMockPrice(destination, departure);
+  const price = generateMockPrice(destination, departure, returnDate);
 
   return {
     destination,
