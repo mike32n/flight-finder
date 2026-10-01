@@ -11,6 +11,7 @@ function getDb() {
 
     db = new sqlite3.Database(dbPath);
     db.configure("busyTimeout", 5000);
+    db.run("PRAGMA journal_mode = WAL");
   }
 
   return db;

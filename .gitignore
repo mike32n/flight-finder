@@ -59,6 +59,8 @@ Thumbs.db
 *.sqlite
 *.sqlite3
 *.sqlite-journal
+*.sqlite-shm
+*.sqlite-wal
 
 # Playwright
 /test-results/

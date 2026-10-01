@@ -6,6 +6,7 @@ let maxResults;
 
 let currentFocus = -1;
 let debounceTimer;
+let dropdownCloseTimer;
 
 let currentResults = [];
 let failedCount = 0;
@@ -140,13 +141,23 @@ function highlightMatch(text, query) {
 /* ========================= */
 
 function openDropdown(list) {
+  clearTimeout(dropdownCloseTimer);
+
   list.classList.remove("hidden");
-  requestAnimationFrame(() => list.classList.add("open"));
+
+  requestAnimationFrame(() => {
+    list.classList.add("open");
+  });
 }
 
 function closeDropdown(list) {
   list.classList.remove("open");
-  setTimeout(() => list.classList.add("hidden"), 150);
+
+  clearTimeout(dropdownCloseTimer);
+
+  dropdownCloseTimer = setTimeout(() => {
+    list.classList.add("hidden");
+  }, 150);
 }
 
 /* ========================= */
