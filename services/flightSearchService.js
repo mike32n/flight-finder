@@ -4,7 +4,7 @@ const provider = require("../config/providerConfig");
 const appConfig = require("../config/appConfig");
 const runWithConcurrencyLimit = require("../utils/promisePool");
 const { expandControlledFlexibility } = require("./flexDateGenerator");
-const { analyzePriceDelta } = require("./smartFlexService");
+const { shouldRunFlex, analyzePriceDelta } = require("./smartFlexService");
 
 const flightProvider = getProvider();
 
@@ -64,10 +64,13 @@ async function searchFlights({ destinations, weekday, nights, enrichAirport }) {
     provider.concurrency,
   );
 
-  // SMART FLEX
+  // SMART FLEX / FALLBACK FLEX
   let flexResults = [];
 
-  if (appConfig.smartFlex.enabled) {
+  const shouldSearchFlex =
+    appConfig.smartFlex.enabled || shouldRunFlex(baseResults);
+
+  if (shouldSearchFlex) {
     const flexTasks = createFlexTasks(destinations, trips);
 
     flexResults = await runWithConcurrencyLimit(
@@ -152,10 +155,17 @@ async function searchFlightsStream({
   // BASE SEARCH
   const baseTasks = createBaseTasks(destinations, trips);
 
-  await runWithConcurrencyLimit(baseTasks, provider.concurrency, handleResult);
+  const baseResults = await runWithConcurrencyLimit(
+    baseTasks,
+    provider.concurrency,
+    handleResult,
+  );
 
-  // SMART FLEX
-  if (appConfig.smartFlex.enabled) {
+  // SMART FLEX / FALLBACK FLEX
+  const shouldSearchFlex =
+    appConfig.smartFlex.enabled || shouldRunFlex(baseResults);
+
+  if (shouldSearchFlex) {
     const flexTasks = createFlexTasks(destinations, trips);
 
     await runWithConcurrencyLimit(
