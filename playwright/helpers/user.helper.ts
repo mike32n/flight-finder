@@ -9,8 +9,12 @@ const {
 
 const { auth } = require("../../config/appConfig");
 
+function createUniqueTestEmail(prefix = "e2e"): string {
+  return `${prefix}-${crypto.randomUUID()}@example.com`;
+}
+
 export async function createTestUser() {
-  const email = `e2e-${Date.now()}@example.com`;
+  const email = createUniqueTestEmail("e2e-test");
   const password = "TestPassword1";
 
   const passwordHash = await bcrypt.hash(password, auth.bcryptSaltRounds);
@@ -31,7 +35,7 @@ export async function createTestUser() {
 }
 
 export async function createVerifiedTestUser() {
-  const email = `e2e-${Date.now()}@example.com`;
+  const email = createUniqueTestEmail("e2e-verified");
   const password = "TestPassword1";
 
   const passwordHash = await bcrypt.hash(password, auth.bcryptSaltRounds);
@@ -53,7 +57,7 @@ export async function createVerifiedTestUser() {
 }
 
 export async function createTestUserWithResetToken() {
-  const email = `e2e-${Date.now()}@example.com`;
+  const email = createUniqueTestEmail("e2e-reset");
   const password = "TestPassword1";
 
   const passwordHash = await bcrypt.hash(password, auth.bcryptSaltRounds);
@@ -78,7 +82,7 @@ export async function createTestUserWithResetToken() {
 }
 
 export async function createVerifiedTestUserWithResetToken() {
-  const email = `e2e-${Date.now()}@example.com`;
+  const email = createUniqueTestEmail("e2e-verified-reset");
   const password = "TestPassword1";
 
   const passwordHash = await bcrypt.hash(password, auth.bcryptSaltRounds);
