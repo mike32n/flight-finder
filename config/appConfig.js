@@ -9,7 +9,6 @@ module.exports = {
   },
   smartFlex: {
     enabled: true,
-    triggerMultiplier: 1.1,
     departureShiftDays: 1,
     returnShiftDays: 1,
   },

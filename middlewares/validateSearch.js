@@ -1,5 +1,5 @@
 module.exports = function validateSearch(req, res, next) {
-  const { destinations, weekday, nights, flexibility } = req.body;
+  const { destinations, weekday, nights } = req.body;
 
   if (!Array.isArray(destinations) || destinations.length === 0) {
     return res
@@ -13,17 +13,6 @@ module.exports = function validateSearch(req, res, next) {
 
   if (typeof nights !== "number" || nights <= 0 || nights > 30) {
     return res.status(400).json({ error: "Nights must be between 1 and 30" });
-  }
-
-  if (
-    flexibility !== undefined &&
-    flexibility !== "none" &&
-    flexibility !== "controlled" &&
-    flexibility !== "smart"
-  ) {
-    return res.status(400).json({
-      error: "flexibility must be 'none', 'controlled', or 'smart'",
-    });
   }
 
   next();

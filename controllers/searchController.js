@@ -50,13 +50,12 @@ async function getDestinations(req, res) {
 
 async function search(req, res) {
   try {
-    const { destinations, weekday, nights, flexibility = "none" } = req.body;
+    const { destinations, weekday, nights } = req.body;
 
     const result = await searchFlights({
       destinations,
       weekday,
       nights,
-      flexibility,
       enrichAirport,
     });
 
@@ -68,7 +67,7 @@ async function search(req, res) {
 
 async function searchStream(req, res) {
   try {
-    const { destinations, weekday, nights, flexibility = "none" } = req.body;
+    const { destinations, weekday, nights } = req.body;
 
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache");
@@ -78,7 +77,6 @@ async function searchStream(req, res) {
       destinations,
       weekday,
       nights,
-      flexibility,
       enrichAirport,
 
       onResult(result) {

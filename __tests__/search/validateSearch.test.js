@@ -54,23 +54,4 @@ describe("validateSearch", () => {
 
     expect(res.status).toHaveBeenCalledWith(400);
   });
-
-  test("rejects invalid flexibility", () => {
-    req.body.flexibility = "invalid";
-
-    validateSearch(req, res, next);
-
-    expect(res.status).toHaveBeenCalledWith(400);
-  });
-
-  test.each(["none", "controlled", "smart"])(
-    "accepts flexibility %s",
-    (flexibility) => {
-      req.body.flexibility = flexibility;
-
-      validateSearch(req, res, next);
-
-      expect(next).toHaveBeenCalled();
-    },
-  );
 });

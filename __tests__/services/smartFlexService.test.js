@@ -17,17 +17,6 @@ describe("shouldRunFlex", () => {
 
     expect(shouldRunFlex(results)).toBe(false);
   });
-
-  test("returns true when majority is significantly more expensive", () => {
-    const results = [
-      { success: true, data: { price: 100 } },
-      { success: true, data: { price: 200 } },
-      { success: true, data: { price: 220 } },
-      { success: true, data: { price: 230 } },
-    ];
-
-    expect(shouldRunFlex(results)).toBe(true);
-  });
 });
 
 describe("analyzePriceDelta", () => {
