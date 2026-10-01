@@ -83,8 +83,7 @@ async function getOrSet(providerName, payload, fetcher) {
 
     // only cache successful responses
     if (fresh?.success) {
-      const ttl = fresh.data?.price < 50 ? 1800 : 600;
-      await redis.set(key, stableStringify(fresh), "EX", ttl);
+      await set(key, fresh);
     }
 
     return fresh;

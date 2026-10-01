@@ -20,6 +20,7 @@ jest.mock("../../services/redisClient", () => {
 });
 
 const cache = require("../../services/cacheService");
+const appConfig = require("../../config/appConfig");
 
 describe("cacheService", () => {
   beforeEach(() => {
@@ -169,34 +170,25 @@ describe("cacheService", () => {
       expect(r1).toEqual(r2);
     });
 
-    test("uses long ttl for cheap flights", async () => {
-      redis.get.mockResolvedValueOnce(null);
+    test("uses configured cache ttl for successful responses", async () => {
+      redis.get.mockResolvedValue(null);
 
-      const fetcher = jest.fn().mockResolvedValue({
-        success: true,
-        data: {
-          price: 40,
-        },
-      });
-
-      await cache.getOrSet(provider, payload, fetcher);
-
-      expect(redis.set.mock.calls[0][3]).toBe(1800);
-    });
-
-    test("uses default ttl for regular flights", async () => {
-      redis.get.mockResolvedValueOnce(null);
-
-      const fetcher = jest.fn().mockResolvedValue({
+      const fresh = {
         success: true,
         data: {
           price: 100,
         },
-      });
+      };
 
-      await cache.getOrSet(provider, payload, fetcher);
+      const fetcher = jest.fn().mockResolvedValue(fresh);
 
-      expect(redis.set.mock.calls[0][3]).toBe(600);
+      await cache.getOrSet("test", { destination: "LON" }, fetcher);
+
+      expect(redis.set).toHaveBeenCalled();
+
+      const ttl = redis.set.mock.calls[0][3];
+
+      expect(ttl).toBe(appConfig.cache.ttlSeconds);
     });
   });
 });
