@@ -34,13 +34,26 @@ function createFlexTasks(destinations, trips) {
       const onlyFlex = variants.slice(1);
 
       for (const variant of onlyFlex) {
-        tasks.push(() =>
-          flightProvider.searchFlights(
+        tasks.push(async () => {
+          const result = await flightProvider.searchFlights(
             destination,
             variant.departure,
             variant.return,
-          ),
-        );
+          );
+
+          if (!result.success || !result.data) {
+            return result;
+          }
+
+          return {
+            ...result,
+            data: {
+              ...result.data,
+              baseDeparture: trip.departure,
+              baseReturn: trip.return,
+            },
+          };
+        });
       }
     }
   }

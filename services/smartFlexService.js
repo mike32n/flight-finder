@@ -3,55 +3,74 @@ function shouldRunFallbackFlex(baseResults) {
 }
 
 function analyzePriceDelta(baseResults, flexResults) {
-  const all = [...baseResults, ...flexResults].filter(
-    (r) => r.success && r.data,
-  );
-
-  if (all.length === 0) return null;
-
-  const sorted = [...all].sort((a, b) => a.data.price - b.data.price);
-  const best = sorted[0].data;
-
   const baseOnly = baseResults
     .filter((r) => r.success && r.data)
     .map((r) => r.data);
 
-  if (baseOnly.length === 0) return null;
+  const flexOnly = flexResults
+    .filter((r) => r.success && r.data)
+    .map((r) => r.data);
 
-  const baseBest = [...baseOnly].sort((a, b) => a.price - b.price)[0];
-
-  // if the flex option is not cheaper - no need to communicate
-  if (best.price >= baseBest.price) return null;
-
-  const diff = baseBest.price - best.price;
-  const percent = Math.round((diff / baseBest.price) * 100);
-
-  // safe date comparisons (avoid timezone issues)
-  const bestDeparture = new Date(best.departure);
-  const baseDeparture = new Date(baseBest.departure);
-
-  const bestReturn = new Date(best.return);
-  const baseReturn = new Date(baseBest.return);
-
-  let reason = "flexible date";
-  let type = "flex_generic";
-
-  if (bestDeparture < baseDeparture) {
-    reason = "leave earlier";
-    type = "departure_shift";
-  } else if (bestReturn > baseReturn) {
-    reason = "return later";
-    type = "return_shift";
+  if (baseOnly.length === 0 || flexOnly.length === 0) {
+    return null;
   }
 
-  return {
-    percent,
-    diff,
-    reason,
-    type,
-    basePrice: baseBest.price,
-    flexPrice: best.price,
-  };
+  let bestInsight = null;
+
+  for (const flex of flexOnly) {
+    const matchingBase = baseOnly.find(
+      (base) =>
+        base.destination === flex.destination &&
+        base.departure === flex.baseDeparture &&
+        base.return === flex.baseReturn,
+    );
+
+    if (!matchingBase) continue;
+
+    if (flex.price >= matchingBase.price) continue;
+
+    const diff = matchingBase.price - flex.price;
+    const percent = Math.round((diff / matchingBase.price) * 100);
+
+    const flexDeparture = new Date(flex.departure);
+    const baseDeparture = new Date(matchingBase.departure);
+
+    const flexReturn = new Date(flex.return);
+    const baseReturn = new Date(matchingBase.return);
+
+    let reason = "flexible date";
+    let type = "flex_generic";
+
+    if (flexDeparture < baseDeparture) {
+      reason = "leave earlier";
+      type = "departure_shift";
+    } else if (flexDeparture > baseDeparture) {
+      reason = "leave later";
+      type = "departure_shift";
+    } else if (flexReturn < baseReturn) {
+      reason = "return earlier";
+      type = "return_shift";
+    } else if (flexReturn > baseReturn) {
+      reason = "return later";
+      type = "return_shift";
+    }
+
+    const insight = {
+      destination: flex.destination,
+      percent,
+      diff,
+      reason,
+      type,
+      basePrice: matchingBase.price,
+      flexPrice: flex.price,
+    };
+
+    if (!bestInsight || insight.diff > bestInsight.diff) {
+      bestInsight = insight;
+    }
+  }
+
+  return bestInsight;
 }
 
 module.exports = {
