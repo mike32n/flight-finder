@@ -7,6 +7,7 @@ import ResetPasswordPage from "../pages/reset-password.page";
 import {
   createTestUser,
   createTestUserWithResetToken,
+  createUniqueTestEmail,
   createVerifiedTestUserWithResetToken,
 } from "../helpers/user.helper";
 
@@ -42,7 +43,7 @@ test.describe("Authentication - Forgot Password", () => {
   });
 
   test("TC-FORGOT-02 | should show success message for non-existing email", async () => {
-    const email = `e2e-nonexistent-${Date.now()}@example.com`;
+    const email = createUniqueTestEmail("e2e-nonexistent");
 
     await auth.clickLoginButton();
     await auth.expectAuthModalVisible();

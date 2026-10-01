@@ -3,7 +3,11 @@ import Env from "../utils/env";
 import CommonPage from "../pages/common.page";
 import FlightFinderPage from "../pages/flight-finder.page";
 import AuthPage from "../pages/auth.page";
-import { createTestUser, createVerifiedTestUser } from "../helpers/user.helper";
+import {
+  createTestUser,
+  createVerifiedTestUser,
+  createUniqueTestEmail,
+} from "../helpers/user.helper";
 
 const bcrypt = require("bcrypt");
 const crypto = require("crypto");
@@ -73,7 +77,7 @@ test.describe("Authentication - Login", () => {
   });
 
   test("TC-LOGIN-04 | should not login with non-existent user", async () => {
-    const email = `non-existent-${Date.now()}@example.com`;
+    const email = createUniqueTestEmail("e2e-nonexistent");
 
     await auth.clickLoginButton();
     await auth.expectAuthModalVisible();

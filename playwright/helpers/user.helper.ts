@@ -9,7 +9,7 @@ const {
 
 const { auth } = require("../../config/appConfig");
 
-function createUniqueTestEmail(prefix = "e2e"): string {
+export function createUniqueTestEmail(prefix = "e2e"): string {
   return `${prefix}-${crypto.randomUUID()}@example.com`;
 }
 
@@ -63,7 +63,7 @@ export async function createTestUserWithResetToken() {
   const passwordHash = await bcrypt.hash(password, auth.bcryptSaltRounds);
   const verificationToken = crypto.randomUUID();
   const resetToken = crypto.randomUUID();
-  const resetExpires = new Date(Date.now() + 3600000);
+  const resetExpires = new Date(Date.now() + auth.passwordResetTokenLifetimeMs);
 
   const user = await createUser({
     email,
@@ -88,7 +88,7 @@ export async function createVerifiedTestUserWithResetToken() {
   const passwordHash = await bcrypt.hash(password, auth.bcryptSaltRounds);
   const verificationToken = crypto.randomUUID();
   const resetToken = crypto.randomUUID();
-  const resetExpires = new Date(Date.now() + 3600000);
+  const resetExpires = new Date(Date.now() + auth.passwordResetTokenLifetimeMs);
 
   const user = await createUser({
     email,

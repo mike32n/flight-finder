@@ -8,8 +8,11 @@ function getDb() {
     const dbPath = process.env.DB_PATH || "./database.sqlite";
 
     console.log("DB file:", path.resolve(dbPath));
+
     db = new sqlite3.Database(dbPath);
+    db.configure("busyTimeout", 5000);
   }
+
   return db;
 }
 

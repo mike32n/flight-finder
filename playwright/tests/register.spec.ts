@@ -1,7 +1,7 @@
 import { test } from "@playwright/test";
 import Env from "../utils/env";
 import AuthPage from "../pages/auth.page";
-import { createTestUser } from "../helpers/user.helper";
+import { createTestUser, createUniqueTestEmail } from "../helpers/user.helper";
 
 test.describe("Authentication - Register", () => {
   let auth: AuthPage;
@@ -13,7 +13,7 @@ test.describe("Authentication - Register", () => {
   });
 
   test("TC-REGISTER-01 | should register a new user successfully", async () => {
-    const email = `e2e-register-${Date.now()}@example.com`;
+    const email = createUniqueTestEmail("e2e-register");
     const password = "TestPassword1";
 
     await auth.clickRegisterButton();
