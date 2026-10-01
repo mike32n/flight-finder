@@ -262,6 +262,26 @@ body.dark .error-card {
 }
 
 /* ========================= */
+/* FLEXIBLE DATE RESULTS */
+/* ========================= */
+
+.flex-card {
+  border-left: 4px solid #d97706;
+}
+
+.flex-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 7px;
+  border-radius: 10px;
+  background: #fff3cd;
+  color: #8a5700;
+  font-size: 0.72rem;
+  font-weight: 600;
+  vertical-align: 1px;
+}
+
+/* ========================= */
 /* IATA BADGES */
 /* ========================= */
 
@@ -458,6 +478,16 @@ body.dark .card {
 /* subtle glow on hover */
 body.dark .card:hover {
   box-shadow: 0 0 12px rgba(0, 247, 255, 0.2);
+}
+
+body.dark .flex-card {
+  border-left-color: #fbbf24;
+  box-shadow: 0 0 8px rgba(251, 191, 36, 0.12);
+}
+
+body.dark .flex-badge {
+  background: #3d3217;
+  color: #fcd34d;
 }
 
 /* Animations */

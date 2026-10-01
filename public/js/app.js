@@ -371,17 +371,22 @@ function insertSortedWithDOM(item, container) {
 
 function createCard(r) {
   const div = document.createElement("div");
-  div.className = "card";
+
+  div.className = r.resultType === "flex" ? "card flex-card" : "card";
+
+  const flexBadge =
+    r.resultType === "flex"
+      ? '<span class="flex-badge">Flexible dates</span>'
+      : "";
 
   div.innerHTML = `
-    <strong>→ ${r.destination.city} (${r.destination.code})</strong><br/>
+    <strong>→ ${r.destination.city} (${r.destination.code})</strong>
+    ${flexBadge}<br/>
     <span class="meta-info">
       ${r.departure} → ${r.return}
     </span><br/>
     💶 ${r.currency} ${r.price.toLocaleString()}
   `;
-
-  div.style.cursor = "pointer";
 
   div.addEventListener("click", () => {
     openFlight(r);
