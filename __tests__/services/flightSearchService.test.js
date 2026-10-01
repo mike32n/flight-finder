@@ -229,6 +229,14 @@ describe("flightSearchService", () => {
         departure: "2026-10-09",
         return: "2026-10-12",
         price: 22966,
+        resultType: "flex",
+      }),
+    );
+
+    expect(result.results[1]).toEqual(
+      expect.objectContaining({
+        price: 34316,
+        resultType: "base",
       }),
     );
 
@@ -301,6 +309,7 @@ describe("flightSearchService", () => {
         price: 22966,
         currency: "HUF",
         bookingUrl: "https://example.com/flex-flight",
+        resultType: "flex",
       }),
     });
   });
@@ -367,6 +376,15 @@ describe("flightSearchService", () => {
         price: 22966,
         currency: "HUF",
         bookingUrl: "https://example.com/flex-flight",
+        resultType: "flex",
+      }),
+    });
+
+    expect(onResult).toHaveBeenCalledWith({
+      type: "data",
+      data: expect.objectContaining({
+        price: 34316,
+        resultType: "base",
       }),
     });
   });

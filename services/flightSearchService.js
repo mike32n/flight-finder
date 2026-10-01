@@ -80,11 +80,25 @@ async function searchFlights({ destinations, weekday, nights, enrichAirport }) {
   }
 
   // MERGE
-  const results = [...baseResults, ...flexResults];
+  const results = [
+    ...baseResults.map((result) => ({
+      ...result,
+      resultType: "base",
+    })),
+    ...flexResults.map((result) => ({
+      ...result,
+      resultType: "flex",
+    })),
+  ];
 
   console.log("RAW RESULTS:", JSON.stringify(results, null, 2));
 
-  const successful = results.filter((r) => r.success).map((r) => r.data);
+  const successful = results
+    .filter((r) => r.success)
+    .map((r) => ({
+      ...r.data,
+      resultType: r.resultType,
+    }));
 
   const unique = new Map();
 
@@ -126,7 +140,7 @@ async function searchFlightsStream({
 
   const sentKeys = new Set();
 
-  function handleResult(result) {
+  function handleResult(result, resultType) {
     console.log("STREAM RESULT:", JSON.stringify(result, null, 2));
 
     if (!result.success) {
@@ -144,7 +158,10 @@ async function searchFlightsStream({
 
     sentKeys.add(key);
 
-    const enriched = enrichFlightResult(item, enrichAirport);
+    const enriched = {
+      ...enrichFlightResult(item, enrichAirport),
+      resultType,
+    };
 
     onResult({
       type: "data",
@@ -158,7 +175,7 @@ async function searchFlightsStream({
   const baseResults = await runWithConcurrencyLimit(
     baseTasks,
     provider.concurrency,
-    handleResult,
+    (result) => handleResult(result, "base"),
   );
 
   // SMART FLEX / FALLBACK FLEX
@@ -168,10 +185,8 @@ async function searchFlightsStream({
   if (shouldSearchFlex) {
     const flexTasks = createFlexTasks(destinations, trips);
 
-    await runWithConcurrencyLimit(
-      flexTasks,
-      provider.concurrency,
-      handleResult,
+    await runWithConcurrencyLimit(flexTasks, provider.concurrency, (result) =>
+      handleResult(result, "flex"),
     );
   }
 }
