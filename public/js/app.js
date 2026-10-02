@@ -131,9 +131,13 @@ function setupAutocomplete() {
 /* HELPERS */
 /* ========================= */
 
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 function highlightMatch(text, query) {
-  const regex = new RegExp(`(${query})`, "gi");
-  return text.replace(regex, `<strong>$1</strong>`);
+  const regex = new RegExp(`(${escapeRegExp(query)})`, "gi");
+  return text.replace(regex, "<strong>$1</strong>");
 }
 
 /* ========================= */

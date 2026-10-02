@@ -10,7 +10,6 @@ const providerConfigs = {
     clientId: process.env.AMADEUS_TEST_CLIENT_ID,
     clientSecret: process.env.AMADEUS_TEST_CLIENT_SECRET,
     concurrency: 1,
-    retryDelay: 2000,
   },
 
   "amadeus-prod": {
@@ -19,14 +18,12 @@ const providerConfigs = {
     clientId: process.env.AMADEUS_PROD_CLIENT_ID,
     clientSecret: process.env.AMADEUS_PROD_CLIENT_SECRET,
     concurrency: 5,
-    retryDelay: 500,
   },
   
   "serpapi": {
     type: "serpapi",
     apiKey: process.env.SERPAPI_KEY,
     concurrency: 5,
-    retryDelay: 500,
   },
 };
 
