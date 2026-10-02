@@ -24,21 +24,18 @@ A lightweight web application for finding cheap short round-trip flights from Bu
 ## How It Works
 
 1. Generate possible trip dates
-2. Create and execute search tasks through a concurrency-limited Promise Pool
-3. Stream results to the browser as they become available
-4. Insert results into the UI in sorted order while the search is still running
-5. Apply Smart Flex when required
-6. Deduplicate and sort results
-7. Return the configured number of cheapest results
+2. Execute flight searches through a concurrency-limited Promise Pool
+3. Apply Smart Flex when enabled or needed as fallback
+4. Stream results to the browser as they become available
+5. Deduplicate, sort and keep the configured number of cheapest results
 
 Individual API failures do not stop the remaining searches.
 
 ## Smart Flex
 
-Additional searches are triggered only when necessary:
+When enabled, Smart Flex also searches controlled nearby date variants.
 
-- no suitable results, or
-- the best price exceeds the configured threshold
+If disabled, flexible-date searches are used only as a fallback when the base search returns no results.
 
 Current variants:
 
@@ -73,7 +70,7 @@ FLIGHT_PROVIDER=serpapi
 **Email:** Nodemailer, Mailtrap  
 **Testing:** Playwright + TypeScript, Jest, Supertest  
 **CI:** GitHub Actions  
-**Development Tools:** Docker Compose
+**Local infrastructure:** Docker Compose (Redis)
 
 ## Test Automation
 
