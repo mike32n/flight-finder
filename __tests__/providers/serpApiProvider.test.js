@@ -71,7 +71,7 @@ describe("SerpApiProvider", () => {
     expect(result.data.price).toBe(29000);
   });
 
-  test("returns failure when no flights found", async () => {
+  test("returns no_results when no flights found", async () => {
     axios.get.mockResolvedValue({
       data: {
         best_flights: [],
@@ -85,7 +85,10 @@ describe("SerpApiProvider", () => {
       "2026-06-04",
     );
 
-    expect(result.success).toBe(false);
+    expect(result).toEqual({
+      success: false,
+      reason: "no_results",
+    });
   });
 
   test("returns failure when response is empty", async () => {
@@ -99,10 +102,13 @@ describe("SerpApiProvider", () => {
       "2026-06-04",
     );
 
-    expect(result.success).toBe(false);
+    expect(result).toEqual({
+      success: false,
+      reason: "no_results",
+    });
   });
 
-  test("returns failure on API error", async () => {
+  test("returns provider_error on API error", async () => {
     axios.get.mockRejectedValue(new Error("SerpApi unavailable"));
 
     const result = await provider.searchFlights(
@@ -111,7 +117,11 @@ describe("SerpApiProvider", () => {
       "2026-06-04",
     );
 
-    expect(result.success).toBe(false);
+    expect(result).toEqual({
+      success: false,
+      reason: "provider_error",
+      error: "SerpApi unavailable",
+    });
   });
 
   test("calls SerpApi with correct parameters", async () => {

@@ -141,6 +141,7 @@ describe("flightSearchService", () => {
       .mockResolvedValueOnce([
         {
           success: false,
+          reason: "no_results",
         },
       ])
       .mockResolvedValueOnce([
@@ -178,6 +179,58 @@ describe("flightSearchService", () => {
     ]);
 
     expect(result.priceInsight).toBeNull();
+  });
+
+  test("does not run fallback flex search when Smart Flex is disabled and base search fails with provider error", async () => {
+    appConfig.smartFlex.enabled = false;
+
+    runWithConcurrencyLimit.mockResolvedValueOnce([
+      {
+        success: false,
+        reason: "provider_error",
+        error: "SerpApi unavailable",
+      },
+    ]);
+
+    const result = await searchFlights({
+      destinations: ["CFU"],
+      weekday: 5,
+      nights: 2,
+      enrichAirport: (code) => ({ code }),
+    });
+
+    expect(runWithConcurrencyLimit).toHaveBeenCalledTimes(1);
+    expect(expandControlledFlexibility).not.toHaveBeenCalled();
+
+    expect(result.results).toEqual([]);
+    expect(result.failedRequests).toBe(1);
+    expect(result.priceInsight).toBeNull();
+  });
+
+  test("does not run fallback flex search when base results contain both no results and provider errors", async () => {
+    appConfig.smartFlex.enabled = false;
+
+    runWithConcurrencyLimit.mockResolvedValueOnce([
+      {
+        success: false,
+        reason: "no_results",
+      },
+      {
+        success: false,
+        reason: "provider_error",
+        error: "SerpApi unavailable",
+      },
+    ]);
+
+    await searchFlights({
+      destinations: ["CFU", "LCA"],
+      weekday: 5,
+      nights: 2,
+      enrichAirport: (code) => ({ code }),
+    });
+
+    expect(runWithConcurrencyLimit).toHaveBeenCalledTimes(1);
+    expect(expandControlledFlexibility).not.toHaveBeenCalled();
   });
 
   test("returns cheaper flex result before the base result", async () => {
@@ -255,6 +308,7 @@ describe("flightSearchService", () => {
         const baseResults = [
           {
             success: false,
+            reason: "no_results",
           },
         ];
 
@@ -295,6 +349,7 @@ describe("flightSearchService", () => {
     expect(shouldRunFallbackFlex).toHaveBeenCalledWith([
       {
         success: false,
+        reason: "no_results",
       },
     ]);
 
@@ -311,6 +366,45 @@ describe("flightSearchService", () => {
         bookingUrl: "https://example.com/flex-flight",
         resultType: "flex",
       }),
+    });
+  });
+
+  test("does not run fallback flex search when Smart Flex is disabled and base search fails with provider error", async () => {
+    appConfig.smartFlex.enabled = false;
+    shouldRunFallbackFlex.mockReturnValue(false);
+
+    const onResult = jest.fn();
+
+    const baseResults = [
+      {
+        success: false,
+        reason: "provider_error",
+        error: "SerpApi unavailable",
+      },
+    ];
+
+    runWithConcurrencyLimit.mockImplementationOnce(async (_, __, callback) => {
+      baseResults.forEach(callback);
+
+      return baseResults;
+    });
+
+    await searchFlightsStream({
+      destinations: ["CFU"],
+      weekday: 5,
+      nights: 2,
+      enrichAirport: (code) => ({ code }),
+      onResult,
+    });
+
+    expect(runWithConcurrencyLimit).toHaveBeenCalledTimes(1);
+
+    expect(shouldRunFallbackFlex).toHaveBeenCalledWith(baseResults);
+
+    expect(expandControlledFlexibility).not.toHaveBeenCalled();
+
+    expect(onResult).toHaveBeenCalledWith({
+      type: "fail",
     });
   });
 
@@ -387,5 +481,7 @@ describe("flightSearchService", () => {
         resultType: "base",
       }),
     });
+
+    expect(shouldRunFallbackFlex).not.toHaveBeenCalled();
   });
 });

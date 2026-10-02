@@ -42,7 +42,10 @@ class SerpApiProvider extends BaseProvider {
         ];
 
         if (!flights.length) {
-          return { success: false };
+          return {
+            success: false,
+            reason: "no_results",
+          };
         }
 
         const cheapest = flights.reduce((min, current) =>
@@ -65,6 +68,7 @@ class SerpApiProvider extends BaseProvider {
 
         return {
           success: false,
+          reason: "provider_error",
           error: error.message,
         };
       }

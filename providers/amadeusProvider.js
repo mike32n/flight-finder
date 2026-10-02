@@ -50,7 +50,10 @@ class AmadeusProvider extends BaseProvider {
           response?.data || response?.result?.data || response?.body?.data;
 
         if (!offers || !Array.isArray(offers) || offers.length === 0) {
-          return { success: false };
+          return {
+            success: false,
+            reason: "no_results",
+          };
         }
 
         const cheapest = offers[0];
@@ -79,7 +82,11 @@ class AmadeusProvider extends BaseProvider {
           JSON.stringify(fullError, null, 2),
         );
 
-        return { success: false };
+        return {
+          success: false,
+          reason: "provider_error",
+          error: error.message,
+        };
       }
     });
   }

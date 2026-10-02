@@ -49,6 +49,7 @@ class MockProvider extends BaseProvider {
     } catch (error) {
       return {
         success: false,
+        reason: "provider_error",
         error: error.message,
       };
     }

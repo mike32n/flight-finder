@@ -1,5 +1,19 @@
 function shouldRunFallbackFlex(baseResults) {
-  return !baseResults.some((r) => r.success && r.data);
+  if (baseResults.length === 0) {
+    return false;
+  }
+
+  const hasSuccessfulResult = baseResults.some(
+    (result) => result.success && result.data,
+  );
+
+  if (hasSuccessfulResult) {
+    return false;
+  }
+
+  return baseResults.every(
+    (result) => !result.success && result.reason === "no_results",
+  );
 }
 
 function analyzePriceDelta(baseResults, flexResults) {

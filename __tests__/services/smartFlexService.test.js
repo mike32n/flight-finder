@@ -4,18 +4,67 @@ const {
 } = require("../../services/smartFlexService");
 
 describe("shouldRunFallbackFlex", () => {
-  test("returns true when no successful results", () => {
-    expect(shouldRunFallbackFlex([])).toBe(true);
-  });
-
-  test("returns false when prices are similar", () => {
+  test("returns false when base search has a successful result", () => {
     const results = [
-      { success: true, data: { price: 100 } },
-      { success: true, data: { price: 105 } },
-      { success: true, data: { price: 108 } },
+      {
+        success: true,
+        data: {
+          destination: "CFU",
+          price: 30000,
+        },
+      },
     ];
 
     expect(shouldRunFallbackFlex(results)).toBe(false);
+  });
+
+  test("returns true when all base searches return no results", () => {
+    const results = [
+      {
+        success: false,
+        reason: "no_results",
+      },
+      {
+        success: false,
+        reason: "no_results",
+      },
+    ];
+
+    expect(shouldRunFallbackFlex(results)).toBe(true);
+  });
+
+  test("returns false when all base searches fail with provider errors", () => {
+    const results = [
+      {
+        success: false,
+        reason: "provider_error",
+      },
+      {
+        success: false,
+        reason: "provider_error",
+      },
+    ];
+
+    expect(shouldRunFallbackFlex(results)).toBe(false);
+  });
+
+  test("returns false when no results and provider errors are mixed", () => {
+    const results = [
+      {
+        success: false,
+        reason: "no_results",
+      },
+      {
+        success: false,
+        reason: "provider_error",
+      },
+    ];
+
+    expect(shouldRunFallbackFlex(results)).toBe(false);
+  });
+
+  test("returns false for empty results", () => {
+    expect(shouldRunFallbackFlex([])).toBe(false);
   });
 });
 

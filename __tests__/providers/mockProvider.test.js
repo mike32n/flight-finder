@@ -89,6 +89,7 @@ describe("MockProvider", () => {
 
     expect(result).toEqual({
       success: false,
+      reason: "provider_error",
       error: "Mock API error",
     });
   });
