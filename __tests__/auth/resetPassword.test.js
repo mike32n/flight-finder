@@ -19,7 +19,9 @@ const {
   updatePassword,
 } = require("../../models/userModel");
 
-const { sendPasswordResetSuccessEmail } = require("../../services/emailService");
+const {
+  sendPasswordResetSuccessEmail,
+} = require("../../services/emailService");
 
 const bcrypt = require("bcrypt");
 
@@ -287,7 +289,7 @@ describe("POST /api/auth/reset-password/:token", () => {
     consoleErrorSpy.mockRestore();
   });
 
-  test("should return 500 when sending success email fails", async () => {
+  test("should reset password successfully when success email fails", async () => {
     const user = {
       id: 1,
       email: "test@example.com",
@@ -312,17 +314,22 @@ describe("POST /api/auth/reset-password/:token", () => {
         password: "NewPassword123!",
       });
 
-    expect(response.statusCode).toBe(500);
+    expect(response.statusCode).toBe(200);
 
     expect(response.body).toEqual({
-      success: false,
-      message: "Internal server error.",
+      success: true,
+      message: "Password reset successfully.",
     });
 
     expect(updatePassword).toHaveBeenCalledWith(1, "hashed-new-password");
 
     expect(sendPasswordResetSuccessEmail).toHaveBeenCalledWith(
       "test@example.com",
+    );
+
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      "Failed to send password reset success email:",
+      "Email sending failed",
     );
 
     consoleErrorSpy.mockRestore();

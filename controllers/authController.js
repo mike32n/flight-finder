@@ -280,9 +280,16 @@ async function resetPassword(req, res) {
 
     await updatePassword(user.id, passwordHash);
 
-    await sendPasswordResetSuccessEmail(user.email);
+    try {
+      await sendPasswordResetSuccessEmail(user.email);
+    } catch (error) {
+      console.error(
+        "Failed to send password reset success email:",
+        error.message,
+      );
+    }
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: "Password reset successfully.",
     });
