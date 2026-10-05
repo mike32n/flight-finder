@@ -272,6 +272,10 @@ async function search() {
       }),
     });
 
+    if (!response.ok) {
+      throw new Error(`Search request failed with status ${response.status}`);
+    }
+
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
 
@@ -287,20 +291,21 @@ async function search() {
       buffer = parts.pop();
 
       for (const part of parts) {
-        // END
         if (part.includes("event: end")) {
           updateFooter(resultsDiv, true);
           return;
         }
 
-        // FAIL
+        if (part.includes("event: error")) {
+          throw new Error("Search stream failed");
+        }
+
         if (part.includes("event: fail")) {
           failedCount++;
           updateFooter(resultsDiv, false);
           continue;
         }
 
-        // DATA
         if (part.includes("data:")) {
           const jsonStr = part.split("data: ")[1];
           if (!jsonStr) continue;

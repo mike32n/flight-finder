@@ -21,6 +21,7 @@ export default class MainPage {
   readonly autocompleteItem: Locator;
   readonly activeAutocompleteItem: Locator;
   readonly firstResult: Locator;
+  readonly results: Locator;
   readonly resultsFooter: Locator;
 
   readonly noAirportsSelectedWarning: Locator;
@@ -71,6 +72,8 @@ export default class MainPage {
     this.activeAutocompleteItem = page.locator(".autocomplete-item.active");
 
     this.firstResult = page.locator(".card").first();
+
+    this.results = page.locator("#results");
 
     this.resultsFooter = page.locator("#results-footer");
   }
@@ -179,6 +182,28 @@ export default class MainPage {
     await this.logoutButton.click();
   }
 
+  async mockSearchServerError(): Promise<void> {
+    await this.page.route("**/search-stream", async (route) => {
+      await route.fulfill({
+        status: 500,
+        contentType: "application/json",
+        body: JSON.stringify({
+          error: "Internal server error",
+        }),
+      });
+    });
+  }
+
+  async mockSearchStreamError(): Promise<void> {
+    await this.page.route("**/search-stream", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "text/event-stream",
+        body: "event: error\ndata: error\n\n",
+      });
+    });
+  }
+
   async expectPageTitle(text: string): Promise<void> {
     await expect(this.page).toHaveTitle(text);
   }
@@ -239,5 +264,9 @@ export default class MainPage {
 
   async expectBookingPageOpened(popup: Page): Promise<void> {
     await expect(popup).toHaveURL(/google\.com\/travel\/flights/);
+  }
+
+  async expectSearchError(message: string): Promise<void> {
+    await expect(this.results).toContainText(message);
   }
 }

@@ -113,3 +113,32 @@ test.describe("Flight Finder", () => {
     await flightFinder.expectResultsFooterText("Finished");
   });
 });
+
+test.describe("Flight Search Error Handling", () => {
+  let flightFinder: FlightFinderPage;
+
+  test.beforeEach(async ({ page }) => {
+    flightFinder = new FlightFinderPage(page);
+
+    await page.goto(Env.test);
+
+    await flightFinder.selectAirportByEnter("ams");
+    await flightFinder.expectAirportSelected("AMS");
+  });
+
+  test("TC-FLIGHT-13 | should show error when search request fails", async () => {
+    await flightFinder.mockSearchServerError();
+
+    await flightFinder.clickSearchButton();
+
+    await flightFinder.expectSearchError("Error occurred.");
+  });
+
+  test("TC-FLIGHT-14 | should show error when search stream fails", async () => {
+    await flightFinder.mockSearchStreamError();
+
+    await flightFinder.clickSearchButton();
+
+    await flightFinder.expectSearchError("Error occurred.");
+  });
+});
