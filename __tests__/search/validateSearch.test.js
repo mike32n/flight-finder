@@ -40,7 +40,7 @@ describe("validateSearch", () => {
     },
   );
 
-  test.each([-1, 7, "2"])("rejects invalid weekday %p", (weekday) => {
+  test.each([-1, 7, 2.5, "2"])("rejects invalid weekday %p", (weekday) => {
     req.body.weekday = weekday;
 
     validateSearch(req, res, next);
@@ -48,7 +48,7 @@ describe("validateSearch", () => {
     expect(res.status).toHaveBeenCalledWith(400);
   });
 
-  test.each([0, "3"])("rejects invalid nights %p", (nights) => {
+  test.each([0, 2.5, "3"])("rejects invalid nights %p", (nights) => {
     req.body.nights = nights;
 
     validateSearch(req, res, next);

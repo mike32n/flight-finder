@@ -13,14 +13,14 @@ function validateSearch(req, res, next) {
     });
   }
 
-  if (typeof weekday !== "number" || weekday < 0 || weekday > 6) {
+  if (!Number.isInteger(weekday) || weekday < 0 || weekday > 6) {
     return res.status(400).json({
       error: "Invalid weekday",
     });
   }
 
   if (
-    typeof nights !== "number" ||
+    !Number.isInteger(nights) ||
     nights <= 0 ||
     nights > appConfig.search.maxNights
   ) {
