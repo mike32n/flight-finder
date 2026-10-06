@@ -198,6 +198,24 @@ export default class MainPage {
     await this.logoutButton.click();
   }
 
+  async mockFallbackFlexSearch(): Promise<void> {
+    await this.page.route("**/search-stream", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "text/event-stream",
+        body: [
+          "event: data",
+          'data: {"destination":{"city":"Larnaca","code":"LCA"},"departure":"2026-10-08","return":"2026-10-11","price":25000,"currency":"HUF","bookingUrl":"https://www.google.com/travel/flights?test","resultType":"fallback-flex"}',
+          "",
+          "event: end",
+          "data: {}",
+          "",
+          "",
+        ].join("\n"),
+      });
+    });
+  }
+
   async mockSearchServerError(): Promise<void> {
     await this.page.route("**/search-stream", async (route) => {
       await route.fulfill({

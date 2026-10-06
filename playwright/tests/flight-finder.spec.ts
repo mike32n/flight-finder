@@ -126,6 +126,15 @@ test.describe("Flight Finder", () => {
     await flightFinder.expectResultsFooterText("Finished");
     await flightFinder.expectFlexibleDateResult();
   });
+
+  test("TC-FLIGHT-14 | should show alternative dates for fallback flex results", async () => {
+    await flightFinder.mockFallbackFlexSearch();
+
+    await flightFinder.selectAirportByEnter("lca");
+    await flightFinder.clickSearchButton();
+
+    await flightFinder.expectAlternativeDateResult();
+  });
 });
 
 test.describe("Flight Search Error Handling", () => {
