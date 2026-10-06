@@ -236,6 +236,21 @@ describe("flightSearchService", () => {
   });
 
   test("returns cheaper flex result before the base result", async () => {
+    analyzeFlexResult.mockImplementation((_, result) => {
+      if (result.data.price === 22966) {
+        return {
+          percent: 33,
+          diff: 11350,
+          reason: "return later",
+          type: "return_shift",
+          basePrice: 34316,
+          flexPrice: 22966,
+        };
+      }
+
+      return null;
+    });
+
     runWithConcurrencyLimit
       .mockResolvedValueOnce([
         {
@@ -276,7 +291,7 @@ describe("flightSearchService", () => {
       enrichAirport: (code) => ({ code }),
     });
 
-    expect(result.results).toHaveLength(3);
+    expect(result.results).toHaveLength(2);
 
     expect(result.results[0]).toEqual(
       expect.objectContaining({
@@ -295,8 +310,13 @@ describe("flightSearchService", () => {
       }),
     );
 
-    expect(result.results[1].price).toBe(34316);
-    expect(result.results[2].price).toBe(40000);
+    expect(result.results).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          price: 40000,
+        }),
+      ]),
+    );
   });
 
   test("streams fallback flex results when Smart Flex is disabled and base search has no results", async () => {

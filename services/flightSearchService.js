@@ -98,12 +98,16 @@ async function searchFlights({ destinations, weekday, nights, enrichAirport }) {
   }
 
   // MERGE
+  const filteredFlexResults = isFallbackFlex
+    ? flexResults
+    : flexResults.filter((result) => analyzeFlexResult(baseResults, result));
+
   const results = [
     ...baseResults.map((result) => ({
       ...result,
       resultType: "base",
     })),
-    ...flexResults.map((result) => ({
+    ...filteredFlexResults.map((result) => ({
       ...result,
       resultType: isFallbackFlex ? "fallback-flex" : "flex",
     })),
