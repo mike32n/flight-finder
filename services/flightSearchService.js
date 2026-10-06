@@ -151,7 +151,12 @@ async function searchFlightsStream({
 
   const sentKeys = new Set();
 
-  function handleResult(result, resultType, baseResults = []) {
+  function handleResult(
+    result,
+    resultType,
+    baseResults = [],
+    isFallbackFlex = false,
+  ) {
     console.log("STREAM RESULT:", JSON.stringify(result, null, 2));
 
     if (!result.success) {
@@ -167,16 +172,21 @@ async function searchFlightsStream({
 
     if (sentKeys.has(key)) return;
 
-    sentKeys.add(key);
-
     const enriched = {
       ...enrichFlightResult(item, enrichAirport),
       resultType,
     };
 
-    if (resultType === "flex") {
-      enriched.priceInsight = analyzeFlexResult(baseResults, result);
+    if (resultType === "flex" && !isFallbackFlex) {
+      const priceInsight = analyzeFlexResult(baseResults, result);
+
+      // Ignore flex results that are not cheaper than their base trip
+      if (!priceInsight) return;
+
+      enriched.priceInsight = priceInsight;
     }
+
+    sentKeys.add(key);
 
     onResult({
       type: "data",
@@ -194,14 +204,16 @@ async function searchFlightsStream({
   );
 
   // SMART FLEX / FALLBACK FLEX
-  const shouldSearchFlex =
-    appConfig.smartFlex.enabled || shouldRunFallbackFlex(baseResults);
+  const isFallbackFlex =
+    !appConfig.smartFlex.enabled && shouldRunFallbackFlex(baseResults);
+
+  const shouldSearchFlex = appConfig.smartFlex.enabled || isFallbackFlex;
 
   if (shouldSearchFlex) {
     const flexTasks = createFlexTasks(destinations, trips);
 
     await runWithConcurrencyLimit(flexTasks, provider.concurrency, (result) =>
-      handleResult(result, "flex", baseResults),
+      handleResult(result, "flex", baseResults, isFallbackFlex),
     );
   }
 }

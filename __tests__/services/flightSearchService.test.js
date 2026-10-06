@@ -529,4 +529,74 @@ describe("flightSearchService", () => {
 
     expect(shouldRunFallbackFlex).not.toHaveBeenCalled();
   });
+
+  test("does not stream flex result when it is not cheaper than its base trip", async () => {
+    const onResult = jest.fn();
+
+    analyzeFlexResult.mockReturnValue(null);
+
+    runWithConcurrencyLimit
+      .mockImplementationOnce(async (_, __, callback) => {
+        const results = [
+          {
+            success: true,
+            data: {
+              destination: "CFU",
+              departure: "2026-10-09",
+              return: "2026-10-11",
+              price: 30000,
+            },
+          },
+        ];
+
+        results.forEach(callback);
+
+        return results;
+      })
+      .mockImplementationOnce(async (_, __, callback) => {
+        const results = [
+          {
+            success: true,
+            data: {
+              destination: "CFU",
+              departure: "2026-10-09",
+              return: "2026-10-12",
+              price: 35000,
+              baseDeparture: "2026-10-09",
+              baseReturn: "2026-10-11",
+            },
+          },
+        ];
+
+        results.forEach(callback);
+
+        return results;
+      });
+
+    await searchFlightsStream({
+      destinations: ["CFU"],
+      weekday: 5,
+      nights: 2,
+      enrichAirport: (code) => ({ code }),
+      onResult,
+    });
+
+    expect(analyzeFlexResult).toHaveBeenCalled();
+
+    expect(onResult).toHaveBeenCalledWith({
+      type: "data",
+      data: expect.objectContaining({
+        price: 30000,
+        resultType: "base",
+      }),
+    });
+
+    expect(onResult).not.toHaveBeenCalledWith({
+      type: "data",
+      data: expect.objectContaining({
+        price: 35000,
+        resultType: "flex",
+      }),
+    });
+  });
 });
