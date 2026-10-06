@@ -392,20 +392,39 @@ function insertSortedWithDOM(item, container) {
 function createCard(r) {
   const div = document.createElement("div");
 
-  div.className = r.resultType === "flex" ? "card flex-card" : "card";
+  const isFlex = r.resultType === "flex";
+  const isFallbackFlex = r.resultType === "fallback-flex";
 
-  const flexBadge =
-    r.resultType === "flex"
-      ? '<span class="flex-badge">Flexible dates</span>'
-      : "";
+  div.className = isFlex || isFallbackFlex ? "card flex-card" : "card";
+
+  let badge = "";
+
+  if (isFlex) {
+    badge = '<span class="flex-badge">Flexible dates</span>';
+  } else if (isFallbackFlex) {
+    badge = '<span class="flex-badge">Alternative dates</span>';
+  }
+
+  let priceInsight = "";
+
+  if (isFlex && r.priceInsight) {
+    priceInsight = `
+    <br/>
+    <span class="price-insight">
+      💡 ${r.priceInsight.percent}% cheaper than the original dates
+      (${r.currency} ${r.priceInsight.basePrice.toLocaleString()})
+    </span>
+  `;
+  }
 
   div.innerHTML = `
     <strong>→ ${r.destination.city} (${r.destination.code})</strong>
-    ${flexBadge}<br/>
+    ${badge}<br/>
     <span class="meta-info">
       ${r.departure} → ${r.return}
     </span><br/>
     💶 ${r.currency} ${r.price.toLocaleString()}
+    ${priceInsight}
   `;
 
   div.addEventListener("click", () => {
