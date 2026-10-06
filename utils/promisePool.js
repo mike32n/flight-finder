@@ -10,7 +10,11 @@ async function runWithConcurrencyLimit(tasks, limit, onResult) {
         return result;
       })
       .catch((error) => {
-        const errResult = { success: false, error: error.message };
+        const errResult = {
+          success: false,
+          reason: "provider_error",
+          error: error.message,
+        };
         results.push(errResult);
         if (onResult) onResult(errResult);
         return errResult;

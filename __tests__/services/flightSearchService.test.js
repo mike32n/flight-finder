@@ -658,5 +658,9 @@ describe("flightSearchService", () => {
         type: "data",
       }),
     );
+
+    expect(onResult).not.toHaveBeenCalledWith({
+      type: "fail",
+    });
   });
 });

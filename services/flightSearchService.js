@@ -136,7 +136,9 @@ async function searchFlights({ destinations, weekday, nights, enrichAirport }) {
 
   return {
     results: enriched.slice(0, appConfig.search.maxResults),
-    failedRequests: results.filter((r) => !r.success).length,
+    failedRequests: results.filter(
+      (r) => !r.success && r.reason === "provider_error",
+    ).length,
   };
 }
 
@@ -151,18 +153,15 @@ async function searchFlightsStream({
 
   const sentKeys = new Set();
 
-  function handleResult(
-    result,
-    resultType,
-    baseResults = [],
-    isFallbackFlex = false,
-  ) {
+  function handleResult(result, resultType, baseResults = []) {
     console.log("STREAM RESULT:", JSON.stringify(result, null, 2));
 
     if (!result.success) {
-      onResult({
-        type: "fail",
-      });
+      if (result.reason === "provider_error") {
+        onResult({
+          type: "fail",
+        });
+      }
 
       return;
     }
@@ -214,7 +213,7 @@ async function searchFlightsStream({
     const flexResultType = isFallbackFlex ? "fallback-flex" : "flex";
 
     await runWithConcurrencyLimit(flexTasks, provider.concurrency, (result) =>
-      handleResult(result, flexResultType, baseResults, isFallbackFlex),
+      handleResult(result, flexResultType, baseResults),
     );
   }
 }

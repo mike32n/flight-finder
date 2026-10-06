@@ -20,6 +20,7 @@ describe("promisePool", () => {
 
     expect(results[0]).toEqual({
       success: false,
+      reason: "provider_error",
       error: "boom",
     });
   });

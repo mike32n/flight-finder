@@ -33,7 +33,11 @@ class AmadeusProvider extends BaseProvider {
       );
 
       if (!allowed) {
-        return { success: false, error: "Rate limit exceeded" };
+        return {
+          success: false,
+          reason: "provider_error",
+          error: "Rate limit exceeded",
+        };
       }
 
       try {
