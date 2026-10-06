@@ -12,7 +12,7 @@ jest.mock("../../services/flexDateGenerator", () => ({
 
 jest.mock("../../services/smartFlexService", () => ({
   shouldRunFallbackFlex: jest.fn(),
-  analyzePriceDelta: jest.fn(),
+  analyzeFlexResult: jest.fn(),
 }));
 
 const { getProvider } = require("../../providers/providerFactory");
@@ -34,12 +34,16 @@ const {
   searchFlightsStream,
 } = require("../../services/flightSearchService");
 
-const { shouldRunFallbackFlex } = require("../../services/smartFlexService");
+const {
+  shouldRunFallbackFlex,
+  analyzeFlexResult,
+} = require("../../services/smartFlexService");
 
 describe("flightSearchService", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     shouldRunFallbackFlex.mockReturnValue(false);
+    analyzeFlexResult.mockReturnValue(null);
 
     appConfig.smartFlex.enabled = true;
 
@@ -177,8 +181,6 @@ describe("flightSearchService", () => {
         bookingUrl: "https://example.com/flex-flight",
       }),
     ]);
-
-    expect(result.priceInsight).toBeNull();
   });
 
   test("does not run fallback flex search when Smart Flex is disabled and base search fails with provider error", async () => {
@@ -204,7 +206,6 @@ describe("flightSearchService", () => {
 
     expect(result.results).toEqual([]);
     expect(result.failedRequests).toBe(1);
-    expect(result.priceInsight).toBeNull();
   });
 
   test("does not run fallback flex search when base results contain both no results and provider errors", async () => {
@@ -411,6 +412,15 @@ describe("flightSearchService", () => {
   test("streams flex results when Smart Flex is enabled", async () => {
     const onResult = jest.fn();
 
+    analyzeFlexResult.mockReturnValue({
+      percent: 33,
+      diff: 11350,
+      reason: "return later",
+      type: "return_shift",
+      basePrice: 34316,
+      flexPrice: 22966,
+    });
+
     runWithConcurrencyLimit
       .mockImplementationOnce(async (_, __, callback) => {
         const results = [
@@ -442,6 +452,8 @@ describe("flightSearchService", () => {
               price: 22966,
               currency: "HUF",
               bookingUrl: "https://example.com/flex-flight",
+              baseDeparture: "2026-10-09",
+              baseReturn: "2026-10-11",
             },
           },
         ];
@@ -471,8 +483,41 @@ describe("flightSearchService", () => {
         currency: "HUF",
         bookingUrl: "https://example.com/flex-flight",
         resultType: "flex",
+        priceInsight: {
+          percent: 33,
+          diff: 11350,
+          reason: "return later",
+          type: "return_shift",
+          basePrice: 34316,
+          flexPrice: 22966,
+        },
       }),
     });
+
+    expect(analyzeFlexResult).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({
+          success: true,
+          data: expect.objectContaining({
+            destination: "CFU",
+            departure: "2026-10-09",
+            return: "2026-10-11",
+            price: 34316,
+          }),
+        }),
+      ]),
+      expect.objectContaining({
+        success: true,
+        data: expect.objectContaining({
+          destination: "CFU",
+          departure: "2026-10-09",
+          return: "2026-10-12",
+          price: 22966,
+          baseDeparture: "2026-10-09",
+          baseReturn: "2026-10-11",
+        }),
+      }),
+    );
 
     expect(onResult).toHaveBeenCalledWith({
       type: "data",

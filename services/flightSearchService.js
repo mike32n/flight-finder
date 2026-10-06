@@ -6,7 +6,7 @@ const runWithConcurrencyLimit = require("../utils/promisePool");
 const { expandControlledFlexibility } = require("./flexDateGenerator");
 const {
   shouldRunFallbackFlex,
-  analyzePriceDelta,
+  analyzeFlexResult,
 } = require("./smartFlexService");
 
 const flightProvider = getProvider();
@@ -134,14 +134,9 @@ async function searchFlights({ destinations, weekday, nights, enrichAirport }) {
 
   enriched.sort((a, b) => a.price - b.price);
 
-  const priceInsight = appConfig.smartFlex.enabled
-    ? analyzePriceDelta(baseResults, flexResults)
-    : null;
-
   return {
     results: enriched.slice(0, appConfig.search.maxResults),
     failedRequests: results.filter((r) => !r.success).length,
-    priceInsight,
   };
 }
 
@@ -156,7 +151,7 @@ async function searchFlightsStream({
 
   const sentKeys = new Set();
 
-  function handleResult(result, resultType) {
+  function handleResult(result, resultType, baseResults = []) {
     console.log("STREAM RESULT:", JSON.stringify(result, null, 2));
 
     if (!result.success) {
@@ -178,6 +173,10 @@ async function searchFlightsStream({
       ...enrichFlightResult(item, enrichAirport),
       resultType,
     };
+
+    if (resultType === "flex") {
+      enriched.priceInsight = analyzeFlexResult(baseResults, result);
+    }
 
     onResult({
       type: "data",
@@ -202,7 +201,7 @@ async function searchFlightsStream({
     const flexTasks = createFlexTasks(destinations, trips);
 
     await runWithConcurrencyLimit(flexTasks, provider.concurrency, (result) =>
-      handleResult(result, "flex"),
+      handleResult(result, "flex", baseResults),
     );
   }
 }
