@@ -177,10 +177,9 @@ async function searchFlightsStream({
       resultType,
     };
 
-    if (resultType === "flex" && !isFallbackFlex) {
+    if (resultType === "flex") {
       const priceInsight = analyzeFlexResult(baseResults, result);
 
-      // Ignore flex results that are not cheaper than their base trip
       if (!priceInsight) return;
 
       enriched.priceInsight = priceInsight;
@@ -212,8 +211,10 @@ async function searchFlightsStream({
   if (shouldSearchFlex) {
     const flexTasks = createFlexTasks(destinations, trips);
 
+    const flexResultType = isFallbackFlex ? "fallback-flex" : "flex";
+
     await runWithConcurrencyLimit(flexTasks, provider.concurrency, (result) =>
-      handleResult(result, "flex", baseResults, isFallbackFlex),
+      handleResult(result, flexResultType, baseResults, isFallbackFlex),
     );
   }
 }

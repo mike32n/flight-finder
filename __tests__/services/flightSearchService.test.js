@@ -365,9 +365,11 @@ describe("flightSearchService", () => {
         price: 22966,
         currency: "HUF",
         bookingUrl: "https://example.com/flex-flight",
-        resultType: "flex",
+        resultType: "fallback-flex",
       }),
     });
+
+    expect(analyzeFlexResult).not.toHaveBeenCalled();
   });
 
   test("does not run fallback flex search when Smart Flex is disabled and base search fails with provider error", async () => {
