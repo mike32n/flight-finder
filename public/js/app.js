@@ -292,6 +292,10 @@ async function search() {
 
       for (const part of parts) {
         if (part.includes("event: end")) {
+          if (currentResults.length === 0) {
+            showNoResults(resultsDiv);
+          }
+
           updateFooter(resultsDiv, true);
           return;
         }
@@ -462,6 +466,21 @@ function initFooter(container) {
   }
 
   el.textContent = "Loading...";
+}
+
+function showNoResults(container) {
+  const noResults = document.createElement("div");
+
+  noResults.className = "card no-results-card";
+  noResults.innerHTML = `
+    <strong>No flights found</strong><br/>
+    <span class="meta-info">
+      Try different dates, more nights, or another destination.
+    </span>
+  `;
+
+  const footer = document.getElementById("results-footer");
+  container.insertBefore(noResults, footer);
 }
 
 function openFlight(r) {

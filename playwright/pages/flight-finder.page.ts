@@ -18,6 +18,7 @@ export default class MainPage {
   readonly nightsInput: Locator;
   readonly autocompleteList: Locator;
   readonly selectedContainer: Locator;
+  readonly noAirportsSelectedWarning: Locator;
   readonly autocompleteItem: Locator;
   readonly activeAutocompleteItem: Locator;
   readonly firstResult: Locator;
@@ -29,7 +30,7 @@ export default class MainPage {
   readonly flexBadge: Locator;
   readonly priceInsight: Locator;
 
-  readonly noAirportsSelectedWarning: Locator;
+  readonly noResultsCard: Locator;
 
   constructor(page: Page) {
     this.page = page;
@@ -92,6 +93,7 @@ export default class MainPage {
 
     this.flexBadge = page.locator(".flex-badge");
     this.priceInsight = page.locator(".price-insight");
+    this.noResultsCard = page.locator(".no-results-card");
   }
 
   async clickToggleTheme(): Promise<void> {
@@ -216,6 +218,16 @@ export default class MainPage {
     });
   }
 
+  async mockEmptySearch(): Promise<void> {
+    await this.page.route("**/search-stream", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "text/event-stream",
+        body: ["event: end", "data: {}", "", ""].join("\n"),
+      });
+    });
+  }
+
   async mockSearchServerError(): Promise<void> {
     await this.page.route("**/search-stream", async (route) => {
       await route.fulfill({
@@ -314,6 +326,16 @@ export default class MainPage {
     ).toBeVisible();
 
     await expect(card.locator(".price-insight")).toHaveCount(0);
+  }
+
+  async expectNoResults(): Promise<void> {
+    await expect(this.noResultsCard).toBeVisible();
+
+    await expect(this.noResultsCard).toContainText("No flights found");
+
+    await expect(this.noResultsCard).toContainText(
+      "Try different dates, more nights, or another destination.",
+    );
   }
 
   async clickFirstResultAndGetBookingPage(): Promise<Page> {

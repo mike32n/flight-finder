@@ -135,6 +135,16 @@ test.describe("Flight Finder", () => {
 
     await flightFinder.expectAlternativeDateResult();
   });
+
+  test("TC-FLIGHT-15 | should show no-results state when search returns no flights", async () => {
+    await flightFinder.mockEmptySearch();
+
+    await flightFinder.selectAirportByEnter("lca");
+    await flightFinder.clickSearchButton();
+
+    await flightFinder.expectNoResults();
+    await flightFinder.expectResultsFooterText("Finished");
+  });
 });
 
 test.describe("Flight Search Error Handling", () => {

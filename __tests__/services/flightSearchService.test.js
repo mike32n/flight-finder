@@ -601,4 +601,62 @@ describe("flightSearchService", () => {
       }),
     });
   });
+
+  test("returns no data when both base and fallback flex searches have no results", async () => {
+    appConfig.smartFlex.enabled = false;
+    shouldRunFallbackFlex.mockReturnValue(true);
+
+    const onResult = jest.fn();
+
+    runWithConcurrencyLimit
+      .mockImplementationOnce(async (_, __, callback) => {
+        const baseResults = [
+          {
+            success: false,
+            reason: "no_results",
+          },
+        ];
+
+        baseResults.forEach(callback);
+
+        return baseResults;
+      })
+      .mockImplementationOnce(async (_, __, callback) => {
+        const flexResults = [
+          {
+            success: false,
+            reason: "no_results",
+          },
+        ];
+
+        flexResults.forEach(callback);
+
+        return flexResults;
+      });
+
+    await searchFlightsStream({
+      destinations: ["CFU"],
+      weekday: 5,
+      nights: 2,
+      enrichAirport: (code) => ({ code }),
+      onResult,
+    });
+
+    expect(runWithConcurrencyLimit).toHaveBeenCalledTimes(2);
+
+    expect(shouldRunFallbackFlex).toHaveBeenCalledWith([
+      {
+        success: false,
+        reason: "no_results",
+      },
+    ]);
+
+    expect(expandControlledFlexibility).toHaveBeenCalled();
+
+    expect(onResult).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "data",
+      }),
+    );
+  });
 });
