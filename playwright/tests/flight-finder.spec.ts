@@ -112,6 +112,20 @@ test.describe("Flight Finder", () => {
     await flightFinder.expectFirstResultVisible();
     await flightFinder.expectResultsFooterText("Finished");
   });
+
+  test("TC-FLIGHT-13 | should show price insight for flexible date results", async () => {
+    await flightFinder.selectAirportByEnter("lca");
+    await flightFinder.selectAirportByEnter("pmi");
+    await flightFinder.selectAirportByEnter("cfu");
+
+    await flightFinder.selectWeekdayOption("5");
+    await flightFinder.clickIncrementButton();
+
+    await flightFinder.clickSearchButton();
+
+    await flightFinder.expectResultsFooterText("Finished");
+    await flightFinder.expectFlexibleDateResult();
+  });
 });
 
 test.describe("Flight Search Error Handling", () => {
@@ -126,7 +140,7 @@ test.describe("Flight Search Error Handling", () => {
     await flightFinder.expectAirportSelected("AMS");
   });
 
-  test("TC-FLIGHT-13 | should show error when search request fails", async () => {
+  test("TC-ERROR-01 | should show error when search request fails", async () => {
     await flightFinder.mockSearchServerError();
 
     await flightFinder.clickSearchButton();
@@ -134,7 +148,7 @@ test.describe("Flight Search Error Handling", () => {
     await flightFinder.expectSearchError("Error occurred.");
   });
 
-  test("TC-FLIGHT-14 | should show error when search stream fails", async () => {
+  test("TC-ERROR-02 | should show error when search stream fails", async () => {
     await flightFinder.mockSearchStreamError();
 
     await flightFinder.clickSearchButton();

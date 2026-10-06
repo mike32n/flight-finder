@@ -24,6 +24,11 @@ export default class MainPage {
   readonly results: Locator;
   readonly resultsFooter: Locator;
 
+  readonly flexCard: Locator;
+  readonly fallbackFlexCard: Locator;
+  readonly flexBadge: Locator;
+  readonly priceInsight: Locator;
+
   readonly noAirportsSelectedWarning: Locator;
 
   constructor(page: Page) {
@@ -76,6 +81,17 @@ export default class MainPage {
     this.results = page.locator("#results");
 
     this.resultsFooter = page.locator("#results-footer");
+
+    this.flexCard = page.locator(".flex-card").filter({
+      has: page.getByText("Flexible dates", { exact: true }),
+    });
+
+    this.fallbackFlexCard = page.locator(".flex-card").filter({
+      has: page.getByText("Alternative dates", { exact: true }),
+    });
+
+    this.flexBadge = page.locator(".flex-badge");
+    this.priceInsight = page.locator(".price-insight");
   }
 
   async clickToggleTheme(): Promise<void> {
@@ -252,6 +268,34 @@ export default class MainPage {
 
   async expectResultsFooterText(text: string): Promise<void> {
     await expect(this.resultsFooter.filter({ hasText: text })).toBeVisible();
+  }
+
+  async expectFlexibleDateResult(): Promise<void> {
+    const card = this.flexCard.first();
+
+    await expect(card).toBeVisible();
+    await expect(
+      card.getByText("Flexible dates", { exact: true }),
+    ).toBeVisible();
+
+    const priceInsight = card.locator(".price-insight");
+
+    await expect(priceInsight).toContainText(
+      /% cheaper than the original dates/,
+    );
+
+    await expect(priceInsight).toContainText(/HUF [\d,]+/);
+  }
+
+  async expectAlternativeDateResult(): Promise<void> {
+    const card = this.fallbackFlexCard.first();
+
+    await expect(card).toBeVisible();
+    await expect(
+      card.getByText("Alternative dates", { exact: true }),
+    ).toBeVisible();
+
+    await expect(card.locator(".price-insight")).toHaveCount(0);
   }
 
   async clickFirstResultAndGetBookingPage(): Promise<Page> {
