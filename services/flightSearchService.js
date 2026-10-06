@@ -107,7 +107,7 @@ async function searchFlights({ destinations, weekday, nights, enrichAirport }) {
     })),
   ];
 
-  console.log("RAW RESULTS:", JSON.stringify(results, null, 2));
+  // console.log("RAW RESULTS:", JSON.stringify(results, null, 2)); // DEBUG
 
   const successful = results
     .filter((r) => r.success)
@@ -154,7 +154,7 @@ async function searchFlightsStream({
   const sentKeys = new Set();
 
   function handleResult(result, resultType, baseResults = []) {
-    console.log("STREAM RESULT:", JSON.stringify(result, null, 2));
+    // console.log("STREAM RESULT:", JSON.stringify(result, null, 2)); // DEBUG
 
     if (!result.success) {
       if (result.reason === "provider_error") {
