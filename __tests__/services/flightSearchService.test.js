@@ -179,6 +179,7 @@ describe("flightSearchService", () => {
         price: 22966,
         currency: "HUF",
         bookingUrl: "https://example.com/flex-flight",
+        resultType: "fallback-flex",
       }),
     ]);
   });

@@ -83,8 +83,10 @@ async function searchFlights({ destinations, weekday, nights, enrichAirport }) {
   // SMART FLEX / FALLBACK FLEX
   let flexResults = [];
 
-  const shouldSearchFlex =
-    appConfig.smartFlex.enabled || shouldRunFallbackFlex(baseResults);
+  const isFallbackFlex =
+    !appConfig.smartFlex.enabled && shouldRunFallbackFlex(baseResults);
+
+  const shouldSearchFlex = appConfig.smartFlex.enabled || isFallbackFlex;
 
   if (shouldSearchFlex) {
     const flexTasks = createFlexTasks(destinations, trips);
@@ -103,11 +105,9 @@ async function searchFlights({ destinations, weekday, nights, enrichAirport }) {
     })),
     ...flexResults.map((result) => ({
       ...result,
-      resultType: "flex",
+      resultType: isFallbackFlex ? "fallback-flex" : "flex",
     })),
   ];
-
-  // console.log("RAW RESULTS:", JSON.stringify(results, null, 2)); // DEBUG
 
   const successful = results
     .filter((r) => r.success)
@@ -154,8 +154,6 @@ async function searchFlightsStream({
   const sentKeys = new Set();
 
   function handleResult(result, resultType, baseResults = []) {
-    // console.log("STREAM RESULT:", JSON.stringify(result, null, 2)); // DEBUG
-
     if (!result.success) {
       if (result.reason === "provider_error") {
         onResult({
