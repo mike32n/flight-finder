@@ -21,10 +21,7 @@ function expandControlledFlexibility(trip) {
     return: trip.return,
   });
 
-  const retPlus = dayjs(trip.return).add(
-    smartFlex.returnShiftDays,
-    "day"
-  );
+  const retPlus = dayjs(trip.return).add(smartFlex.returnShiftDays, "day");
 
   results.push({
     departure: trip.departure,

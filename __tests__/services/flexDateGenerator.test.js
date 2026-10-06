@@ -1,8 +1,14 @@
 const {
   expandControlledFlexibility,
 } = require("../../services/flexDateGenerator");
+const { smartFlex } = require("../../config/appConfig");
 
 describe("expandControlledFlexibility", () => {
+  beforeEach(() => {
+    smartFlex.departureShiftDays = 1;
+    smartFlex.returnShiftDays = 1;
+  });
+
   test("should include the original trip", () => {
     const trip = {
       departure: "2026-10-10",
