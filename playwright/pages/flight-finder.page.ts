@@ -262,6 +262,21 @@ export default class MainPage {
     });
   }
 
+  async mockUnexpectedStreamClose(): Promise<void> {
+    await this.page.route("**/search-stream", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "text/event-stream",
+        body: [
+          "event: data",
+          'data: {"destination":{"city":"Amsterdam","code":"AMS"},"departure":"2026-10-09","return":"2026-10-11","price":30000,"currency":"HUF","bookingUrl":"https://example.com"}',
+          "",
+          "",
+        ].join("\n"),
+      });
+    });
+  }
+
   async expectPageTitle(text: string): Promise<void> {
     await expect(this.page).toHaveTitle(text);
   }

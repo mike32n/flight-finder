@@ -163,6 +163,15 @@ test.describe("Flight Finder", () => {
     await flightFinder.clickIncrementButton(30);
     await flightFinder.expectNightsValue("30");
   });
+
+  test("TC-FLIGHT-17 | should handle unexpected search stream close", async () => {
+    await flightFinder.mockUnexpectedStreamClose();
+
+    await flightFinder.selectAirportByEnter("ams");
+    await flightFinder.clickSearchButton();
+
+    await flightFinder.expectSearchError("Error occurred.");
+  });
 });
 
 test.describe("Flight Search Error Handling", () => {
