@@ -70,6 +70,50 @@ describe("flightSearchService", () => {
     ]);
   });
 
+  test("counts Smart Flex provider errors but not no-results outcomes", async () => {
+    runWithConcurrencyLimit
+      .mockResolvedValueOnce([
+        {
+          success: true,
+          data: {
+            destination: "CFU",
+            departure: "2026-10-09",
+            return: "2026-10-11",
+            price: 30000,
+          },
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          success: false,
+          reason: "provider_error",
+          error: "Provider timeout",
+        },
+        {
+          success: false,
+          reason: "no_results",
+        },
+      ]);
+
+    const result = await searchFlights({
+      destinations: ["CFU"],
+      weekday: 5,
+      nights: 2,
+      enrichAirport: (code) => ({ code }),
+    });
+
+    expect(runWithConcurrencyLimit).toHaveBeenCalledTimes(2);
+    expect(result.failedRequests).toBe(1);
+
+    expect(result.results).toEqual([
+      expect.objectContaining({
+        destination: { code: "CFU" },
+        price: 30000,
+        resultType: "base",
+      }),
+    ]);
+  });
+
   test("runs base and flex searches when Smart Flex is enabled", async () => {
     runWithConcurrencyLimit
       .mockResolvedValueOnce([

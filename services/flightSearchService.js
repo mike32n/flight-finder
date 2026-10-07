@@ -140,7 +140,7 @@ async function searchFlights({ destinations, weekday, nights, enrichAirport }) {
 
   return {
     results: enriched.slice(0, appConfig.search.maxResults),
-    failedRequests: results.filter(
+    failedRequests: [...baseResults, ...flexResults].filter(
       (r) => !r.success && r.reason === "provider_error",
     ).length,
   };
