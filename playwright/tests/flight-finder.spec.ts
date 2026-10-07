@@ -145,6 +145,24 @@ test.describe("Flight Finder", () => {
     await flightFinder.expectNoResults();
     await flightFinder.expectResultsFooterText("Finished");
   });
+
+  test("TC-FLIGHT-16 | should remain usable when config request fails", async () => {
+    await flightFinder.mockConfigFailure();
+
+    await common.reloadPage();
+
+    await flightFinder.selectAirportByEnter("ams");
+    await flightFinder.selectAirportByEnter("lca");
+    await flightFinder.selectAirportByEnter("ein");
+
+    await flightFinder.expectAirportSelected("AMS");
+    await flightFinder.expectAirportSelected("LCA");
+    await flightFinder.expectAirportSelected("EIN");
+    await flightFinder.expectAirportInputDisabled();
+
+    await flightFinder.clickIncrementButton(30);
+    await flightFinder.expectNightsValue("30");
+  });
 });
 
 test.describe("Flight Search Error Handling", () => {

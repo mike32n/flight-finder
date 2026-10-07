@@ -200,6 +200,18 @@ export default class MainPage {
     await this.logoutButton.click();
   }
 
+  async mockConfigFailure(): Promise<void> {
+    await this.page.route("**/config", async (route) => {
+      await route.fulfill({
+        status: 500,
+        contentType: "application/json",
+        body: JSON.stringify({
+          error: "Internal server error",
+        }),
+      });
+    });
+  }
+
   async mockFallbackFlexSearch(): Promise<void> {
     await this.page.route("**/search-stream", async (route) => {
       await route.fulfill({
@@ -290,6 +302,10 @@ export default class MainPage {
 
   async expectNoAirportsSelectedWarning(): Promise<void> {
     await expect(this.noAirportsSelectedWarning).toBeVisible();
+  }
+
+  async expectAirportInputDisabled(): Promise<void> {
+    await expect(this.airportInput).toBeDisabled();
   }
 
   async expectFirstResultVisible(): Promise<void> {

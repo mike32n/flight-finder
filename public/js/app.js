@@ -1,8 +1,8 @@
 let destinationsData = [];
 let selectedDestinations = [];
-let maxDestinations;
-let maxNights;
-let maxResults;
+let maxDestinations = 3;
+let maxNights = 30;
+let maxResults = 5;
 
 let currentFocus = -1;
 let debounceTimer;
@@ -24,15 +24,22 @@ window.onload = async function () {
 
   try {
     const configRes = await fetch("/config");
+
+    if (!configRes.ok) {
+      throw new Error(`Config request failed: ${configRes.status}`);
+    }
+
     const config = await configRes.json();
 
-    maxDestinations = config.destinations.maxSelected || 3;
-    maxNights = config.search.maxNights || 30;
-    maxResults = config.search.maxResults || 5;
+    maxDestinations = config.destinations.maxSelected ?? maxDestinations;
+    maxNights = config.search.maxNights ?? maxNights;
+    maxResults = config.search.maxResults ?? maxResults;
 
     window.emailVerificationRequired =
       config.auth?.emailVerificationRequired ?? true;
-  } catch {}
+  } catch (err) {
+    console.error("Failed to load config:", err);
+  }
 
   setupAutocomplete();
   loadTheme();
