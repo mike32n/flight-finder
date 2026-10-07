@@ -7,7 +7,7 @@ A lightweight web application for finding cheap short round-trip flights from Bu
 - Multi-destination flight search from BUD
 - Trip generation by weekday + number of nights
 - Configurable search limits
-- Smart Flex with controlled ±1 day expansion
+- Smart Flex with controlled nearby-date search
 - Live results via Server-Sent Events (SSE)
 - Partial failure handling
 - Result deduplication and price sorting
@@ -25,7 +25,7 @@ A lightweight web application for finding cheap short round-trip flights from Bu
 
 1. Generate possible trip dates
 2. Execute flight searches through a concurrency-limited Promise Pool
-3. Apply Smart Flex when enabled or needed as fallback
+3. Search nearby dates with Smart Flex or as a fallback when needed
 4. Stream results to the browser as they become available
 5. Deduplicate, sort and keep the configured number of cheapest results
 
@@ -33,9 +33,9 @@ Individual API failures do not stop the remaining searches.
 
 ## Smart Flex
 
-When enabled, Smart Flex also searches controlled nearby date variants.
+When enabled, Smart Flex checks controlled nearby date variants and shows them when they are cheaper than the original dates.
 
-If disabled, flexible-date searches are used only as a fallback when the base search returns no results.
+If disabled, nearby dates are searched only as a fallback when no flights are found for the original dates.
 
 Current variants:
 
