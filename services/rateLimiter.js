@@ -1,3 +1,4 @@
+const crypto = require("crypto");
 const redis = require("./redisClient");
 
 /**
@@ -13,6 +14,7 @@ local key = KEYS[1]
 local now = tonumber(ARGV[1])
 local window = tonumber(ARGV[2])
 local limit = tonumber(ARGV[3])
+local requestId = ARGV[4]
 
 -- remove old entries
 redis.call("ZREMRANGEBYSCORE", key, 0, now - window)
@@ -24,7 +26,7 @@ if count >= limit then
 end
 
 -- add current request
-redis.call("ZADD", key, now, now)
+redis.call("ZADD", key, now, requestId)
 
 -- set expiration in seconds
 redis.call("EXPIRE", key, math.ceil(window / 1000))
@@ -42,8 +44,9 @@ async function acquireToken(providerName, limit, windowSeconds) {
   const key = `ratelimit:${providerName}`;
   const now = Date.now();
   const windowMs = windowSeconds * 1000;
+  const requestId = `${now}-${crypto.randomUUID()}`;
 
-  const result = await redis.acquireToken(key, now, windowMs, limit);
+  const result = await redis.acquireToken(key, now, windowMs, limit, requestId);
 
   return result === 1;
 }
