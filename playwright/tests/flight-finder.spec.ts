@@ -172,6 +172,26 @@ test.describe("Flight Finder", () => {
 
     await flightFinder.expectSearchError("Error occurred.");
   });
+
+  test("TC-FLIGHT-18 | should prevent overlapping searches and unlock after completion", async () => {
+    const pendingSearch = await flightFinder.mockPendingSearch();
+
+    await flightFinder.selectAirportByEnter("ams");
+
+    try {
+      await flightFinder.triggerSearchTwice();
+
+      await flightFinder.expectSearchButtonDisabled();
+      await pendingSearch.expectRequestCount(1);
+    } finally {
+      pendingSearch.complete();
+    }
+
+    await flightFinder.expectNoResults();
+    await flightFinder.expectSearchButtonEnabled();
+
+    await pendingSearch.expectRequestCount(1);
+  });
 });
 
 test.describe("Flight Search Error Handling", () => {

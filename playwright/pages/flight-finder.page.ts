@@ -200,6 +200,17 @@ export default class MainPage {
     await this.logoutButton.click();
   }
 
+  async triggerSearchTwice(): Promise<void> {
+    await this.page.evaluate(() => {
+      const app = window as unknown as {
+        search: () => Promise<void>;
+      };
+
+      void app.search();
+      void app.search();
+    });
+  }
+
   async mockConfigFailure(): Promise<void> {
     await this.page.route("**/config", async (route) => {
       await route.fulfill({
@@ -275,6 +286,34 @@ export default class MainPage {
         ].join("\n"),
       });
     });
+  }
+
+  async mockPendingSearch() {
+    let requestCount = 0;
+    let releaseResponse!: () => void;
+
+    const responseGate = new Promise<void>((resolve) => {
+      releaseResponse = resolve;
+    });
+
+    await this.page.route("**/search-stream", async (route) => {
+      requestCount++;
+      await responseGate;
+
+      await route.fulfill({
+        status: 200,
+        contentType: "text/event-stream",
+        body: "event: end\ndata: done\n\n",
+      });
+    });
+
+    return {
+      complete: () => releaseResponse(),
+
+      expectRequestCount: async (expected: number): Promise<void> => {
+        await expect.poll(() => requestCount).toBe(expected);
+      },
+    };
   }
 
   async expectPageTitle(text: string): Promise<void> {
@@ -383,5 +422,13 @@ export default class MainPage {
 
   async expectSearchError(message: string): Promise<void> {
     await expect(this.results).toContainText(message);
+  }
+
+  async expectSearchButtonDisabled(): Promise<void> {
+    await expect(this.searchButton).toBeDisabled();
+  }
+
+  async expectSearchButtonEnabled(): Promise<void> {
+    await expect(this.searchButton).toBeEnabled();
   }
 }

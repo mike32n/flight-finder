@@ -11,6 +11,7 @@ let dropdownCloseTimer;
 let currentResults = [];
 let failedCount = 0;
 let resultNodes = [];
+let isSearching = false;
 
 window.emailVerificationRequired = true;
 
@@ -240,6 +241,8 @@ function renderSelected() {
 /* ========================= */
 
 async function search() {
+  if (isSearching) return;
+
   const weekday = Number(document.getElementById("weekday").value);
   const nights = Number(document.getElementById("nights").value);
 
@@ -256,17 +259,22 @@ async function search() {
     return;
   }
 
-  resultsDiv.innerHTML = "";
+  const searchButton = document.getElementById("search-button");
 
-  // footer reset
-  initFooter(resultsDiv);
-
-  // STATE
-  currentResults = [];
-  failedCount = 0;
-  resultNodes = [];
+  isSearching = true;
+  searchButton.disabled = true;
 
   try {
+    resultsDiv.innerHTML = "";
+
+    // footer reset
+    initFooter(resultsDiv);
+
+    // STATE
+    currentResults = [];
+    failedCount = 0;
+    resultNodes = [];
+
     const response = await fetch("/search-stream", {
       method: "POST",
       headers: {
@@ -331,6 +339,9 @@ async function search() {
     }
   } catch (err) {
     resultsDiv.innerHTML = "Error occurred.";
+  } finally {
+    isSearching = false;
+    searchButton.disabled = false;
   }
 }
 
