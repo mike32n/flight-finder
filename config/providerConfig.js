@@ -19,11 +19,13 @@ const providerConfigs = {
     clientSecret: process.env.AMADEUS_PROD_CLIENT_SECRET,
     concurrency: 5,
   },
-  
-  "serpapi": {
+
+  serpapi: {
     type: "serpapi",
     apiKey: process.env.SERPAPI_KEY,
     concurrency: 5,
+    rateLimit: 100,
+    rateLimitWindowSeconds: 60,
   },
 };
 

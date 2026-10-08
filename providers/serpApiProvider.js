@@ -2,12 +2,15 @@ const axios = require("axios");
 
 const BaseProvider = require("./baseProvider");
 const { getOrSet } = require("../services/cacheService");
+const { acquireToken } = require("../services/rateLimiter");
 
 class SerpApiProvider extends BaseProvider {
   constructor(config) {
     super();
 
     this.apiKey = config.apiKey;
+    this.rateLimit = config.rateLimit ?? 100;
+    this.rateLimitWindowSeconds = config.rateLimitWindowSeconds ?? 60;
   }
 
   async searchFlights(destination, departure, returnDate) {
@@ -19,6 +22,20 @@ class SerpApiProvider extends BaseProvider {
 
     return getOrSet("serpapi", payload, async () => {
       try {
+        const allowed = await acquireToken(
+          "serpapi",
+          this.rateLimit,
+          this.rateLimitWindowSeconds,
+        );
+
+        if (!allowed) {
+          return {
+            success: false,
+            reason: "provider_error",
+            error: "SerpApi rate limit exceeded",
+          };
+        }
+
         const response = await axios.get("https://serpapi.com/search.json", {
           params: {
             engine: "google_flights",

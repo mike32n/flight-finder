@@ -1,5 +1,6 @@
 const crypto = require("crypto");
 const redis = require("./redisClient");
+const appConfig = require("../config/appConfig");
 
 /**
  * Sliding window rate limiter (atomic, Lua)
@@ -46,9 +47,26 @@ async function acquireToken(providerName, limit, windowSeconds) {
   const windowMs = windowSeconds * 1000;
   const requestId = `${now}-${crypto.randomUUID()}`;
 
-  const result = await redis.acquireToken(key, now, windowMs, limit, requestId);
+  let timer;
 
-  return result === 1;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => {
+      reject(new Error("Rate limiter Redis timeout"));
+    }, appConfig.cache.operationTimeoutMs ?? 1000);
+
+    timer.unref?.();
+  });
+
+  try {
+    const result = await Promise.race([
+      redis.acquireToken(key, now, windowMs, limit, requestId),
+      timeout,
+    ]);
+
+    return result === 1;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 module.exports = { acquireToken };

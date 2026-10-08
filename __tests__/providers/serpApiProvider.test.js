@@ -1,5 +1,7 @@
 const axios = require("axios");
 const SerpApiProvider = require("../../providers/serpApiProvider");
+const { acquireToken } = require("../../services/rateLimiter");
+const { getOrSet } = require("../../services/cacheService");
 
 jest.mock("axios");
 
@@ -7,14 +9,22 @@ jest.mock("../../services/cacheService", () => ({
   getOrSet: jest.fn((_, __, fetcher) => fetcher()),
 }));
 
+jest.mock("../../services/rateLimiter", () => ({
+  acquireToken: jest.fn(),
+}));
+
 describe("SerpApiProvider", () => {
   let provider;
 
   beforeEach(() => {
     jest.clearAllMocks();
+    acquireToken.mockReset();
+    acquireToken.mockResolvedValue(true);
 
     provider = new SerpApiProvider({
       apiKey: "test-api-key",
+      rateLimit: 20,
+      rateLimitWindowSeconds: 60,
     });
   });
 
@@ -190,5 +200,68 @@ describe("SerpApiProvider", () => {
         }),
       }),
     );
+
+    expect(acquireToken).toHaveBeenCalledWith("serpapi", 20, 60);
+  });
+
+  test("does not call API when rate limit is reached", async () => {
+    acquireToken.mockResolvedValue(false);
+
+    const result = await provider.searchFlights(
+      "BCN",
+      "2026-10-09",
+      "2026-10-11",
+    );
+
+    expect(result).toEqual({
+      success: false,
+      reason: "provider_error",
+      error: "SerpApi rate limit exceeded",
+    });
+
+    expect(axios.get).not.toHaveBeenCalled();
+  });
+
+  test("does not call API when the rate limiter fails", async () => {
+    acquireToken.mockRejectedValue(new Error("Redis unavailable"));
+
+    const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+
+    try {
+      const result = await provider.searchFlights(
+        "BCN",
+        "2026-10-09",
+        "2026-10-11",
+      );
+
+      expect(result).toEqual({
+        success: false,
+        reason: "provider_error",
+        error: "Redis unavailable",
+      });
+
+      expect(axios.get).not.toHaveBeenCalled();
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
+  test("does not acquire a token or call API on cache hit", async () => {
+    const cached = {
+      success: true,
+      data: { price: 25000 },
+    };
+
+    getOrSet.mockResolvedValueOnce(cached);
+
+    const result = await provider.searchFlights(
+      "BCN",
+      "2026-10-09",
+      "2026-10-11",
+    );
+
+    expect(result).toEqual(cached);
+    expect(acquireToken).not.toHaveBeenCalled();
+    expect(axios.get).not.toHaveBeenCalled();
   });
 });

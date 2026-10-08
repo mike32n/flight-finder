@@ -6,6 +6,7 @@ jest.mock("../../services/redisClient", () => ({
   acquireToken: mockAcquireToken,
 }));
 
+const appConfig = require("../../config/appConfig");
 const { acquireToken } = require("../../services/rateLimiter");
 
 describe("rateLimiter", () => {
@@ -48,6 +49,28 @@ describe("rateLimiter", () => {
     const result = await acquireToken("serpapi", 10, 60);
 
     expect(result).toBe(false);
+  });
+
+  test("should reject when Redis does not respond before timeout", async () => {
+    jest.useFakeTimers();
+
+    try {
+      mockAcquireToken.mockImplementationOnce(() => new Promise(() => {}));
+
+      const pending = acquireToken("serpapi", 20, 60);
+
+      const assertion = expect(pending).rejects.toThrow(
+        "Rate limiter Redis timeout",
+      );
+
+      await jest.advanceTimersByTimeAsync(appConfig.cache.operationTimeoutMs);
+
+      await assertion;
+
+      expect(jest.getTimerCount()).toBe(0);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   test("should generate unique request IDs for requests in the same millisecond", async () => {
