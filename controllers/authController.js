@@ -26,11 +26,21 @@ const {
   hasValidPasswordResetToken,
 } = require("../utils/passwordResetTokenValidator");
 
+const { validateEmailType } = require("../utils/emailValidator");
 const { normalizeEmail } = require("../utils/emailNormalizer");
 
 async function register(req, res) {
   try {
     const { password } = req.body;
+
+    const emailError = validateEmailType(req.body.email);
+
+    if (emailError) {
+      return res.status(400).json({
+        success: false,
+        message: emailError,
+      });
+    }
 
     const email = normalizeEmail(req.body.email);
 
@@ -136,12 +146,35 @@ async function login(req, res) {
   try {
     const { password } = req.body;
 
+    const emailError = validateEmailType(req.body.email);
+
+    if (emailError) {
+      return res.status(400).json({
+        success: false,
+        message: emailError,
+      });
+    }
+
     const email = normalizeEmail(req.body.email);
 
     if (!email) {
       return res.status(400).json({
         success: false,
         message: "Email is required.",
+      });
+    }
+
+    if (password == null || password === "") {
+      return res.status(400).json({
+        success: false,
+        message: "Password is required.",
+      });
+    }
+
+    if (typeof password !== "string") {
+      return res.status(400).json({
+        success: false,
+        message: "Password must be a string.",
       });
     }
 
@@ -205,6 +238,15 @@ async function login(req, res) {
 
 async function forgotPassword(req, res) {
   try {
+    const emailError = validateEmailType(req.body.email);
+
+    if (emailError) {
+      return res.status(400).json({
+        success: false,
+        message: emailError,
+      });
+    }
+
     const email = normalizeEmail(req.body.email);
 
     const user = await findUserByEmail(email);

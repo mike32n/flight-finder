@@ -1,5 +1,9 @@
 function normalizeEmail(email) {
-  return email?.trim().toLowerCase();
+  if (typeof email !== "string") {
+    return undefined;
+  }
+
+  return email.trim().toLowerCase();
 }
 
 module.exports = {

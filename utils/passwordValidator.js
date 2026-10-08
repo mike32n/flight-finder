@@ -1,6 +1,10 @@
 function validatePassword(password) {
-  if (!password) {
+  if (password == null || password === "") {
     return "Password is required.";
+  }
+
+  if (typeof password !== "string") {
+    return "Password must be a string.";
   }
 
   if (password.length < 8) {
