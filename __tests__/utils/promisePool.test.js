@@ -25,6 +25,53 @@ describe("promisePool", () => {
     });
   });
 
+  test("converts synchronous task exception into failure and continues", async () => {
+    const successfulResult = { success: true, id: 2 };
+    const nextTask = jest.fn().mockResolvedValue(successfulResult);
+    const onResult = jest.fn();
+
+    const tasks = [
+      () => {
+        throw new Error("sync failure");
+      },
+      nextTask,
+    ];
+
+    const results = await runWithConcurrencyLimit(tasks, 1, onResult);
+
+    expect(results).toEqual([
+      {
+        success: false,
+        reason: "provider_error",
+        error: "sync failure",
+      },
+      successfulResult,
+    ]);
+
+    expect(nextTask).toHaveBeenCalledTimes(1);
+    expect(onResult).toHaveBeenCalledTimes(2);
+  });
+
+  test("propagates callback error without reporting a provider failure", async () => {
+    const successfulResult = { success: true, id: 1 };
+    const callbackError = new Error("Callback failed");
+
+    const onResult = jest.fn(() => {
+      throw callbackError;
+    });
+
+    await expect(
+      runWithConcurrencyLimit(
+        [() => Promise.resolve(successfulResult)],
+        1,
+        onResult,
+      ),
+    ).rejects.toBe(callbackError);
+
+    expect(onResult).toHaveBeenCalledTimes(1);
+    expect(onResult).toHaveBeenCalledWith(successfulResult);
+  });
+
   test("calls onResult callback", async () => {
     const onResult = jest.fn();
 

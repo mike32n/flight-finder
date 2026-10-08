@@ -3,21 +3,17 @@ async function runWithConcurrencyLimit(tasks, limit, onResult) {
   const results = [];
 
   for (const task of tasks) {
-    const p = task()
+    const p = Promise.resolve()
+      .then(() => task())
+      .catch((error) => ({
+        success: false,
+        reason: "provider_error",
+        error: error.message,
+      }))
       .then((result) => {
         results.push(result);
         if (onResult) onResult(result);
         return result;
-      })
-      .catch((error) => {
-        const errResult = {
-          success: false,
-          reason: "provider_error",
-          error: error.message,
-        };
-        results.push(errResult);
-        if (onResult) onResult(errResult);
-        return errResult;
       })
       .finally(() => {
         executing.splice(executing.indexOf(p), 1);
