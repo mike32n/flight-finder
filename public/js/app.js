@@ -310,7 +310,11 @@ async function search() {
       for (const part of parts) {
         if (part.includes("event: end")) {
           if (currentResults.length === 0) {
-            showNoResults(resultsDiv);
+            if (failedCount > 0) {
+              showSearchUnavailable(resultsDiv);
+            } else {
+              showNoResults(resultsDiv);
+            }
           }
 
           updateFooter(resultsDiv, true);
@@ -501,6 +505,22 @@ function showNoResults(container) {
 
   const footer = document.getElementById("results-footer");
   container.insertBefore(noResults, footer);
+}
+
+function showSearchUnavailable(container) {
+  const message = document.createElement("div");
+
+  message.className = "card error-card search-unavailable-card";
+  message.innerHTML = `
+    <strong>Search results unavailable</strong><br/>
+    <span class="meta-info">
+      Some flight searches failed and no results could be displayed.
+      Please try again.
+    </span>
+  `;
+
+  const footer = document.getElementById("results-footer");
+  container.insertBefore(message, footer);
 }
 
 function openFlight(r) {

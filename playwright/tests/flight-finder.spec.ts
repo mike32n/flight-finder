@@ -221,4 +221,25 @@ test.describe("Flight Search Error Handling", () => {
 
     await flightFinder.expectSearchError("Error occurred.");
   });
+
+  test("TC-ERROR-03 | should request retry when provider failure leaves no results", async () => {
+    await flightFinder.mockSearchWithProviderFailure();
+
+    await flightFinder.clickSearchButton();
+
+    await flightFinder.expectSearchUnavailable();
+    await flightFinder.expectResultsFooterText("Finished...(failed: 1)");
+    await flightFinder.expectSearchButtonEnabled();
+  });
+
+  test("TC-ERROR-04 | should retain results when another provider request fails", async () => {
+    await flightFinder.mockSearchWithProviderFailure(true);
+
+    await flightFinder.clickSearchButton();
+
+    await flightFinder.expectFirstResultVisible();
+    await flightFinder.expectResultsFooterText("Finished...(failed: 1)");
+    await flightFinder.expectNoSearchUnavailableMessage();
+    await flightFinder.expectSearchButtonEnabled();
+  });
 });

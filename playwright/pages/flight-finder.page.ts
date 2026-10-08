@@ -316,6 +316,33 @@ export default class MainPage {
     };
   }
 
+  async mockSearchWithProviderFailure(includeResult = false): Promise<void> {
+    await this.page.route("**/search-stream", async (route) => {
+      const flight = {
+        destination: { city: "Amsterdam", code: "AMS" },
+        departure: "2026-10-09",
+        return: "2026-10-11",
+        price: 30000,
+        currency: "HUF",
+        bookingUrl: "https://example.com/booking",
+        resultType: "base",
+      };
+
+      const resultEvent = includeResult
+        ? `data: ${JSON.stringify(flight)}\n\n`
+        : "";
+
+      await route.fulfill({
+        status: 200,
+        contentType: "text/event-stream",
+        body:
+          "event: fail\ndata: fail\n\n" +
+          resultEvent +
+          "event: end\ndata: done\n\n",
+      });
+    });
+  }
+
   async expectPageTitle(text: string): Promise<void> {
     await expect(this.page).toHaveTitle(text);
   }
@@ -430,5 +457,18 @@ export default class MainPage {
 
   async expectSearchButtonEnabled(): Promise<void> {
     await expect(this.searchButton).toBeEnabled();
+  }
+
+  async expectSearchUnavailable(): Promise<void> {
+    const message = this.page.locator(".search-unavailable-card");
+
+    await expect(message).toBeVisible();
+    await expect(message).toContainText("Search results unavailable");
+    await expect(message).toContainText("Please try again.");
+    await expect(this.noResultsCard).toHaveCount(0);
+  }
+
+  async expectNoSearchUnavailableMessage(): Promise<void> {
+    await expect(this.page.locator(".search-unavailable-card")).toHaveCount(0);
   }
 }
