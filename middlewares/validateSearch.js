@@ -6,7 +6,11 @@ function validateSearch(req, res, next) {
   if (
     !Array.isArray(destinations) ||
     destinations.length === 0 ||
-    destinations.length > appConfig.destinations.maxSelected
+    destinations.length > appConfig.destinations.maxSelected ||
+    destinations.some(
+      (code) => typeof code !== "string" || !/^[A-Z]{3}$/.test(code),
+    ) ||
+    new Set(destinations).size !== destinations.length
   ) {
     return res.status(400).json({
       error: "Invalid destinations",

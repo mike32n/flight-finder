@@ -19,6 +19,7 @@ jest.mock("../../db", () => ({
 
 const request = require("supertest");
 const app = require("../../app");
+const { getProvider } = require("../../providers/providerFactory");
 
 describe("POST /search", () => {
   test("returns 400 if parameters missing", async () => {
@@ -63,16 +64,54 @@ describe("POST /search", () => {
   });
 
   test("handles partial failures", async () => {
-    const response = await request(app)
-      .post("/search")
-      .send({
-        destinations: ["INVALID1", "BCN"],
-        weekday: 2,
-        nights: 3,
+    const providerSpy = jest
+      .spyOn(getProvider(), "searchFlights")
+      .mockImplementation(async (destination, departure, returnDate) => {
+        if (destination === "LCA") {
+          return {
+            success: false,
+            reason: "provider_error",
+            error: "Provider timeout",
+          };
+        }
+
+        return {
+          success: true,
+          data: {
+            destination,
+            departure,
+            return: returnDate,
+            price: 30000,
+            currency: "HUF",
+            bookingUrl: "https://example.com/booking",
+          },
+        };
       });
 
-    expect(response.statusCode).toBe(200);
-    expect(response.body.failedRequests).toBeGreaterThanOrEqual(0);
+    try {
+      const response = await request(app)
+        .post("/search")
+        .send({
+          destinations: ["LCA", "BCN"],
+          weekday: 2,
+          nights: 3,
+        });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.body.failedRequests).toBeGreaterThan(0);
+
+      expect(response.body.results).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            destination: expect.objectContaining({
+              code: "BCN",
+            }),
+          }),
+        ]),
+      );
+    } finally {
+      providerSpy.mockRestore();
+    }
   });
 });
 

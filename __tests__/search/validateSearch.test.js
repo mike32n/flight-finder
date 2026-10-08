@@ -29,16 +29,32 @@ describe("validateSearch", () => {
     expect(next).toHaveBeenCalled();
   });
 
-  test.each([[{ destinations: [] }], [{ destinations: "BCN" }]])(
-    "rejects invalid destinations",
-    (override) => {
-      Object.assign(req.body, override);
+  test.each([
+    { destinations: [] },
+    { destinations: "BCN" },
+    { destinations: [null] },
+    { destinations: [123] },
+    { destinations: [{}] },
+    { destinations: [""] },
+    { destinations: ["lca"] },
+    { destinations: ["LC"] },
+    { destinations: ["LCAA"] },
+    { destinations: ["LC1"] },
+    { destinations: [" LCA"] },
+    { destinations: ["LCA\n"] },
+    { destinations: ["BCN", null] },
+    { destinations: ["LCA", "LCA"] },
+  ])("rejects invalid destinations: %p", ({ destinations }) => {
+    req.body.destinations = destinations;
 
-      validateSearch(req, res, next);
+    validateSearch(req, res, next);
 
-      expect(res.status).toHaveBeenCalledWith(400);
-    },
-  );
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({
+      error: "Invalid destinations",
+    });
+    expect(next).not.toHaveBeenCalled();
+  });
 
   test.each([-1, 7, 2.5, "2"])("rejects invalid weekday %p", (weekday) => {
     req.body.weekday = weekday;
@@ -59,7 +75,12 @@ describe("validateSearch", () => {
   test("rejects too many destinations", () => {
     req.body.destinations = Array.from(
       { length: appConfig.destinations.maxSelected + 1 },
-      (_, i) => `D${i}`,
+      (_, i) =>
+        String.fromCharCode(
+          65 + Math.floor(i / 676),
+          65 + (Math.floor(i / 26) % 26),
+          65 + (i % 26),
+        ),
     );
 
     validateSearch(req, res, next);
@@ -74,7 +95,12 @@ describe("validateSearch", () => {
   test("accepts maximum allowed destinations", () => {
     req.body.destinations = Array.from(
       { length: appConfig.destinations.maxSelected },
-      (_, i) => `D${i}`,
+      (_, i) =>
+        String.fromCharCode(
+          65 + Math.floor(i / 676),
+          65 + (Math.floor(i / 26) % 26),
+          65 + (i % 26),
+        ),
     );
 
     validateSearch(req, res, next);
