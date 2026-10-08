@@ -5,8 +5,15 @@ const { smartFlex } = require("../../config/appConfig");
 
 describe("expandControlledFlexibility", () => {
   beforeEach(() => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date(2026, 8, 1, 12));
+
     smartFlex.departureShiftDays = 1;
     smartFlex.returnShiftDays = 1;
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   test("should include the original trip", () => {
@@ -46,6 +53,71 @@ describe("expandControlledFlexibility", () => {
       departure: "2026-10-10",
       return: "2026-10-14",
     });
+  });
+
+  test("should exclude earlier departure when it falls in the past", () => {
+    jest.setSystemTime(new Date(2026, 9, 8, 12));
+
+    const results = expandControlledFlexibility({
+      departure: "2026-10-08",
+      return: "2026-10-11",
+    });
+
+    expect(results).toEqual([
+      {
+        departure: "2026-10-08",
+        return: "2026-10-11",
+      },
+      {
+        departure: "2026-10-08",
+        return: "2026-10-12",
+      },
+    ]);
+  });
+
+  test("should allow earlier departure falling on today", () => {
+    jest.setSystemTime(new Date(2026, 9, 8, 12));
+
+    const results = expandControlledFlexibility({
+      departure: "2026-10-09",
+      return: "2026-10-11",
+    });
+
+    expect(results).toEqual([
+      {
+        departure: "2026-10-09",
+        return: "2026-10-11",
+      },
+      {
+        departure: "2026-10-08",
+        return: "2026-10-11",
+      },
+      {
+        departure: "2026-10-09",
+        return: "2026-10-12",
+      },
+    ]);
+  });
+
+  test("should exclude past departure with a larger configured shift", () => {
+    jest.setSystemTime(new Date(2026, 9, 8, 12));
+    smartFlex.departureShiftDays = 3;
+
+    const results = expandControlledFlexibility({
+      departure: "2026-10-10",
+      return: "2026-10-13",
+    });
+
+    expect(results).toEqual([
+      {
+        departure: "2026-10-10",
+        return: "2026-10-13",
+      },
+      {
+        departure: "2026-10-10",
+        return: "2026-10-14",
+      },
+    ]);
   });
 
   test("should return exactly three trip variants", () => {

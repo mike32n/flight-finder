@@ -16,10 +16,14 @@ function expandControlledFlexibility(trip) {
     "day",
   );
 
-  results.push({
-    departure: depMinus.format("YYYY-MM-DD"),
-    return: trip.return,
-  });
+  const today = dayjs().startOf("day");
+
+  if (depMinus.valueOf() >= today.valueOf()) {
+    results.push({
+      departure: depMinus.format("YYYY-MM-DD"),
+      return: trip.return,
+    });
+  }
 
   const retPlus = dayjs(trip.return).add(smartFlex.returnShiftDays, "day");
 
