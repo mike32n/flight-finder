@@ -69,7 +69,14 @@ async function getOrSet(providerName, payload, fetcher) {
 
   const promise = (async () => {
     // Cache check
-    const cached = await get(key);
+    let cached = null;
+
+    try {
+      cached = await get(key);
+    } catch (error) {
+      console.warn("Flight cache read failed:", error.message);
+    }
+
     if (cached) return cached;
 
     // Fresh fetch (timeout protected)
@@ -83,7 +90,11 @@ async function getOrSet(providerName, payload, fetcher) {
 
     // only cache successful responses
     if (fresh?.success) {
-      await set(key, fresh);
+      try {
+        await set(key, fresh);
+      } catch (error) {
+        console.warn("Flight cache write failed:", error.message);
+      }
     }
 
     return fresh;

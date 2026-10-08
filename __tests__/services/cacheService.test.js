@@ -190,5 +190,35 @@ describe("cacheService", () => {
 
       expect(ttl).toBe(appConfig.cache.ttlSeconds);
     });
+
+    test.each(["get", "set"])(
+      "returns provider result when Redis %s fails",
+      async (operation) => {
+        if (operation === "set") {
+          redis.get.mockResolvedValueOnce(null);
+        }
+
+        redis[operation].mockRejectedValueOnce(new Error("Redis unavailable"));
+
+        const fresh = {
+          success: true,
+          data: { price: 25000 },
+        };
+
+        const fetcher = jest.fn().mockResolvedValue(fresh);
+        const warningSpy = jest
+          .spyOn(console, "warn")
+          .mockImplementation(() => {});
+
+        try {
+          const result = await cache.getOrSet(provider, payload, fetcher);
+
+          expect(result).toEqual(fresh);
+          expect(fetcher).toHaveBeenCalledTimes(1);
+        } finally {
+          warningSpy.mockRestore();
+        }
+      },
+    );
   });
 });
