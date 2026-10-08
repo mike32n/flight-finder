@@ -226,6 +226,8 @@ describe("flightSearchService", () => {
         resultType: "fallback-flex",
       }),
     ]);
+
+    expect(result.results[0]).not.toHaveProperty("priceInsight");
   });
 
   test("does not run fallback flex search when Smart Flex is disabled and base search fails with provider error", async () => {
@@ -344,6 +346,14 @@ describe("flightSearchService", () => {
         return: "2026-10-12",
         price: 22966,
         resultType: "flex",
+        priceInsight: {
+          percent: 33,
+          diff: 11350,
+          reason: "return later",
+          type: "return_shift",
+          basePrice: 34316,
+          flexPrice: 22966,
+        },
       }),
     );
 
@@ -361,6 +371,8 @@ describe("flightSearchService", () => {
         }),
       ]),
     );
+
+    expect(result.results[1]).not.toHaveProperty("priceInsight");
   });
 
   test("streams fallback flex results when Smart Flex is disabled and base search has no results", async () => {
