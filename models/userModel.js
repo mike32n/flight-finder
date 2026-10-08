@@ -110,7 +110,7 @@ function savePasswordResetToken(userId, token, expires) {
         password_reset_expires = ?
       WHERE id = ?
       `,
-      [token, expires, userId],
+      [token, new Date(expires).getTime(), userId],
 
       function (err) {
         if (err) {
@@ -145,7 +145,7 @@ function findUserByPasswordResetToken(token) {
   });
 }
 
-function updatePassword(userId, passwordHash) {
+function updatePassword(userId, passwordHash, token) {
   const db = getDb();
 
   return new Promise((resolve, reject) => {
@@ -157,14 +157,16 @@ function updatePassword(userId, passwordHash) {
         password_reset_token = NULL,
         password_reset_expires = NULL
       WHERE id = ?
+        AND password_reset_token = ?
+        AND password_reset_expires >= ?
       `,
-      [passwordHash, userId],
+      [passwordHash, userId, token, Date.now()],
       function (err) {
         if (err) {
           return reject(err);
         }
 
-        resolve();
+        resolve(this.changes === 1);
       },
     );
   });

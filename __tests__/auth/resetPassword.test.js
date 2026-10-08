@@ -47,7 +47,7 @@ describe("POST /api/auth/reset-password/:token", () => {
 
     findUserByPasswordResetToken.mockResolvedValue(user);
     bcrypt.hash.mockResolvedValue("hashed-new-password");
-    updatePassword.mockResolvedValue();
+    updatePassword.mockResolvedValue(true);
     sendPasswordResetSuccessEmail.mockResolvedValue();
 
     const response = await request(app)
@@ -67,7 +67,11 @@ describe("POST /api/auth/reset-password/:token", () => {
 
     expect(bcrypt.hash).toHaveBeenCalledWith("NewPassword123!", 10);
 
-    expect(updatePassword).toHaveBeenCalledWith(1, "hashed-new-password");
+    expect(updatePassword).toHaveBeenCalledWith(
+      1,
+      "hashed-new-password",
+      "valid-token",
+    );
 
     expect(sendPasswordResetSuccessEmail).toHaveBeenCalledWith(
       "test@example.com",
@@ -85,7 +89,7 @@ describe("POST /api/auth/reset-password/:token", () => {
 
     findUserByPasswordResetToken.mockResolvedValue(user);
     bcrypt.hash.mockResolvedValue("hashed-new-password");
-    updatePassword.mockResolvedValue();
+    updatePassword.mockResolvedValue(true);
     sendPasswordResetSuccessEmail.mockResolvedValue();
 
     const response = await request(app)
@@ -100,7 +104,11 @@ describe("POST /api/auth/reset-password/:token", () => {
 
     expect(findUserByPasswordResetToken).toHaveBeenCalledWith("valid-token");
     expect(bcrypt.hash).toHaveBeenCalledWith("NewPassword123!", 10);
-    expect(updatePassword).toHaveBeenCalledWith(1, "hashed-new-password");
+    expect(updatePassword).toHaveBeenCalledWith(
+      1,
+      "hashed-new-password",
+      "valid-token",
+    );
     expect(sendPasswordResetSuccessEmail).toHaveBeenCalledWith(
       "test@example.com",
     );
@@ -195,6 +203,35 @@ describe("POST /api/auth/reset-password/:token", () => {
     expect(findUserByPasswordResetToken).not.toHaveBeenCalled();
     expect(bcrypt.hash).not.toHaveBeenCalled();
     expect(updatePassword).not.toHaveBeenCalled();
+  });
+
+  test("should reject when token is no longer valid at password update", async () => {
+    findUserByPasswordResetToken.mockResolvedValue({
+      id: 1,
+      email: "test@example.com",
+      password_reset_token: "valid-token",
+      password_reset_expires: new Date(Date.now() + 3600000),
+    });
+
+    bcrypt.hash.mockResolvedValue("hashed-new-password");
+    updatePassword.mockResolvedValue(false);
+
+    const response = await request(app)
+      .post("/api/auth/reset-password/valid-token")
+      .send({ password: "NewPassword123!" });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.body).toEqual({
+      success: false,
+      message: "Invalid or expired password reset token.",
+    });
+
+    expect(updatePassword).toHaveBeenCalledWith(
+      1,
+      "hashed-new-password",
+      "valid-token",
+    );
+    expect(sendPasswordResetSuccessEmail).not.toHaveBeenCalled();
   });
 
   test("should return 500 when an error occurs", async () => {
@@ -299,7 +336,7 @@ describe("POST /api/auth/reset-password/:token", () => {
 
     findUserByPasswordResetToken.mockResolvedValue(user);
     bcrypt.hash.mockResolvedValue("hashed-new-password");
-    updatePassword.mockResolvedValue();
+    updatePassword.mockResolvedValue(true);
     sendPasswordResetSuccessEmail.mockRejectedValue(
       new Error("Email sending failed"),
     );
@@ -321,7 +358,11 @@ describe("POST /api/auth/reset-password/:token", () => {
       message: "Password reset successfully.",
     });
 
-    expect(updatePassword).toHaveBeenCalledWith(1, "hashed-new-password");
+    expect(updatePassword).toHaveBeenCalledWith(
+      1,
+      "hashed-new-password",
+      "valid-token",
+    );
 
     expect(sendPasswordResetSuccessEmail).toHaveBeenCalledWith(
       "test@example.com",

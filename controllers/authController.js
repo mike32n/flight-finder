@@ -278,7 +278,14 @@ async function resetPassword(req, res) {
 
     const passwordHash = await bcrypt.hash(password, auth.bcryptSaltRounds);
 
-    await updatePassword(user.id, passwordHash);
+    const updated = await updatePassword(user.id, passwordHash, token);
+
+    if (!updated) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or expired password reset token.",
+      });
+    }
 
     try {
       await sendPasswordResetSuccessEmail(user.email);

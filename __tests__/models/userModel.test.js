@@ -134,7 +134,9 @@ describe("userModel", () => {
       new Date(Date.now() + 60_000),
     );
 
-    await updatePassword(created.id, "new-hash");
+    const updated = await updatePassword(created.id, "new-hash", "reset-token");
+
+    expect(updated).toBe(true);
 
     const user = await findUserByEmail("password@example.com");
 
@@ -142,4 +144,78 @@ describe("userModel", () => {
     expect(user.password_reset_token).toBeNull();
     expect(user.password_reset_expires).toBeNull();
   });
+
+  test("should allow only one concurrent password update per reset token", async () => {
+    const created = await createUser({
+      email: "concurrent-reset@example.com",
+      passwordHash: "old-hash",
+      verificationToken: null,
+    });
+
+    await savePasswordResetToken(
+      created.id,
+      "concurrent-token",
+      new Date(Date.now() + 60_000),
+    );
+
+    const hashes = ["first-hash", "second-hash"];
+
+    const results = await Promise.all(
+      hashes.map((hash) =>
+        updatePassword(created.id, hash, "concurrent-token"),
+      ),
+    );
+
+    expect(results.filter(Boolean)).toHaveLength(1);
+    expect(results.filter((updated) => !updated)).toHaveLength(1);
+
+    const user = await findUserByEmail("concurrent-reset@example.com");
+
+    expect(user.password_hash).toBe(hashes[results.indexOf(true)]);
+    expect(user.password_reset_token).toBeNull();
+    expect(user.password_reset_expires).toBeNull();
+  });
+
+  test.each([
+    {
+      name: "expired",
+      suppliedToken: "stored-token",
+      expiresInMs: -60_000,
+    },
+    {
+      name: "incorrect",
+      suppliedToken: "wrong-token",
+      expiresInMs: 60_000,
+    },
+  ])(
+    "should reject $name reset token at password update",
+    async ({ name, suppliedToken, expiresInMs }) => {
+      const email = `reset-${name}@example.com`;
+
+      const created = await createUser({
+        email,
+        passwordHash: "old-hash",
+        verificationToken: null,
+      });
+
+      await savePasswordResetToken(
+        created.id,
+        "stored-token",
+        new Date(Date.now() + expiresInMs),
+      );
+
+      const updated = await updatePassword(
+        created.id,
+        "new-hash",
+        suppliedToken,
+      );
+
+      expect(updated).toBe(false);
+
+      const user = await findUserByEmail(email);
+
+      expect(user.password_hash).toBe("old-hash");
+      expect(user.password_reset_token).toBe("stored-token");
+    },
+  );
 });
