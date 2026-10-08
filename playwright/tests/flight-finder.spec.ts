@@ -192,6 +192,30 @@ test.describe("Flight Finder", () => {
 
     await pendingSearch.expectRequestCount(1);
   });
+
+  const destinationsFailureModes = [
+    "http",
+    "network",
+    "json",
+    "shape",
+    "entry",
+  ] as const;
+
+  for (const mode of destinationsFailureModes) {
+    test(`TC-FLIGHT-19 | should preserve other UI initialization when destinations fail: ${mode}`, async () => {
+      await flightFinder.mockDestinationsFailure(mode);
+      await flightFinder.setStoredDarkTheme();
+
+      await common.reloadPage();
+
+      await flightFinder.expectDestinationsUnavailable();
+      await common.expectDarkThemeIsActive();
+      await flightFinder.expectAuthControlsVisible();
+
+      await flightFinder.fillNights("0");
+      await flightFinder.expectNightsValue("1");
+    });
+  }
 });
 
 test.describe("Flight Search Error Handling", () => {

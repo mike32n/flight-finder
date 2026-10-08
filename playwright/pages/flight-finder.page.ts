@@ -96,6 +96,12 @@ export default class MainPage {
     this.noResultsCard = page.locator(".no-results-card");
   }
 
+  async setStoredDarkTheme(): Promise<void> {
+    await this.page.evaluate(() => {
+      localStorage.setItem("theme", "dark");
+    });
+  }
+
   async clickToggleTheme(): Promise<void> {
     await this.toggleThemeButton.click();
   }
@@ -192,6 +198,10 @@ export default class MainPage {
     await this.weekdaySelect.type(weekDay);
   }
 
+  async fillNights(value: string): Promise<void> {
+    await this.nightsInput.fill(value);
+  }
+
   async clickFirstResult(): Promise<void> {
     await this.firstResult.click();
   }
@@ -219,6 +229,30 @@ export default class MainPage {
         body: JSON.stringify({
           error: "Internal server error",
         }),
+      });
+    });
+  }
+
+  async mockDestinationsFailure(
+    mode: "http" | "network" | "json" | "shape" | "entry",
+  ): Promise<void> {
+    await this.page.route("**/destinations", async (route) => {
+      if (mode === "network") {
+        await route.abort("failed");
+        return;
+      }
+
+      const bodies = {
+        http: JSON.stringify({ error: "DB error" }),
+        json: "{invalid-json",
+        shape: JSON.stringify({ destinations: [] }),
+        entry: JSON.stringify([null]),
+      };
+
+      await route.fulfill({
+        status: mode === "http" ? 500 : 200,
+        contentType: "application/json",
+        body: bodies[mode],
       });
     });
   }
@@ -347,6 +381,22 @@ export default class MainPage {
     await expect(this.page).toHaveTitle(text);
   }
 
+  async expectAuthControlsVisible(): Promise<void> {
+    await expect(
+      this.authContainer.getByRole("button", {
+        name: "Login",
+        exact: true,
+      }),
+    ).toBeVisible();
+
+    await expect(
+      this.authContainer.getByRole("button", {
+        name: "Register",
+        exact: true,
+      }),
+    ).toBeVisible();
+  }
+
   async expectAutocompleteOpen(): Promise<void> {
     await expect(this.autocompleteList).toHaveClass(/open/);
   }
@@ -466,6 +516,17 @@ export default class MainPage {
     await expect(message).toContainText("Search results unavailable");
     await expect(message).toContainText("Please try again.");
     await expect(this.noResultsCard).toHaveCount(0);
+  }
+
+  async expectDestinationsUnavailable(): Promise<void> {
+    await expect(this.page.locator("#destinations-error")).toHaveText(
+      "Destinations could not be loaded. Please reload the page to try again.",
+    );
+
+    await expect(this.page.locator("#destinations-error")).toBeVisible();
+
+    await expect(this.airportInput).toBeDisabled();
+    await expect(this.searchButton).toBeDisabled();
   }
 
   async expectNoSearchUnavailableMessage(): Promise<void> {

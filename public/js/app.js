@@ -20,8 +20,42 @@ window.emailVerificationRequired = true;
 /* ========================= */
 
 window.onload = async function () {
-  const res = await fetch("/destinations");
-  destinationsData = await res.json();
+  try {
+    const res = await fetch("/destinations");
+
+    if (!res.ok) {
+      throw new Error(`Destinations request failed: ${res.status}`);
+    }
+
+    const destinations = await res.json();
+
+    if (
+      !Array.isArray(destinations) ||
+      !destinations.every(
+        (destination) =>
+          destination &&
+          typeof destination.label === "string" &&
+          typeof destination.value === "string",
+      )
+    ) {
+      throw new Error("Invalid destinations response");
+    }
+
+    destinationsData = destinations;
+  } catch (error) {
+    destinationsData = [];
+
+    document.getElementById("destination-input").disabled = true;
+    document.getElementById("search-button").disabled = true;
+
+    const message = document.getElementById("destinations-error");
+
+    message.textContent =
+      "Destinations could not be loaded. Please reload the page to try again.";
+    message.hidden = false;
+
+    console.error("Failed to load destinations:", error);
+  }
 
   try {
     const configRes = await fetch("/config");
