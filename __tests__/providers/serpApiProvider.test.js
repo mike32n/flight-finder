@@ -124,6 +124,50 @@ describe("SerpApiProvider", () => {
     });
   });
 
+  test("ignores flights without valid prices when selecting the cheapest", async () => {
+    axios.get.mockResolvedValue({
+      data: {
+        best_flights: [
+          {},
+          { price: null },
+          { price: 0 },
+          { price: -100 },
+          { price: 30000 },
+        ],
+        other_flights: [{ price: 25000 }],
+      },
+    });
+
+    const result = await provider.searchFlights(
+      "BCN",
+      "2026-06-01",
+      "2026-06-04",
+    );
+
+    expect(result.success).toBe(true);
+    expect(result.data.price).toBe(25000);
+  });
+
+  test("returns provider_error when flights have no valid prices", async () => {
+    axios.get.mockResolvedValue({
+      data: {
+        best_flights: [{}, { price: null }, { price: 0 }, { price: -100 }],
+      },
+    });
+
+    const result = await provider.searchFlights(
+      "BCN",
+      "2026-06-01",
+      "2026-06-04",
+    );
+
+    expect(result).toEqual({
+      success: false,
+      reason: "provider_error",
+      error: "No valid flight prices in provider response",
+    });
+  });
+
   test("calls SerpApi with correct parameters", async () => {
     axios.get.mockResolvedValue({
       data: {

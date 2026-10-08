@@ -48,7 +48,15 @@ class SerpApiProvider extends BaseProvider {
           };
         }
 
-        const cheapest = flights.reduce((min, current) =>
+        const pricedFlights = flights.filter(
+          (flight) => Number.isFinite(flight?.price) && flight.price > 0,
+        );
+
+        if (!pricedFlights.length) {
+          throw new Error("No valid flight prices in provider response");
+        }
+
+        const cheapest = pricedFlights.reduce((min, current) =>
           current.price < min.price ? current : min,
         );
 
