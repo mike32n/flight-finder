@@ -220,5 +220,61 @@ describe("cacheService", () => {
         }
       },
     );
+
+    test.each(["get", "set"])(
+      "continues after Redis %s timeout and releases in-flight entry",
+      async (operation) => {
+        jest.useFakeTimers();
+
+        const warningSpy = jest
+          .spyOn(console, "warn")
+          .mockImplementation(() => {});
+
+        try {
+          if (operation === "set") {
+            redis.get.mockResolvedValueOnce(null);
+          }
+
+          redis[operation].mockImplementationOnce(() => new Promise(() => {}));
+
+          const fresh = {
+            success: true,
+            data: { price: 25000 },
+          };
+
+          const fetcher = jest.fn().mockResolvedValue(fresh);
+
+          const firstRequest = cache.getOrSet(provider, payload, fetcher);
+          const concurrentRequest = cache.getOrSet(provider, payload, fetcher);
+
+          await jest.advanceTimersByTimeAsync(
+            appConfig.cache.operationTimeoutMs,
+          );
+
+          const results = await Promise.all([firstRequest, concurrentRequest]);
+
+          expect(results).toEqual([fresh, fresh]);
+          expect(fetcher).toHaveBeenCalledTimes(1);
+          expect(warningSpy).toHaveBeenCalledWith(
+            operation === "get"
+              ? "Flight cache read failed:"
+              : "Flight cache write failed:",
+            "timeout",
+          );
+
+          // A new request must not reuse the completed in-flight entry.
+          redis.get.mockResolvedValueOnce(null);
+
+          const nextResult = await cache.getOrSet(provider, payload, fetcher);
+
+          expect(nextResult).toEqual(fresh);
+          expect(fetcher).toHaveBeenCalledTimes(2);
+          expect(jest.getTimerCount()).toBe(0);
+        } finally {
+          warningSpy.mockRestore();
+          jest.useRealTimers();
+        }
+      },
+    );
   });
 });

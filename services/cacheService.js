@@ -5,6 +5,7 @@ const appConfig = require("../config/appConfig");
 const PREFIX = "ff:v1";
 const CACHE_TTL = appConfig.cache.ttlSeconds || 600; // fallback
 const FETCH_TIMEOUT = appConfig.api.timeoutMs || 10000;
+const CACHE_TIMEOUT = appConfig.cache.operationTimeoutMs ?? 1000;
 
 const inFlight = new Map();
 
@@ -45,11 +46,14 @@ function withTimeout(promise, ms = FETCH_TIMEOUT) {
 }
 
 async function set(key, value, ttl = CACHE_TTL) {
-  await redis.set(key, stableStringify(value), "EX", ttl);
+  await withTimeout(
+    redis.set(key, stableStringify(value), "EX", ttl),
+    CACHE_TIMEOUT,
+  );
 }
 
 async function get(key) {
-  const cached = await redis.get(key);
+  const cached = await withTimeout(redis.get(key), CACHE_TIMEOUT);
   if (!cached) return null;
 
   try {
