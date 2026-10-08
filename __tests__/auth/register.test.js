@@ -8,6 +8,7 @@ jest.mock("../../models/userModel", () => ({
 
 jest.mock("bcrypt", () => ({
   hash: jest.fn(),
+  compare: jest.fn(),
 }));
 
 jest.mock("../../services/emailService", () => ({
@@ -31,7 +32,7 @@ app.use("/api/auth", authRoutes);
 
 describe("POST /api/auth/register", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    jest.resetAllMocks();
     auth.emailVerificationRequired = true;
   });
 
@@ -43,6 +44,7 @@ describe("POST /api/auth/register", () => {
     expect(response.status).toBe(400);
     expect(response.body.message).toBe("Email is required.");
   });
+
   test("should reject invalid email", async () => {
     const response = await request(app).post("/api/auth/register").send({
       email: "abc",
@@ -52,6 +54,7 @@ describe("POST /api/auth/register", () => {
     expect(response.status).toBe(400);
     expect(response.body.message).toBe("Please enter a valid email address.");
   });
+  
   test("should reject missing password", async () => {
     const response = await request(app).post("/api/auth/register").send({
       email: "test@test.com",
@@ -60,6 +63,7 @@ describe("POST /api/auth/register", () => {
     expect(response.status).toBe(400);
     expect(response.body.message).toBe("Password is required.");
   });
+
   test("should reject short password", async () => {
     const response = await request(app).post("/api/auth/register").send({
       email: "test@test.com",
@@ -71,6 +75,7 @@ describe("POST /api/auth/register", () => {
       "Password must be at least 8 characters.",
     );
   });
+
   test("should reject weak password", async () => {
     const response = await request(app).post("/api/auth/register").send({
       email: "test@test.com",
@@ -82,6 +87,7 @@ describe("POST /api/auth/register", () => {
       "Password must contain uppercase, lowercase and number.",
     );
   });
+
   test("should reject duplicate email", async () => {
     findUserByEmail.mockResolvedValue({
       id: 1,
@@ -96,6 +102,7 @@ describe("POST /api/auth/register", () => {
     expect(response.status).toBe(400);
     expect(response.body.message).toBe("Email already registered.");
   });
+
   test("should reject email registered after the initial lookup", async () => {
     findUserByEmail.mockResolvedValue(null);
     bcrypt.hash.mockResolvedValue("hashed-password");
@@ -115,6 +122,7 @@ describe("POST /api/auth/register", () => {
     expect(createUser).toHaveBeenCalledTimes(1);
     expect(sendVerificationEmail).not.toHaveBeenCalled();
   });
+
   test("should create user", async () => {
     findUserByEmail.mockResolvedValue(null);
 
@@ -154,6 +162,7 @@ describe("POST /api/auth/register", () => {
       expect.any(String),
     );
   });
+
   test("should create verified user without verification email when email verification is disabled", async () => {
     auth.emailVerificationRequired = false;
 
@@ -185,6 +194,7 @@ describe("POST /api/auth/register", () => {
 
     expect(sendVerificationEmail).not.toHaveBeenCalled();
   });
+
   test("should normalize email before registration", async () => {
     findUserByEmail.mockResolvedValue(null);
 
@@ -207,4 +217,121 @@ describe("POST /api/auth/register", () => {
       }),
     );
   });
+  
+  test("should recover from verification email failure by retrying registration", async () => {
+    const storedUser = {
+      id: 1,
+      email: "test@test.com",
+      password_hash: "hashed-password",
+      email_verified: 0,
+      verification_token: "stored-verification-token",
+    };
+
+    findUserByEmail
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(storedUser);
+
+    bcrypt.hash.mockResolvedValue("hashed-password");
+    bcrypt.compare.mockResolvedValue(true);
+    createUser.mockResolvedValue({ id: 1 });
+
+    sendVerificationEmail
+      .mockRejectedValueOnce(new Error("Email unavailable"))
+      .mockResolvedValueOnce();
+
+    const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+
+    try {
+      const payload = {
+        email: "test@test.com",
+        password: "Password1",
+      };
+
+      const firstResponse = await request(app)
+        .post("/api/auth/register")
+        .send(payload);
+
+      expect(firstResponse.status).toBe(503);
+      expect(firstResponse.body.success).toBe(false);
+      expect(firstResponse.body.message).toContain(
+        "Please retry registration with the same email and password.",
+      );
+
+      const retryResponse = await request(app)
+        .post("/api/auth/register")
+        .send(payload);
+
+      expect(retryResponse.status).toBe(200);
+      expect(retryResponse.body).toEqual({
+        success: true,
+        message: "Verification email sent. Please check your inbox.",
+      });
+
+      expect(createUser).toHaveBeenCalledTimes(1);
+      expect(bcrypt.hash).toHaveBeenCalledTimes(1);
+      expect(bcrypt.compare).toHaveBeenCalledWith(
+        "Password1",
+        "hashed-password",
+      );
+
+      expect(sendVerificationEmail).toHaveBeenCalledTimes(2);
+      expect(sendVerificationEmail).toHaveBeenLastCalledWith(
+        "test@test.com",
+        "stored-verification-token",
+      );
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
+  test.each([
+    {
+      name: "incorrect password",
+      emailVerified: 0,
+      passwordMatches: false,
+      verificationRequired: true,
+    },
+    {
+      name: "verified account",
+      emailVerified: 1,
+      passwordMatches: true,
+      verificationRequired: true,
+    },
+    {
+      name: "verification disabled",
+      emailVerified: 0,
+      passwordMatches: true,
+      verificationRequired: false,
+    },
+  ])(
+    "should not resend verification for $name",
+    async ({ emailVerified, passwordMatches, verificationRequired }) => {
+      auth.emailVerificationRequired = verificationRequired;
+
+      findUserByEmail.mockResolvedValue({
+        id: 1,
+        email: "test@test.com",
+        password_hash: "hashed-password",
+        email_verified: emailVerified,
+        verification_token: "stored-token",
+      });
+
+      bcrypt.compare.mockResolvedValue(passwordMatches);
+
+      const response = await request(app).post("/api/auth/register").send({
+        email: "test@test.com",
+        password: "Password1",
+      });
+
+      expect(response.status).toBe(400);
+      expect(response.body).toEqual({
+        success: false,
+        message: "Email already registered.",
+      });
+
+      expect(createUser).not.toHaveBeenCalled();
+      expect(bcrypt.hash).not.toHaveBeenCalled();
+      expect(sendVerificationEmail).not.toHaveBeenCalled();
+    },
+  );
 });

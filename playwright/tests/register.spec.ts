@@ -1,7 +1,11 @@
 import { test } from "@playwright/test";
 import Env from "../utils/env";
 import AuthPage from "../pages/auth.page";
-import { createTestUser, createUniqueTestEmail } from "../helpers/user.helper";
+import {
+  createTestUser,
+  createVerifiedTestUser,
+  createUniqueTestEmail,
+} from "../helpers/user.helper";
 
 test.describe("Authentication - Register", () => {
   let auth: AuthPage;
@@ -32,7 +36,7 @@ test.describe("Authentication - Register", () => {
   });
 
   test("TC-REGISTER-02 | should not register with an already registered email", async () => {
-    const user = await createTestUser();
+    const user = await createVerifiedTestUser();
 
     await auth.clickRegisterButton();
 
@@ -46,5 +50,21 @@ test.describe("Authentication - Register", () => {
 
     await auth.expectAuthModalVisible();
     await auth.expectRegisterFormVisible();
+  });
+
+  test("TC-REGISTER-03 | should resend verification for an unverified account with matching password", async () => {
+    const user = await createTestUser();
+
+    await auth.clickRegisterButton();
+    await auth.expectAuthModalVisible();
+    await auth.expectRegisterFormVisible();
+
+    await auth.fillRegisterForm(user.email, user.password);
+    await auth.submitRegisterForm();
+
+    await auth.expectLoginFormVisible();
+    await auth.expectLoginMessage(
+      "Registration successful. Please check your email to verify your account.",
+    );
   });
 });

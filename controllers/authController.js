@@ -29,6 +29,31 @@ const {
 const { validateEmailType } = require("../utils/emailValidator");
 const { normalizeEmail } = require("../utils/emailNormalizer");
 
+async function sendRegistrationVerification(
+  email,
+  token,
+  res,
+  successStatus,
+  successMessage,
+) {
+  try {
+    await sendVerificationEmail(email, token);
+  } catch (error) {
+    console.error("Failed to send verification email:", error.message);
+
+    return res.status(503).json({
+      success: false,
+      message:
+        "Your account is awaiting email verification, but the email could not be sent. Please retry registration with the same email and password.",
+    });
+  }
+
+  return res.status(successStatus).json({
+    success: true,
+    message: successMessage,
+  });
+}
+
 async function register(req, res) {
   try {
     const { password } = req.body;
@@ -70,6 +95,21 @@ async function register(req, res) {
     const existingUser = await findUserByEmail(email);
 
     if (existingUser) {
+      if (
+        auth.emailVerificationRequired &&
+        existingUser.email_verified === 0 &&
+        existingUser.verification_token &&
+        (await bcrypt.compare(password, existingUser.password_hash))
+      ) {
+        return sendRegistrationVerification(
+          email,
+          existingUser.verification_token,
+          res,
+          200,
+          "Verification email sent. Please check your inbox.",
+        );
+      }
+
       return res.status(400).json({
         success: false,
         message: "Email already registered.",
@@ -96,7 +136,13 @@ async function register(req, res) {
     }
 
     if (auth.emailVerificationRequired) {
-      await sendVerificationEmail(email, verificationToken);
+      return sendRegistrationVerification(
+        email,
+        verificationToken,
+        res,
+        201,
+        "User created.",
+      );
     }
 
     res.status(201).json({
