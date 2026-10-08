@@ -49,6 +49,30 @@ describe("userModel", () => {
     expect(user).toBeNull();
   });
 
+  test("should create only one user for concurrent duplicate emails", async () => {
+    const email = "concurrent-register@example.com";
+    const hashes = ["first-hash", "second-hash"];
+
+    const results = await Promise.all(
+      hashes.map((passwordHash) =>
+        createUser({
+          email,
+          passwordHash,
+          verificationToken: null,
+        }),
+      ),
+    );
+
+    expect(results.filter((result) => result !== null)).toHaveLength(1);
+    expect(results.filter((result) => result === null)).toHaveLength(1);
+
+    const winnerIndex = results.findIndex((result) => result !== null);
+    const user = await findUserByEmail(email);
+
+    expect(user.id).toBe(results[winnerIndex].id);
+    expect(user.password_hash).toBe(hashes[winnerIndex]);
+  });
+
   test("should create user as verified when emailVerified is true", async () => {
     await createUser({
       email: "verified@example.com",

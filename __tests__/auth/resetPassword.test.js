@@ -34,7 +34,7 @@ app.use("/api/auth", authRoutes);
 
 describe("POST /api/auth/reset-password/:token", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    jest.resetAllMocks();
   });
 
   test("should reset password with a valid token", async () => {

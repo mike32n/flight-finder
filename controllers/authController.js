@@ -71,12 +71,19 @@ async function register(req, res) {
       ? crypto.randomUUID()
       : null;
 
-    await createUser({
+    const createdUser = await createUser({
       email,
       passwordHash,
       verificationToken,
       emailVerified: !auth.emailVerificationRequired,
     });
+
+    if (!createdUser) {
+      return res.status(400).json({
+        success: false,
+        message: "Email already registered.",
+      });
+    }
 
     if (auth.emailVerificationRequired) {
       await sendVerificationEmail(email, verificationToken);

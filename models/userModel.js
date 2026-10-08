@@ -18,11 +18,16 @@ function createUser({
         verification_token
       )
       VALUES (?, ?, ?, ?)
+      ON CONFLICT(email) DO NOTHING
       `,
       [email, passwordHash, emailVerified ? 1 : 0, verificationToken],
       function (err) {
         if (err) {
           return reject(err);
+        }
+
+        if (this.changes === 0) {
+          return resolve(null);
         }
 
         resolve({

@@ -96,6 +96,25 @@ describe("POST /api/auth/register", () => {
     expect(response.status).toBe(400);
     expect(response.body.message).toBe("Email already registered.");
   });
+  test("should reject email registered after the initial lookup", async () => {
+    findUserByEmail.mockResolvedValue(null);
+    bcrypt.hash.mockResolvedValue("hashed-password");
+    createUser.mockResolvedValue(null);
+
+    const response = await request(app).post("/api/auth/register").send({
+      email: "test@test.com",
+      password: "Password1",
+    });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({
+      success: false,
+      message: "Email already registered.",
+    });
+
+    expect(createUser).toHaveBeenCalledTimes(1);
+    expect(sendVerificationEmail).not.toHaveBeenCalled();
+  });
   test("should create user", async () => {
     findUserByEmail.mockResolvedValue(null);
 
