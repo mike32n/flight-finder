@@ -234,7 +234,6 @@ document
         : "Registration successful. You can now log in.";
 
       showAuthMessage("login-message", message, false);
-      
     } catch {
       showAuthMessage("register-message", "Registration failed.");
     } finally {
@@ -307,6 +306,7 @@ document.getElementById("auth-modal").addEventListener("click", (event) => {
 });
 
 function logout() {
+  clearSearchResults();
   removeToken();
 
   authUser = null;

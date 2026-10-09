@@ -1,3 +1,6 @@
+const SEARCH_STATE_KEY = "flightFinder.lastSearch.v1";
+const SEARCH_SETUP_KEY = "flightFinder.searchSetup.v1";
+
 let destinationsData = [];
 let selectedDestinations = [];
 let maxDestinations = 3;
@@ -12,6 +15,8 @@ let currentResults = [];
 let failedCount = 0;
 let resultNodes = [];
 let isSearching = false;
+let lastSearchParameters = null;
+let searchAbortController = null;
 
 window.emailVerificationRequired = true;
 
@@ -94,7 +99,12 @@ window.onload = async function () {
 
   await loadCurrentUser();
   renderAuthUI();
+
+  restoreSearchSetup();
+  restoreSearchState();
 };
+
+window.addEventListener("pagehide", saveSearchSetup);
 
 /* ========================= */
 /* AUTOCOMPLETE */
@@ -274,6 +284,155 @@ function renderSelected() {
 /* SEARCH */
 /* ========================= */
 
+function saveSearchState(status) {
+  if (!lastSearchParameters) return;
+
+  try {
+    sessionStorage.setItem(
+      SEARCH_STATE_KEY,
+      JSON.stringify({
+        parameters: lastSearchParameters,
+        results: currentResults,
+        failedCount,
+        status,
+      }),
+    );
+  } catch (error) {
+    console.warn("Could not save search results:", error);
+  }
+}
+
+function clearSearchResults() {
+  searchAbortController?.abort();
+
+  currentResults = [];
+  resultNodes = [];
+  failedCount = 0;
+  lastSearchParameters = null;
+
+  document.getElementById("results").innerHTML = "";
+
+  try {
+    sessionStorage.removeItem(SEARCH_STATE_KEY);
+  } catch (error) {
+    console.warn("Could not clear saved search results:", error);
+  }
+}
+
+function restoreSearchState() {
+  try {
+    const stored = sessionStorage.getItem(SEARCH_STATE_KEY);
+    if (!stored) return;
+
+    const saved = JSON.parse(stored);
+
+    if (
+      !Array.isArray(saved.results) ||
+      !Array.isArray(saved.parameters?.destinations) ||
+      !Number.isInteger(saved.failedCount) ||
+      saved.failedCount < 0 ||
+      !["searching", "completed", "interrupted"].includes(saved.status)
+    ) {
+      clearSearchResults();
+      return;
+    }
+
+    lastSearchParameters = saved.parameters;
+    failedCount = saved.failedCount;
+
+    const resultsDiv = document.getElementById("results");
+
+    resultsDiv.innerHTML = "";
+    currentResults = [];
+    resultNodes = [];
+
+    initFooter(resultsDiv);
+
+    saved.results.forEach((item) => {
+      insertSortedWithDOM(item, resultsDiv);
+    });
+
+    if (saved.status === "completed") {
+      if (currentResults.length === 0) {
+        if (failedCount > 0) {
+          showSearchUnavailable(resultsDiv);
+        } else {
+          showNoResults(resultsDiv);
+        }
+      }
+
+      updateFooter(resultsDiv, true);
+    } else {
+      document.getElementById("results-footer").textContent =
+        `Search interrupted. Run a new search to finish. (failed: ${failedCount})`;
+    }
+
+    const timestamp = document.createElement("div");
+    timestamp.className = "meta-info";
+    timestamp.textContent = `Saved search: ${new Date(saved.parameters.startedAt).toLocaleString()}.`;
+
+    const priceNotice = document.createElement("div");
+    priceNotice.textContent = "Prices may have changed.";
+    timestamp.appendChild(priceNotice);
+
+    resultsDiv.appendChild(timestamp);
+  } catch (error) {
+    console.warn("Could not restore search results:", error);
+    clearSearchResults();
+  }
+}
+
+function saveSearchSetup() {
+  try {
+    sessionStorage.setItem(
+      SEARCH_SETUP_KEY,
+      JSON.stringify({
+        destinations: [...selectedDestinations],
+        weekday: Number(document.getElementById("weekday").value),
+        nights: Number(document.getElementById("nights").value),
+      }),
+    );
+  } catch (error) {
+    console.warn("Could not save search setup:", error);
+  }
+}
+
+function restoreSearchSetup() {
+  try {
+    const stored = sessionStorage.getItem(SEARCH_SETUP_KEY);
+    if (!stored) return;
+
+    const saved = JSON.parse(stored);
+
+    if (
+      !Array.isArray(saved.destinations) ||
+      !Number.isInteger(saved.weekday) ||
+      saved.weekday < 0 ||
+      saved.weekday > 6 ||
+      !Number.isInteger(saved.nights) ||
+      saved.nights < 1 ||
+      saved.nights > maxNights
+    ) {
+      return;
+    }
+
+    selectedDestinations = saved.destinations
+      .filter((code) =>
+        destinationsData.some((destination) => destination.value === code),
+      )
+      .slice(0, maxDestinations);
+
+    if (destinationsData.length > 0) {
+      renderSelected();
+    }
+
+    document.getElementById("weekday").value = saved.weekday;
+    document.getElementById("nights").value = saved.nights;
+  } catch (error) {
+    console.warn("Could not restore search setup:", error);
+  }
+}
+
 async function search() {
   if (isSearching) return;
 
@@ -295,8 +454,22 @@ async function search() {
 
   const searchButton = document.getElementById("search-button");
 
+  clearSearchResults();
+
+  lastSearchParameters = {
+    destinations: [...selectedDestinations],
+    weekday,
+    nights,
+    startedAt: new Date().toISOString(),
+  };
+
+  const controller = new AbortController();
+  searchAbortController = controller;
+
   isSearching = true;
   searchButton.disabled = true;
+
+  saveSearchState("searching");
 
   try {
     resultsDiv.innerHTML = "";
@@ -311,11 +484,12 @@ async function search() {
 
     const response = await fetch("/search-stream", {
       method: "POST",
+      signal: controller.signal,
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        destinations: selectedDestinations,
+        destinations: lastSearchParameters.destinations,
         weekday,
         nights,
       }),
@@ -332,6 +506,7 @@ async function search() {
 
     while (true) {
       const { done, value } = await reader.read();
+      if (controller.signal.aborted) return;
       if (done) {
         throw new Error("Search stream ended unexpectedly.");
       }
@@ -352,6 +527,7 @@ async function search() {
           }
 
           updateFooter(resultsDiv, true);
+          saveSearchState("completed");
           return;
         }
 
@@ -362,6 +538,7 @@ async function search() {
         if (part.includes("event: fail")) {
           failedCount++;
           updateFooter(resultsDiv, false);
+          saveSearchState("searching");
           continue;
         }
 
@@ -372,12 +549,26 @@ async function search() {
           const item = JSON.parse(jsonStr);
 
           insertSortedWithDOM(item, resultsDiv);
+          saveSearchState("searching");
         }
       }
     }
   } catch (err) {
-    resultsDiv.innerHTML = "Error occurred.";
+    if (controller.signal.aborted) return;
+
+    saveSearchState("interrupted");
+
+    if (currentResults.length === 0) {
+      resultsDiv.textContent = "Error occurred.";
+    } else {
+      document.getElementById("results-footer").textContent =
+        `Search interrupted. Run a new search to finish. (failed: ${failedCount})`;
+    }
   } finally {
+    if (searchAbortController === controller) {
+      searchAbortController = null;
+    }
+
     isSearching = false;
     searchButton.disabled = false;
   }

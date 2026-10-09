@@ -178,13 +178,18 @@ test.describe("Flight Finder", () => {
     await flightFinder.expectNightsValue("30");
   });
 
-  test("TC-FLIGHT-17 | should handle unexpected search stream close", async () => {
+  test("TC-FLIGHT-17 | should preserve received results when search stream closes unexpectedly", async () => {
     await flightFinder.mockUnexpectedStreamClose();
 
     await flightFinder.selectAirportByEnter("ams");
     await flightFinder.clickSearchButton();
 
-    await flightFinder.expectSearchError("Error occurred.");
+    await flightFinder.expectResultsFooterText(
+      "Search interrupted. Run a new search to finish. (failed: 0)",
+    );
+
+    await common.expectVisible(flightFinder.firstResult);
+    await flightFinder.expectSearchButtonEnabled();
   });
 
   test("TC-FLIGHT-18 | should prevent overlapping searches and unlock after completion", async () => {
