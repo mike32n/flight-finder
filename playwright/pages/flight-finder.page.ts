@@ -106,6 +106,10 @@ export default class MainPage {
     await this.toggleThemeButton.click();
   }
 
+  async expectThemeButtonText(text: string): Promise<void> {
+    await expect(this.toggleThemeButton).toHaveText(text);
+  }
+
   async clickAirportInput(): Promise<void> {
     await this.airportInput.click();
   }

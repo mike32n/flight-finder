@@ -15,10 +15,24 @@ test.describe("Flight Finder", () => {
     await page.goto(Env.test);
   });
 
-  test("TC-FLIGHT-01 | should toggle dark theme", async () => {
+  test("TC-FLIGHT-01 | should toggle theme icons and preserve theme after reload", async () => {
+    await common.expectLightThemeIsActive();
+    await flightFinder.expectThemeButtonText("Theme 🌙");
+
     await flightFinder.clickToggleTheme();
 
     await common.expectDarkThemeIsActive();
+    await flightFinder.expectThemeButtonText("Theme ☀️");
+
+    await common.reloadPage();
+
+    await common.expectDarkThemeIsActive();
+    await flightFinder.expectThemeButtonText("Theme ☀️");
+
+    await flightFinder.clickToggleTheme();
+
+    await common.expectLightThemeIsActive();
+    await flightFinder.expectThemeButtonText("Theme 🌙");
   });
 
   test("TC-FLIGHT-02 | should select active autocomplete item", async () => {

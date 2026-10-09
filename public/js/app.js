@@ -387,6 +387,19 @@ async function search() {
 /* THEME */
 /* ========================= */
 
+function updateThemeButton() {
+  const button = document.getElementById("theme-button");
+
+  if (!button) return;
+
+  const isDark = document.body.classList.contains("dark");
+  const label = isDark ? "Switch to light theme" : "Switch to dark theme";
+
+  button.textContent = isDark ? "Theme ☀️" : "Theme 🌙";
+  button.title = label;
+  button.setAttribute("aria-label", label);
+}
+
 function toggleTheme() {
   document.body.classList.toggle("dark");
 
@@ -394,12 +407,17 @@ function toggleTheme() {
     "theme",
     document.body.classList.contains("dark") ? "dark" : "light",
   );
+
+  updateThemeButton();
 }
 
 function loadTheme() {
-  if (localStorage.getItem("theme") === "dark") {
-    document.body.classList.add("dark");
-  }
+  document.body.classList.toggle(
+    "dark",
+    localStorage.getItem("theme") === "dark",
+  );
+
+  updateThemeButton();
 }
 
 function changeNights(delta) {
