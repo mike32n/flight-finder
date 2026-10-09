@@ -92,10 +92,18 @@ window.onload = async function () {
     if (!value || value < 1) {
       value = 1;
     }
-    if (value > maxNights) value = maxNights;
+
+    if (value > maxNights) {
+      value = maxNights;
+    }
 
     nightsInput.value = value;
+    saveSearchSetup();
   });
+
+  document
+    .getElementById("weekday")
+    .addEventListener("change", saveSearchSetup);
 
   await loadCurrentUser();
   renderAuthUI();
@@ -103,8 +111,6 @@ window.onload = async function () {
   restoreSearchSetup();
   restoreSearchState();
 };
-
-window.addEventListener("pagehide", saveSearchSetup);
 
 /* ========================= */
 /* AUTOCOMPLETE */
@@ -278,6 +284,8 @@ function renderSelected() {
 
   document.getElementById("destination-input").disabled =
     selectedDestinations.length >= maxDestinations;
+
+  saveSearchSetup();
 }
 
 /* ========================= */
@@ -422,12 +430,12 @@ function restoreSearchSetup() {
       )
       .slice(0, maxDestinations);
 
+    document.getElementById("weekday").value = saved.weekday;
+    document.getElementById("nights").value = saved.nights;
+
     if (destinationsData.length > 0) {
       renderSelected();
     }
-
-    document.getElementById("weekday").value = saved.weekday;
-    document.getElementById("nights").value = saved.nights;
   } catch (error) {
     console.warn("Could not restore search setup:", error);
   }
@@ -454,6 +462,7 @@ async function search() {
 
   const searchButton = document.getElementById("search-button");
 
+  saveSearchSetup();
   clearSearchResults();
 
   lastSearchParameters = {
@@ -621,6 +630,7 @@ function changeNights(delta) {
   if (value > maxNights) value = maxNights;
 
   input.value = value;
+  saveSearchSetup();
 }
 
 function insertSortedWithDOM(item, container) {

@@ -178,18 +178,37 @@ test.describe("Flight Finder", () => {
     await flightFinder.expectNightsValue("30");
   });
 
-  test("TC-FLIGHT-17 | should preserve received results when search stream closes unexpectedly", async () => {
-    await flightFinder.mockUnexpectedStreamClose();
+  test("TC-FLIGHT-17 | should preserve interrupted search results after reload", async () => {
+    const searchMock = await flightFinder.mockSearchSequence([
+      {
+        city: "Amsterdam",
+        code: "AMS",
+        price: 30000,
+        completed: false,
+      },
+    ]);
+
+    const resultText =
+      "→ Amsterdam (AMS) 2026-10-09 → 2026-10-11 💶 HUF 30,000";
+
+    const interruptedMessage =
+      "Search interrupted. Run a new search to finish. (failed: 0)";
 
     await flightFinder.selectAirportByEnter("ams");
     await flightFinder.clickSearchButton();
 
-    await flightFinder.expectResultsFooterText(
-      "Search interrupted. Run a new search to finish. (failed: 0)",
-    );
-
-    await common.expectVisible(flightFinder.firstResult);
+    await flightFinder.expectResultsFooterText(interruptedMessage);
+    await flightFinder.expectResultTexts([resultText]);
     await flightFinder.expectSearchButtonEnabled();
+
+    await common.reloadPage();
+    await flightFinder.expectRestoredSearchVisible();
+
+    await flightFinder.expectResultsFooterText(interruptedMessage);
+    await flightFinder.expectResultTexts([resultText]);
+    await flightFinder.expectSearchButtonEnabled();
+
+    await searchMock.expectRequestCount(1);
   });
 
   test("TC-FLIGHT-18 | should prevent overlapping searches and unlock after completion", async () => {

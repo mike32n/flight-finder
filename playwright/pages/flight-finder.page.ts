@@ -225,6 +225,59 @@ export default class MainPage {
     });
   }
 
+  async mockSearchSequence(
+    responses: Array<{
+      city: string;
+      code: string;
+      price: number;
+      completed?: boolean;
+    }>,
+  ): Promise<{
+    expectRequestCount: (expected: number) => Promise<void>;
+  }> {
+    let requestCount = 0;
+
+    await this.page.route("**/search-stream", async (route) => {
+      const response = responses[requestCount];
+      requestCount++;
+
+      if (!response) {
+        await route.abort("failed");
+        return;
+      }
+
+      const flight = {
+        origin: { city: "Budapest", code: "BUD" },
+        destination: {
+          city: response.city,
+          code: response.code,
+        },
+        departure: "2026-10-09",
+        return: "2026-10-11",
+        price: response.price,
+        currency: "HUF",
+        bookingUrl: "https://example.com/booking",
+        resultType: "base",
+      };
+
+      const resultEvent = `data: ${JSON.stringify(flight)}\n\n`;
+      const endEvent =
+        response.completed === false ? "" : "event: end\ndata: done\n\n";
+
+      await route.fulfill({
+        status: 200,
+        contentType: "text/event-stream",
+        body: resultEvent + endEvent,
+      });
+    });
+
+    return {
+      expectRequestCount: async (expected: number): Promise<void> => {
+        expect(requestCount).toBe(expected);
+      },
+    };
+  }
+
   async mockConfigFailure(): Promise<void> {
     await this.page.route("**/config", async (route) => {
       await route.fulfill({
@@ -449,6 +502,22 @@ export default class MainPage {
 
   async expectResultsFooterText(text: string): Promise<void> {
     await expect(this.resultsFooter.filter({ hasText: text })).toBeVisible();
+  }
+
+  async expectResultTexts(texts: string[]): Promise<void> {
+    await expect(this.results.locator(".card")).toHaveText(texts);
+  }
+
+  async expectRestoredSearchVisible(): Promise<void> {
+    await expect(this.results.getByText(/^Saved search:/)).toBeVisible();
+  }
+
+  async expectResultsEmpty(): Promise<void> {
+    await expect(this.results).toBeEmpty();
+  }
+
+  async expectWeekdayValue(value: string): Promise<void> {
+    await expect(this.weekdaySelect).toHaveValue(value);
   }
 
   async expectFlexibleDateResult(): Promise<void> {
