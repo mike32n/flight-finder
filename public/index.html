@@ -19,9 +19,19 @@
       <!-- Selected IATA badges -->
       <div id="selected-container" class="selected-container"></div>
 
+      <div
+        id="search-validation-error"
+        class="card error-card hidden"
+        role="alert"
+      ></div>
+
       <p id="destinations-error" role="alert" hidden></p>
 
       <div class="form">
+        <select id="origin" aria-label="Departure airport">
+          <option value="BUD">Budapest (BUD)</option>
+        </select>
+
         <div class="autocomplete-wrapper">
           <input
             id="destination-input"

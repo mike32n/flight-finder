@@ -37,7 +37,7 @@ test.describe("Flight Finder", () => {
 
   test("TC-FLIGHT-02 | should select active autocomplete item", async () => {
     await flightFinder.openAutocomplete("c");
-    await flightFinder.pressArrowDown(flightFinder.airportInput, 2);
+    await flightFinder.pressAirportArrowDown(2);
 
     const iata = await flightFinder.getActiveAutocompleteItemIata();
 
@@ -87,10 +87,10 @@ test.describe("Flight Finder", () => {
 
   test("TC-FLIGHT-08 | should navigate weekdays with arrow keys", async () => {
     await flightFinder.selectWeekdayByName("Friday");
-    await flightFinder.pressArrowDown(flightFinder.weekdaySelect);
+    await flightFinder.pressWeekdayArrowDown();
     await flightFinder.expectWeekdaySelected("Saturday");
 
-    await flightFinder.pressArrowUp(flightFinder.weekdaySelect, 2);
+    await flightFinder.pressWeekdayArrowUp(2);
     await flightFinder.expectWeekdaySelected("Thursday");
   });
 
@@ -189,7 +189,7 @@ test.describe("Flight Finder", () => {
     ]);
 
     const resultText =
-      "→ Amsterdam (AMS) 2026-10-09 → 2026-10-11 💶 HUF 30,000";
+      "BUD → Amsterdam (AMS) 2026-10-09 → 2026-10-11 💶 HUF 30,000";
 
     const interruptedMessage =
       "Search interrupted. Run a new search to finish. (failed: 0)";
@@ -254,6 +254,57 @@ test.describe("Flight Finder", () => {
       await flightFinder.expectNightsValue("1");
     });
   }
+
+  test("TC-FLIGHT-20 | should exclude the origin from destination suggestions", async () => {
+    await flightFinder.selectOrigin("VIE");
+    await flightFinder.expectOriginSelected("VIE");
+
+    await flightFinder.openAutocomplete("v");
+    await flightFinder.expectDestinationSuggestionAbsent("VIE");
+
+    await flightFinder.pressEnter();
+
+    await flightFinder.expectSelectedDestinationCount(1);
+    await flightFinder.expectAirportNotSelected("VIE");
+  });
+
+  test("TC-FLIGHT-21 | should disable selected origins and preserve removable badges after validation failure", async () => {
+    await flightFinder.selectOrigin("BUD");
+
+    await flightFinder.selectAirportByEnter("vie");
+    await flightFinder.selectAirportByEnter("ams");
+    await flightFinder.selectAirportByEnter("lca");
+
+    await flightFinder.expectSelectedDestinationCount(3);
+    await flightFinder.expectAirportInputDisabled();
+    await flightFinder.expectOriginOptionDisabled("VIE");
+
+    // Bypass the UI restriction to check defensive validation.
+    await flightFinder.forceOriginValue("VIE");
+    await flightFinder.clickSearchButton();
+
+    await flightFinder.expectSearchValidationErrorText(
+      "Departure and destination airports must differ.",
+    );
+
+    await flightFinder.expectSelectedDestinationCount(3);
+    await flightFinder.expectAirportSelected("VIE");
+    await flightFinder.expectAirportSelected("AMS");
+    await flightFinder.expectAirportSelected("LCA");
+    await flightFinder.expectSearchButtonEnabled();
+
+    await flightFinder.clickSelectedContainer("VIE");
+
+    await flightFinder.expectAirportNotSelected("VIE");
+    await flightFinder.expectSelectedDestinationCount(2);
+    await flightFinder.expectAirportInputEnabled();
+    await flightFinder.expectOriginOptionEnabled("VIE");
+    await flightFinder.expectSearchValidationErrorHidden();
+
+    await flightFinder.selectOrigin("BUD");
+    await flightFinder.selectOrigin("VIE");
+    await flightFinder.expectOriginSelected("VIE");
+  });
 });
 
 test.describe("Flight Search Error Handling", () => {

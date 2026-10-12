@@ -6,6 +6,9 @@ let selectedDestinations = [];
 let maxDestinations = 3;
 let maxNights = 30;
 let maxResults = 5;
+let departureAirports = [{ code: "BUD", city: "Budapest" }];
+let defaultOrigin = "BUD";
+let previousOrigin = defaultOrigin;
 
 let currentFocus = -1;
 let debounceTimer;
@@ -71,6 +74,8 @@ window.onload = async function () {
 
     const config = await configRes.json();
 
+    configureDepartureAirports(config.departureAirports);
+
     maxDestinations = config.destinations.maxSelected ?? maxDestinations;
     maxNights = config.search.maxNights ?? maxNights;
     maxResults = config.search.maxResults ?? maxResults;
@@ -105,6 +110,10 @@ window.onload = async function () {
     .getElementById("weekday")
     .addEventListener("change", saveSearchSetup);
 
+  document
+    .getElementById("origin")
+    .addEventListener("change", handleOriginChange);
+
   await loadCurrentUser();
   renderAuthUI();
 
@@ -133,10 +142,13 @@ function setupAutocomplete() {
         return;
       }
 
+      const origin = document.getElementById("origin").value;
+
       const filtered = destinationsData.filter(
         (d) =>
-          d.label.toLowerCase().includes(value) ||
-          d.value.toLowerCase().includes(value),
+          d.value !== origin &&
+          (d.label.toLowerCase().includes(value) ||
+            d.value.toLowerCase().includes(value)),
       );
 
       filtered.forEach((dest) => {
@@ -254,9 +266,51 @@ function removeActive(items) {
 /* DESTINATIONS */
 /* ========================= */
 
+function showSearchValidationError(message = "") {
+  const error = document.getElementById("search-validation-error");
+
+  error.textContent = message;
+  error.classList.toggle("hidden", !message);
+}
+
+function updateOriginOptions() {
+  const select = document.getElementById("origin");
+
+  for (const option of select.options) {
+    option.disabled = selectedDestinations.includes(option.value);
+  }
+}
+
+function handleOriginChange() {
+  const select = document.getElementById("origin");
+
+  if (selectedDestinations.includes(select.value)) {
+    select.value = previousOrigin;
+
+    showSearchValidationError(
+      "Departure and destination airports must differ.",
+    );
+    return;
+  }
+
+  previousOrigin = select.value;
+
+  // Remove suggestions generated for the previous origin.
+  clearTimeout(debounceTimer);
+  currentFocus = -1;
+
+  const list = document.getElementById("autocomplete-list");
+  list.replaceChildren();
+  closeDropdown(list);
+
+  showSearchValidationError();
+  saveSearchSetup();
+}
+
 function selectDestination(dest) {
   if (selectedDestinations.length >= maxDestinations) return;
   if (selectedDestinations.includes(dest.value)) return;
+  if (dest.value === document.getElementById("origin").value) return;
 
   selectedDestinations.push(dest.value);
   renderSelected();
@@ -283,8 +337,11 @@ function renderSelected() {
   });
 
   document.getElementById("destination-input").disabled =
+    destinationsData.length === 0 ||
     selectedDestinations.length >= maxDestinations;
 
+  updateOriginOptions();
+  showSearchValidationError();
   saveSearchSetup();
 }
 
@@ -390,11 +447,51 @@ function restoreSearchState() {
   }
 }
 
+function configureDepartureAirports(settings) {
+  const airports = settings?.options ?? departureAirports;
+  const preferred = settings?.default ?? defaultOrigin;
+
+  if (
+    !Array.isArray(airports) ||
+    airports.length === 0 ||
+    !airports.every(
+      (airport) =>
+        airport &&
+        typeof airport.code === "string" &&
+        /^[A-Z]{3}$/.test(airport.code) &&
+        typeof airport.city === "string",
+    ) ||
+    new Set(airports.map((airport) => airport.code)).size !== airports.length ||
+    !airports.some((airport) => airport.code === preferred)
+  ) {
+    throw new Error("Invalid departure airports configuration");
+  }
+
+  departureAirports = airports;
+  defaultOrigin = preferred;
+
+  const select = document.getElementById("origin");
+  select.replaceChildren();
+
+  airports.forEach((airport) => {
+    const option = document.createElement("option");
+    option.value = airport.code;
+    option.textContent = `${airport.city} (${airport.code})`;
+    select.appendChild(option);
+  });
+
+  select.value = defaultOrigin;
+  previousOrigin = select.value;
+
+  updateOriginOptions();
+}
+
 function saveSearchSetup() {
   try {
     sessionStorage.setItem(
       SEARCH_SETUP_KEY,
       JSON.stringify({
+        origin: document.getElementById("origin").value,
         destinations: [...selectedDestinations],
         weekday: Number(document.getElementById("weekday").value),
         nights: Number(document.getElementById("nights").value),
@@ -424,9 +521,22 @@ function restoreSearchSetup() {
       return;
     }
 
+    const savedOrigin = saved.origin ?? defaultOrigin;
+
+    document.getElementById("origin").value = departureAirports.some(
+      (airport) => airport.code === savedOrigin,
+    )
+      ? savedOrigin
+      : defaultOrigin;
+
+    const origin = document.getElementById("origin").value;
+    previousOrigin = origin;
+
     selectedDestinations = saved.destinations
-      .filter((code) =>
-        destinationsData.some((destination) => destination.value === code),
+      .filter(
+        (code) =>
+          code !== origin &&
+          destinationsData.some((destination) => destination.value === code),
       )
       .slice(0, maxDestinations);
 
@@ -444,19 +554,30 @@ function restoreSearchSetup() {
 async function search() {
   if (isSearching) return;
 
+  const origin = document.getElementById("origin").value;
   const weekday = Number(document.getElementById("weekday").value);
   const nights = Number(document.getElementById("nights").value);
 
-  const container = document.getElementById("selected-container");
   const resultsDiv = document.getElementById("results");
 
   // validation FIRST
+  showSearchValidationError();
+
   if (selectedDestinations.length === 0) {
+    const container = document.getElementById("selected-container");
+
     container.innerHTML = `
     <div class="card error-card">
       ⚠️ Please select destination airport(s)
     </div>
   `;
+    return;
+  }
+
+  if (selectedDestinations.includes(origin)) {
+    showSearchValidationError(
+      "Departure and destination airports must differ.",
+    );
     return;
   }
 
@@ -466,6 +587,7 @@ async function search() {
   clearSearchResults();
 
   lastSearchParameters = {
+    origin,
     destinations: [...selectedDestinations],
     weekday,
     nights,
@@ -498,6 +620,7 @@ async function search() {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
+        origin: lastSearchParameters.origin,
         destinations: lastSearchParameters.destinations,
         weekday,
         nights,
@@ -673,6 +796,9 @@ function insertSortedWithDOM(item, container) {
 function createCard(r) {
   const div = document.createElement("div");
 
+  const originCode =
+    r.origin?.code ?? lastSearchParameters?.origin ?? defaultOrigin;
+
   const isFlex = r.resultType === "flex";
   const isFallbackFlex = r.resultType === "fallback-flex";
 
@@ -699,7 +825,7 @@ function createCard(r) {
   }
 
   div.innerHTML = `
-    <strong>→ ${r.destination.city} (${r.destination.code})</strong>
+    <strong>${originCode} → ${r.destination.city} (${r.destination.code})</strong>
     ${badge}<br/>
     <span class="meta-info">
       ${r.departure} → ${r.return}

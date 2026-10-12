@@ -13,16 +13,21 @@ export default class MainPage {
   readonly incrementButton: Locator;
   readonly decrementButton: Locator;
 
+  readonly originSelect: Locator;
+  readonly originOptions: Locator;
   readonly airportInput: Locator;
   readonly weekdaySelect: Locator;
   readonly nightsInput: Locator;
   readonly autocompleteList: Locator;
   readonly selectedContainer: Locator;
+  readonly selectedDestinationBadges: Locator;
   readonly noAirportsSelectedWarning: Locator;
+  readonly searchValidationError: Locator;
   readonly autocompleteItem: Locator;
   readonly activeAutocompleteItem: Locator;
   readonly firstResult: Locator;
   readonly results: Locator;
+  readonly resultCards: Locator;
   readonly resultsFooter: Locator;
 
   readonly flexCard: Locator;
@@ -63,6 +68,13 @@ export default class MainPage {
       name: "Type city or IATA code...",
     });
 
+    this.originSelect = page.getByRole("combobox", {
+      name: "Departure airport",
+      exact: true,
+    });
+
+    this.originOptions = this.originSelect.locator("option");
+
     this.weekdaySelect = page.locator("#weekday");
 
     this.nightsInput = page.locator("#nights");
@@ -71,15 +83,21 @@ export default class MainPage {
 
     this.selectedContainer = page.locator("#selected-container");
 
-    this.noAirportsSelectedWarning = page.locator(".error-card");
+    this.selectedDestinationBadges =
+      this.selectedContainer.locator(".iata-badge");
+
+    this.noAirportsSelectedWarning =
+      this.selectedContainer.locator(".error-card");
+
+    this.searchValidationError = page.locator("#search-validation-error");
 
     this.autocompleteItem = page.locator(".autocomplete-item");
 
     this.activeAutocompleteItem = page.locator(".autocomplete-item.active");
 
-    this.firstResult = page.locator(".card").first();
-
     this.results = page.locator("#results");
+    this.resultCards = this.results.locator(".card");
+    this.firstResult = this.resultCards.first();
 
     this.resultsFooter = page.locator("#results-footer");
 
@@ -158,6 +176,18 @@ export default class MainPage {
     }
   }
 
+  async pressAirportArrowDown(times = 1): Promise<void> {
+    await this.pressArrowDown(this.airportInput, times);
+  }
+
+  async pressWeekdayArrowDown(times = 1): Promise<void> {
+    await this.pressArrowDown(this.weekdaySelect, times);
+  }
+
+  async pressWeekdayArrowUp(times = 1): Promise<void> {
+    await this.pressArrowUp(this.weekdaySelect, times);
+  }
+
   async openAutocomplete(searchText: string): Promise<void> {
     await this.clickAirportInput();
     await this.searchAirport(searchText);
@@ -186,6 +216,20 @@ export default class MainPage {
     await this.searchAirport(searchText);
     await this.expectAutocompleteOpen();
     await this.pressEnter();
+  }
+
+  async selectOrigin(code: string): Promise<void> {
+    await this.originSelect.selectOption(code);
+  }
+
+  async expectOriginSelected(code: string): Promise<void> {
+    await expect(this.originSelect).toHaveValue(code);
+  }
+
+  async forceOriginValue(code: string): Promise<void> {
+    await this.originSelect.evaluate((element, value) => {
+      (element as HTMLSelectElement).value = value;
+    }, code);
   }
 
   async selectWeekdayOption(option: string): Promise<void> {
@@ -247,7 +291,9 @@ export default class MainPage {
       }
 
       const flight = {
-        origin: { city: "Budapest", code: "BUD" },
+        origin: {
+          code: route.request().postDataJSON().origin ?? "BUD",
+        },
         destination: {
           city: response.city,
           code: response.code,
@@ -454,6 +500,40 @@ export default class MainPage {
     ).toBeVisible();
   }
 
+  async expectOriginOptionDisabled(code: string): Promise<void> {
+    await expect(
+      this.originOptions.filter({ hasText: `(${code})` }),
+    ).toBeDisabled();
+  }
+
+  async expectOriginOptionEnabled(code: string): Promise<void> {
+    await expect(
+      this.originOptions.filter({ hasText: `(${code})` }),
+    ).toBeEnabled();
+  }
+
+  async expectDestinationSuggestionAbsent(code: string): Promise<void> {
+    await expect(
+      this.autocompleteItem.filter({ hasText: `(${code})` }),
+    ).toHaveCount(0);
+  }
+
+  async expectSelectedDestinationCount(count: number): Promise<void> {
+    await expect(this.selectedDestinationBadges).toHaveCount(count);
+  }
+
+  async expectAirportInputEnabled(): Promise<void> {
+    await expect(this.airportInput).toBeEnabled();
+  }
+
+  async expectSearchValidationErrorText(message: string): Promise<void> {
+    await expect(this.searchValidationError).toHaveText(message);
+  }
+
+  async expectSearchValidationErrorHidden(): Promise<void> {
+    await expect(this.searchValidationError).toBeHidden();
+  }
+
   async expectAutocompleteOpen(): Promise<void> {
     await expect(this.autocompleteList).toHaveClass(/open/);
   }
@@ -505,7 +585,7 @@ export default class MainPage {
   }
 
   async expectResultTexts(texts: string[]): Promise<void> {
-    await expect(this.results.locator(".card")).toHaveText(texts);
+    await expect(this.resultCards).toHaveText(texts);
   }
 
   async expectRestoredSearchVisible(): Promise<void> {
