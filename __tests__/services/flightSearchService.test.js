@@ -740,4 +740,52 @@ describe("flightSearchService", () => {
       type: "fail",
     });
   });
+
+  test.each(["json", "stream"])(
+    "passes selected origin to base and Flex searches in %s mode",
+    async (mode) => {
+      searchFlightsMock.mockImplementation(
+        async (destination, departure, returnDate) => ({
+          success: true,
+          data: {
+            destination, departure, return: returnDate,
+            price: 30000, currency: "HUF",
+          },
+        }),
+      );
+
+      const executeTasks = async (tasks, limit, onResult) => {
+        const results = await Promise.all(tasks.map((task) => task()));
+        if (onResult) results.forEach(onResult);
+        return results;
+      };
+
+      runWithConcurrencyLimit
+        .mockImplementationOnce(executeTasks)
+        .mockImplementationOnce(executeTasks);
+
+      const options = {
+        origin: "VIE", destinations: ["AMS"], weekday: 5, nights: 2,
+        enrichAirport: (code) => ({ code }),
+      };
+
+      if (mode === "json") {
+        const result = await searchFlights(options);
+        expect(result.results[0].origin).toEqual({ code: "VIE" });
+      } else {
+        const onResult = jest.fn();
+        await searchFlightsStream({ ...options, onResult });
+        expect(onResult).toHaveBeenCalledWith({
+          type: "data",
+          data: expect.objectContaining({ origin: { code: "VIE" } }),
+        });
+      }
+
+      expect(searchFlightsMock).toHaveBeenCalledTimes(3);
+      expect(searchFlightsMock.mock.calls.map((args) => args[3])).toEqual([
+        "VIE", "VIE", "VIE",
+      ]);
+    },
+  );
+
 });

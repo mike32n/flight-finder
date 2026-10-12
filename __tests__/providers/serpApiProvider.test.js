@@ -264,4 +264,20 @@ describe("SerpApiProvider", () => {
     expect(acquireToken).not.toHaveBeenCalled();
     expect(axios.get).not.toHaveBeenCalled();
   });
+
+  test("separates origins in cache payload and API parameters", async () => {
+    axios.get.mockResolvedValue({
+      data: { best_flights: [{ price: 30000 }] },
+    });
+
+    await provider.searchFlights("AMS", "2026-10-16", "2026-10-18", "BUD");
+    await provider.searchFlights("AMS", "2026-10-16", "2026-10-18", "VIE");
+
+    expect(getOrSet.mock.calls.map(([, payload]) => payload.origin)).toEqual([
+      "BUD", "VIE",
+    ]);
+    expect(axios.get.mock.calls.map(([, options]) => options.params.departure_id))
+      .toEqual(["BUD", "VIE"]);
+  });
+
 });

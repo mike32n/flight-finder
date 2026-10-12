@@ -15,6 +15,7 @@ describe("GET /config", () => {
     expect(response.status).toBe(200);
 
     expect(response.body).toEqual({
+      departureAirports: config.departureAirports,
       destinations: {
         maxSelected: config.destinations.maxSelected,
       },

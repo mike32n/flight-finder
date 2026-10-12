@@ -1,7 +1,13 @@
 const BaseProvider = require("./baseProvider");
+const appConfig = require("../config/appConfig");
 
-function generateMockPrice(destination, departure, returnDate) {
-  const input = `${departure}-${destination}-${returnDate}`;
+function generateMockPrice(
+  destination,
+  departure,
+  returnDate,
+  origin = appConfig.departureAirports.default,
+) {
+  const input = `${origin}-${departure}-${destination}-${returnDate}`;
 
   let hash = 2166136261;
 
@@ -15,13 +21,13 @@ function generateMockPrice(destination, departure, returnDate) {
   return 20000 + normalized;
 }
 
-async function searchMockFlights(destination, departure, returnDate) {
+async function searchMockFlights(destination, departure, returnDate, origin) {
   // 15% chance of error to simulate API issues
   if (Math.random() < 0.15) {
     throw new Error("Mock API error");
   }
 
-  const price = generateMockPrice(destination, departure, returnDate);
+  const price = generateMockPrice(destination, departure, returnDate, origin);
 
   return {
     destination,
@@ -34,12 +40,18 @@ async function searchMockFlights(destination, departure, returnDate) {
 }
 
 class MockProvider extends BaseProvider {
-  async searchFlights(destination, departure, returnDate) {
+  async searchFlights(
+    destination,
+    departure,
+    returnDate,
+    origin = appConfig.departureAirports.default,
+  ) {
     try {
       const result = await searchMockFlights(
         destination,
         departure,
         returnDate,
+        origin,
       );
 
       return {

@@ -1,5 +1,6 @@
 const Amadeus = require("amadeus");
 const BaseProvider = require("./baseProvider");
+const appConfig = require("../config/appConfig");
 const { getOrSet } = require("../services/cacheService");
 const { acquireToken } = require("../services/rateLimiter");
 
@@ -21,8 +22,13 @@ class AmadeusProvider extends BaseProvider {
     console.log("Using hostname:", config.hostname);
   }
 
-  async searchFlights(destination, departure, returnDate) {
-    const payload = { destination, departure, returnDate };
+  async searchFlights(
+    destination,
+    departure,
+    returnDate,
+    origin = appConfig.departureAirports.default,
+  ) {
+    const payload = { origin, destination, departure, returnDate };
 
     return getOrSet("amadeus", payload, async () => {
       // Distributed rate limit
@@ -42,7 +48,7 @@ class AmadeusProvider extends BaseProvider {
 
       try {
         const response = await this.amadeus.shopping.flightOffersSearch.get({
-          originLocationCode: "BUD",
+          originLocationCode: origin,
           destinationLocationCode: destination,
           departureDate: departure,
           returnDate: returnDate,

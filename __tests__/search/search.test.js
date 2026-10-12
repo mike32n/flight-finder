@@ -113,6 +113,41 @@ describe("POST /search", () => {
       providerSpy.mockRestore();
     }
   });
+  test.each(["/search", "/search-stream"])(
+    "forwards selected origin through %s",
+    async (endpoint) => {
+      const providerSpy = jest.spyOn(getProvider(), "searchFlights")
+        .mockImplementation(async (destination, departure, returnDate) => ({
+          success: true,
+          data: {
+            destination, departure, return: returnDate,
+            price: 30000, currency: "HUF",
+            bookingUrl: "https://example.com/booking",
+          },
+        }));
+
+      try {
+        const response = await request(app).post(endpoint).send({
+          origin: "VIE", destinations: ["AMS"], weekday: 5, nights: 2,
+        });
+
+        expect(response.statusCode).toBe(200);
+        expect(providerSpy).toHaveBeenCalled();
+        expect(providerSpy.mock.calls.every((args) => args[3] === "VIE"))
+          .toBe(true);
+
+        if (endpoint === "/search") {
+          expect(response.body.results[0].origin).toEqual({
+            code: "VIE", city: "Vienna",
+          });
+        } else {
+          expect(response.text).toContain('"origin":{"code":"VIE","city":"Vienna"}');
+        }
+      } finally {
+        providerSpy.mockRestore();
+      }
+    },
+  );
 });
 
 afterAll(async () => {

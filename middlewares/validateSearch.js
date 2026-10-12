@@ -2,6 +2,16 @@ const appConfig = require("../config/appConfig");
 
 function validateSearch(req, res, next) {
   const { destinations, weekday, nights } = req.body;
+  const origin = req.body.origin === undefined
+    ? appConfig.departureAirports.default
+    : req.body.origin;
+
+  if (
+    typeof origin !== "string" ||
+    !appConfig.departureAirports.options.some((airport) => airport.code === origin)
+  ) {
+    return res.status(400).json({ error: "Invalid origin" });
+  }
 
   if (
     !Array.isArray(destinations) ||
@@ -33,6 +43,13 @@ function validateSearch(req, res, next) {
     });
   }
 
+  if (destinations.includes(origin)) {
+    return res.status(400).json({
+      error: "Departure and destination airports must differ",
+    });
+  }
+
+  req.body.origin = origin;
   next();
 }
 

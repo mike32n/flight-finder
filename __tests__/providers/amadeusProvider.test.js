@@ -106,4 +106,17 @@ describe("AmadeusProvider", () => {
 
     expect(result.success).toBe(false);
   });
+
+  test("passes selected origin to Amadeus", async () => {
+    mockAmadeus.shopping.flightOffersSearch.get.mockResolvedValue({
+      data: [{ price: { total: "100", currency: "EUR" } }],
+    });
+
+    await provider.searchFlights("AMS", "2026-10-16", "2026-10-18", "VIE");
+
+    expect(mockAmadeus.shopping.flightOffersSearch.get).toHaveBeenCalledWith(
+      expect.objectContaining({ originLocationCode: "VIE" }),
+    );
+  });
+
 });

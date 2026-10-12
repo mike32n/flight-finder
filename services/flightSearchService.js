@@ -11,13 +11,13 @@ const {
 
 const flightProvider = getProvider();
 
-function createBaseTasks(destinations, trips) {
+function createBaseTasks(destinations, trips, origin) {
   const tasks = [];
 
   for (const destination of destinations) {
     for (const trip of trips) {
       tasks.push(() =>
-        flightProvider.searchFlights(destination, trip.departure, trip.return),
+        flightProvider.searchFlights(destination, trip.departure, trip.return, origin),
       );
     }
   }
@@ -25,7 +25,7 @@ function createBaseTasks(destinations, trips) {
   return tasks;
 }
 
-function createFlexTasks(destinations, trips) {
+function createFlexTasks(destinations, trips, origin) {
   const tasks = [];
 
   for (const destination of destinations) {
@@ -39,6 +39,7 @@ function createFlexTasks(destinations, trips) {
             destination,
             variant.departure,
             variant.return,
+            origin,
           );
 
           if (!result.success || !result.data) {
@@ -61,18 +62,24 @@ function createFlexTasks(destinations, trips) {
   return tasks;
 }
 
-function enrichFlightResult(item, enrichAirport) {
+function enrichFlightResult(item, enrichAirport, origin) {
   return {
     ...item,
-    origin: enrichAirport("BUD"),
+    origin: enrichAirport(origin),
     destination: enrichAirport(item.destination),
   };
 }
 
-async function searchFlights({ destinations, weekday, nights, enrichAirport }) {
+async function searchFlights({
+  origin = appConfig.departureAirports.default,
+  destinations,
+  weekday,
+  nights,
+  enrichAirport,
+}) {
   const trips = generateTrips(weekday, nights);
 
-  const baseTasks = createBaseTasks(destinations, trips);
+  const baseTasks = createBaseTasks(destinations, trips, origin);
 
   // RUN BASE
   const baseResults = await runWithConcurrencyLimit(
@@ -89,7 +96,7 @@ async function searchFlights({ destinations, weekday, nights, enrichAirport }) {
   const shouldSearchFlex = appConfig.smartFlex.enabled || isFallbackFlex;
 
   if (shouldSearchFlex) {
-    const flexTasks = createFlexTasks(destinations, trips);
+    const flexTasks = createFlexTasks(destinations, trips, origin);
 
     flexResults = await runWithConcurrencyLimit(
       flexTasks,
@@ -137,7 +144,7 @@ async function searchFlights({ destinations, weekday, nights, enrichAirport }) {
   const unique = new Map();
 
   for (const item of successful) {
-    const key = `${item.destination}-${item.departure}-${item.return}`;
+    const key = `${origin}-${item.destination}-${item.departure}-${item.return}`;
 
     if (!unique.has(key)) {
       unique.set(key, item);
@@ -147,7 +154,7 @@ async function searchFlights({ destinations, weekday, nights, enrichAirport }) {
   const deduped = Array.from(unique.values());
 
   const enriched = deduped.map((item) =>
-    enrichFlightResult(item, enrichAirport),
+    enrichFlightResult(item, enrichAirport, origin),
   );
 
   enriched.sort((a, b) => a.price - b.price);
@@ -161,6 +168,7 @@ async function searchFlights({ destinations, weekday, nights, enrichAirport }) {
 }
 
 async function searchFlightsStream({
+  origin = appConfig.departureAirports.default,
   destinations,
   weekday,
   nights,
@@ -183,12 +191,12 @@ async function searchFlightsStream({
     }
 
     const item = result.data;
-    const key = `${item.destination}-${item.departure}-${item.return}`;
+    const key = `${origin}-${item.destination}-${item.departure}-${item.return}`;
 
     if (sentKeys.has(key)) return;
 
     const enriched = {
-      ...enrichFlightResult(item, enrichAirport),
+      ...enrichFlightResult(item, enrichAirport, origin),
       resultType,
     };
 
@@ -209,7 +217,7 @@ async function searchFlightsStream({
   }
 
   // BASE SEARCH
-  const baseTasks = createBaseTasks(destinations, trips);
+  const baseTasks = createBaseTasks(destinations, trips, origin);
 
   const baseResults = await runWithConcurrencyLimit(
     baseTasks,
@@ -224,7 +232,7 @@ async function searchFlightsStream({
   const shouldSearchFlex = appConfig.smartFlex.enabled || isFallbackFlex;
 
   if (shouldSearchFlex) {
-    const flexTasks = createFlexTasks(destinations, trips);
+    const flexTasks = createFlexTasks(destinations, trips, origin);
 
     const flexResultType = isFallbackFlex ? "fallback-flex" : "flex";
 

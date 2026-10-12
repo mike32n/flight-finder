@@ -1,5 +1,5 @@
 class BaseProvider {
-  async searchFlights(destination, departure, returnDate) {
+  async searchFlights(destination, departure, returnDate, origin) {
     throw new Error("searchFlights must be implemented");
   }
 }

@@ -135,4 +135,44 @@ describe("validateSearch", () => {
 
     expect(next).toHaveBeenCalled();
   });
+
+  test("uses configured default origin when omitted", () => {
+    validateSearch(req, res, next);
+    expect(next).toHaveBeenCalledTimes(1);
+    expect(req.body.origin).toBe(appConfig.departureAirports.default);
+  });
+
+  test.each(appConfig.departureAirports.options.map(({ code }) => [code]))(
+    "accepts supported origin %s",
+    (origin) => {
+      req.body.origin = origin;
+      validateSearch(req, res, next);
+      expect(next).toHaveBeenCalledTimes(1);
+      expect(req.body.origin).toBe(origin);
+    },
+  );
+
+  test.each(
+    [null, "", "vie", "VIE\n", "XXX", ["BUD", "VIE"], {}, 123].map(
+      (origin) => [origin],
+    ),
+  )("rejects invalid origin %p", (origin) => {
+    req.body.origin = origin;
+    validateSearch(req, res, next);
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({ error: "Invalid origin" });
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  test("rejects destination equal to origin", () => {
+    req.body.origin = "VIE";
+    req.body.destinations = ["VIE"];
+    validateSearch(req, res, next);
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({
+      error: "Departure and destination airports must differ",
+    });
+    expect(next).not.toHaveBeenCalled();
+  });
+
 });

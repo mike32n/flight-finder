@@ -93,4 +93,21 @@ describe("MockProvider", () => {
       error: "Mock API error",
     });
   });
+
+  test("includes origin in deterministic mock price", async () => {
+    jest.spyOn(Math, "random").mockReturnValue(0.5);
+
+    const result = await provider.searchFlights(
+      "AMS", "2026-10-16", "2026-10-18", "VIE",
+    );
+
+    expect(result.success).toBe(true);
+    expect(result.data.price).toBe(
+      generateMockPrice("AMS", "2026-10-16", "2026-10-18", "VIE"),
+    );
+    expect(result.data.price).not.toBe(
+      generateMockPrice("AMS", "2026-10-16", "2026-10-18", "BUD"),
+    );
+  });
+
 });

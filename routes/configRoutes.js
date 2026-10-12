@@ -4,6 +4,7 @@ const config = require("../config/appConfig");
 
 router.get("/", (req, res) => {
   res.json({
+    departureAirports: config.departureAirports,
     destinations: {
       maxSelected: config.destinations.maxSelected,
     },

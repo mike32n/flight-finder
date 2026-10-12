@@ -1,6 +1,7 @@
 const axios = require("axios");
 
 const BaseProvider = require("./baseProvider");
+const appConfig = require("../config/appConfig");
 const { getOrSet } = require("../services/cacheService");
 const { acquireToken } = require("../services/rateLimiter");
 
@@ -13,8 +14,14 @@ class SerpApiProvider extends BaseProvider {
     this.rateLimitWindowSeconds = config.rateLimitWindowSeconds ?? 60;
   }
 
-  async searchFlights(destination, departure, returnDate) {
+  async searchFlights(
+    destination,
+    departure,
+    returnDate,
+    origin = appConfig.departureAirports.default,
+  ) {
     const payload = {
+      origin,
       destination,
       departure,
       returnDate,
@@ -40,7 +47,7 @@ class SerpApiProvider extends BaseProvider {
           params: {
             engine: "google_flights",
 
-            departure_id: "BUD",
+            departure_id: origin,
             arrival_id: destination,
 
             outbound_date: departure,
