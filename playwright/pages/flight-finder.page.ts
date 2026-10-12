@@ -65,7 +65,8 @@ export default class MainPage {
     });
 
     this.airportInput = page.getByRole("textbox", {
-      name: "Type city or IATA code...",
+      name: "Destination",
+      exact: true,
     });
 
     this.originSelect = page.getByRole("combobox", {

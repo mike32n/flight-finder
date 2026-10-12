@@ -900,3 +900,69 @@ body.dark .reset-password-message.error {
 body.dark .reset-password-button:disabled {
   opacity: 0.65;
 }
+
+/* Keep the existing mobile layout. */
+.form-field {
+  display: contents;
+}
+
+.field-label {
+  display: none;
+}
+
+@media (min-width: 769px) {
+  .form {
+    display: grid;
+    grid-template-columns:
+      minmax(0, 1fr)
+      minmax(0, 1fr)
+      max-content
+      max-content
+      max-content;
+    align-items: end;
+  }
+
+  .form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .form .field-label {
+    display: block;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    line-height: 1.2;
+    text-transform: uppercase;
+  }
+
+  .form-field > select,
+  .form-field > .autocomplete-wrapper {
+    flex: none;
+    width: 100%;
+  }
+
+  .weekday-field > select {
+    width: auto;
+    padding-inline: 10px;
+  }
+
+  .nights-field .stepper input {
+    flex: 0 0 calc(2ch + 26px);
+    width: calc(2ch + 26px);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .nights-field .stepper button {
+    padding-inline: 10px;
+  }
+
+  .form > #search-button {
+    width: max-content;
+    padding-inline: 14px;
+    white-space: nowrap;
+  }
+}
