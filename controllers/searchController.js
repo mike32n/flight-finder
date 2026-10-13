@@ -15,7 +15,7 @@ async function initDestinations() {
   // build map AFTER data arrives
   destinationMap = new Map(destinationsList.map((d) => [d.iata_code, d]));
 
-  console.log("Destinations loaded:", destinationsList.length);
+  console.log("Airports loaded:", destinationsList.length);
 }
 
 // HELPER
