@@ -1,15 +1,16 @@
 const appConfig = require("../config/appConfig");
+const airports = require("../data/airports");
+
+const airportCodes = new Set(airports.map(({ iata }) => iata));
 
 function validateSearch(req, res, next) {
   const { destinations, weekday, nights } = req.body;
-  const origin = req.body.origin === undefined
-    ? appConfig.departureAirports.default
-    : req.body.origin;
+  const origin =
+    req.body.origin === undefined
+      ? appConfig.departureAirports.default
+      : req.body.origin;
 
-  if (
-    typeof origin !== "string" ||
-    !appConfig.departureAirports.options.some((airport) => airport.code === origin)
-  ) {
+  if (typeof origin !== "string" || !airportCodes.has(origin)) {
     return res.status(400).json({ error: "Invalid origin" });
   }
 

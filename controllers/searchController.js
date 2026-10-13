@@ -1,5 +1,4 @@
 const { getAllDestinations } = require("../models/destinationModel");
-const appConfig = require("../config/appConfig");
 const {
   searchFlights,
   searchFlightsStream,
@@ -21,14 +20,6 @@ async function initDestinations() {
 
 // HELPER
 function enrichAirport(code) {
-  const departureAirport = appConfig.departureAirports.options.find(
-    (airport) => airport.code === code,
-  );
-
-  if (departureAirport) {
-    return { code, city: departureAirport.city };
-  }
-
   const d = destinationMap.get(code);
 
   if (!d) {

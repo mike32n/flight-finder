@@ -1,11 +1,6 @@
 module.exports = {
   departureAirports: {
     default: "BUD",
-    options: [
-      { code: "BUD", city: "Budapest" },
-      { code: "VIE", city: "Vienna" },
-      { code: "BTS", city: "Bratislava" },
-    ],
   },
   destinations: {
     maxSelected: 3,

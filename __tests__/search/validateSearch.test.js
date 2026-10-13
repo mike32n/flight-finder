@@ -1,5 +1,6 @@
 const validateSearch = require("../../middlewares/validateSearch");
 const appConfig = require("../../config/appConfig");
+const airports = require("../../data/airports");
 
 describe("validateSearch", () => {
   let req;
@@ -142,20 +143,24 @@ describe("validateSearch", () => {
     expect(req.body.origin).toBe(appConfig.departureAirports.default);
   });
 
-  test.each(appConfig.departureAirports.options.map(({ code }) => [code]))(
-    "accepts supported origin %s",
+  test.each(airports.map(({ iata }) => [iata]))(
+    "accepts airport list origin %s",
     (origin) => {
       req.body.origin = origin;
+      req.body.destinations = [origin === "AMS" ? "BCN" : "AMS"];
+
       validateSearch(req, res, next);
+
       expect(next).toHaveBeenCalledTimes(1);
       expect(req.body.origin).toBe(origin);
+      expect(res.status).not.toHaveBeenCalled();
     },
   );
 
   test.each(
-    [null, "", "vie", "VIE\n", "XXX", ["BUD", "VIE"], {}, 123].map(
-      (origin) => [origin],
-    ),
+    [null, "", "vie", "VIE\n", "XXX", ["BUD", "VIE"], {}, 123].map((origin) => [
+      origin,
+    ]),
   )("rejects invalid origin %p", (origin) => {
     req.body.origin = origin;
     validateSearch(req, res, next);
@@ -174,5 +179,4 @@ describe("validateSearch", () => {
     });
     expect(next).not.toHaveBeenCalled();
   });
-
 });

@@ -317,6 +317,21 @@ test.describe("Flight Finder", () => {
     await flightFinder.selectOrigin("VIE");
     await flightFinder.expectOriginSelected("VIE");
   });
+
+  test("TC-FLIGHT-22 | should select an origin from the shared airport list and preserve it after reload", async () => {
+    await flightFinder.selectOrigin("LCA");
+    await flightFinder.expectOriginSelected("LCA");
+
+    await flightFinder.selectAirportByEnter("ams");
+    await flightFinder.expectAirportSelected("AMS");
+    await flightFinder.expectOriginOptionDisabled("AMS");
+
+    await common.reloadPage();
+
+    await flightFinder.expectOriginSelected("LCA");
+    await flightFinder.expectAirportSelected("AMS");
+    await flightFinder.expectOriginOptionDisabled("AMS");
+  });
 });
 
 test.describe("Flight Search Error Handling", () => {

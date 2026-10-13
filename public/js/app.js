@@ -74,7 +74,7 @@ window.onload = async function () {
 
     const config = await configRes.json();
 
-    configureDepartureAirports(config.departureAirports);
+    defaultOrigin = config.departureAirports?.default ?? defaultOrigin;
 
     maxDestinations = config.destinations.maxSelected ?? maxDestinations;
     maxNights = config.search.maxNights ?? maxNights;
@@ -84,6 +84,10 @@ window.onload = async function () {
       config.auth?.emailVerificationRequired ?? true;
   } catch (err) {
     console.error("Failed to load config:", err);
+  }
+
+  if (destinationsData.length > 0) {
+    configureDepartureAirports();
   }
 
   setupAutocomplete();
@@ -474,36 +478,36 @@ function restoreSearchState() {
   }
 }
 
-function configureDepartureAirports(settings) {
-  const airports = settings?.options ?? departureAirports;
-  const preferred = settings?.default ?? defaultOrigin;
+function configureDepartureAirports() {
+  const airports = destinationsData.map(({ value, label }) => ({
+    code: value,
+    city: label,
+  }));
 
   if (
-    !Array.isArray(airports) ||
     airports.length === 0 ||
     !airports.every(
       (airport) =>
-        airport &&
-        typeof airport.code === "string" &&
-        /^[A-Z]{3}$/.test(airport.code) &&
-        typeof airport.city === "string",
+        /^[A-Z]{3}$/.test(airport.code) && typeof airport.city === "string",
     ) ||
-    new Set(airports.map((airport) => airport.code)).size !== airports.length ||
-    !airports.some((airport) => airport.code === preferred)
+    new Set(airports.map(({ code }) => code)).size !== airports.length
   ) {
-    throw new Error("Invalid departure airports configuration");
+    throw new Error("Invalid departure airports list");
   }
 
   departureAirports = airports;
-  defaultOrigin = preferred;
+
+  if (!airports.some(({ code }) => code === defaultOrigin)) {
+    defaultOrigin = airports[0].code;
+  }
 
   const select = document.getElementById("origin");
   select.replaceChildren();
 
-  airports.forEach((airport) => {
+  airports.forEach(({ code, city }) => {
     const option = document.createElement("option");
-    option.value = airport.code;
-    option.textContent = `${airport.city} (${airport.code})`;
+    option.value = code;
+    option.textContent = `${city} (${code})`;
     select.appendChild(option);
   });
 

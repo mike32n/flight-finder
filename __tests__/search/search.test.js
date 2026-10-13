@@ -12,7 +12,12 @@ jest.mock("../../services/rateLimiter", () => ({
 
 jest.mock("../../db", () => ({
   getDb: jest.fn(() => ({
-    all: jest.fn((_, __, cb) => cb(null, [])),
+    all: jest.fn((_, __, cb) =>
+      cb(null, [
+        { city_name: "Vienna", iata_code: "VIE" },
+        { city_name: "Amsterdam", iata_code: "AMS" },
+      ]),
+    ),
   })),
   closeDb: jest.fn().mockResolvedValue(),
 }));
@@ -20,8 +25,13 @@ jest.mock("../../db", () => ({
 const request = require("supertest");
 const app = require("../../app");
 const { getProvider } = require("../../providers/providerFactory");
+const { initDestinations } = require("../../routes/searchRoutes");
 
 describe("POST /search", () => {
+  beforeAll(async () => {
+    await initDestinations();
+  });
+
   test("returns 400 if parameters missing", async () => {
     const response = await request(app).post("/search").send({});
 
@@ -116,32 +126,45 @@ describe("POST /search", () => {
   test.each(["/search", "/search-stream"])(
     "forwards selected origin through %s",
     async (endpoint) => {
-      const providerSpy = jest.spyOn(getProvider(), "searchFlights")
+      const providerSpy = jest
+        .spyOn(getProvider(), "searchFlights")
         .mockImplementation(async (destination, departure, returnDate) => ({
           success: true,
           data: {
-            destination, departure, return: returnDate,
-            price: 30000, currency: "HUF",
+            destination,
+            departure,
+            return: returnDate,
+            price: 30000,
+            currency: "HUF",
             bookingUrl: "https://example.com/booking",
           },
         }));
 
       try {
-        const response = await request(app).post(endpoint).send({
-          origin: "VIE", destinations: ["AMS"], weekday: 5, nights: 2,
-        });
+        const response = await request(app)
+          .post(endpoint)
+          .send({
+            origin: "VIE",
+            destinations: ["AMS"],
+            weekday: 5,
+            nights: 2,
+          });
 
         expect(response.statusCode).toBe(200);
         expect(providerSpy).toHaveBeenCalled();
-        expect(providerSpy.mock.calls.every((args) => args[3] === "VIE"))
-          .toBe(true);
+        expect(providerSpy.mock.calls.every((args) => args[3] === "VIE")).toBe(
+          true,
+        );
 
         if (endpoint === "/search") {
           expect(response.body.results[0].origin).toEqual({
-            code: "VIE", city: "Vienna",
+            code: "VIE",
+            city: "Vienna",
           });
         } else {
-          expect(response.text).toContain('"origin":{"code":"VIE","city":"Vienna"}');
+          expect(response.text).toContain(
+            '"origin":{"code":"VIE","city":"Vienna"}',
+          );
         }
       } finally {
         providerSpy.mockRestore();
