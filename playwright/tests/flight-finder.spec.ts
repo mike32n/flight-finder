@@ -73,10 +73,20 @@ test.describe("Flight Finder", () => {
     await flightFinder.expectAirportSelectedOnlyOnce("AMS");
   });
 
-  test("TC-FLIGHT-06 | should warn if no airports are selected", async () => {
+  test("TC-FLIGHT-06 | should dismiss the missing-destination warning on click", async () => {
     await flightFinder.clickSearchButton();
 
     await flightFinder.expectNoAirportsSelectedWarning();
+    await flightFinder.expectSearchValidationErrorText(
+      "⚠️ Please select destination airport(s)",
+    );
+
+    await flightFinder.clickSearchValidationError();
+
+    await flightFinder.expectSearchValidationErrorHidden();
+    await flightFinder.expectSelectedDestinationCount(0);
+    await flightFinder.expectAirportInputEnabled();
+    await flightFinder.expectSearchButtonEnabled();
   });
 
   test("TC-FLIGHT-07 | should select weekday by typing", async () => {
@@ -268,7 +278,7 @@ test.describe("Flight Finder", () => {
     await flightFinder.expectAirportNotSelected("VIE");
   });
 
-  test("TC-FLIGHT-21 | should disable selected origins and preserve removable badges after validation failure", async () => {
+  test("TC-FLIGHT-21 | should restore destination badges when the conflict warning is dismissed", async () => {
     await flightFinder.selectOrigin("BUD");
 
     await flightFinder.selectAirportByEnter("vie");
@@ -279,19 +289,22 @@ test.describe("Flight Finder", () => {
     await flightFinder.expectAirportInputDisabled();
     await flightFinder.expectOriginOptionDisabled("VIE");
 
-    // Bypass the UI restriction to check defensive validation.
     await flightFinder.forceOriginValue("VIE");
     await flightFinder.clickSearchButton();
 
     await flightFinder.expectSearchValidationErrorText(
       "Departure and destination airports must differ.",
     );
+    await flightFinder.expectSelectedDestinationCount(0);
 
+    await flightFinder.clickSearchValidationError();
+
+    await flightFinder.expectSearchValidationErrorHidden();
     await flightFinder.expectSelectedDestinationCount(3);
     await flightFinder.expectAirportSelected("VIE");
     await flightFinder.expectAirportSelected("AMS");
     await flightFinder.expectAirportSelected("LCA");
-    await flightFinder.expectSearchButtonEnabled();
+    await flightFinder.expectAirportInputDisabled();
 
     await flightFinder.clickSelectedContainer("VIE");
 
@@ -299,7 +312,6 @@ test.describe("Flight Finder", () => {
     await flightFinder.expectSelectedDestinationCount(2);
     await flightFinder.expectAirportInputEnabled();
     await flightFinder.expectOriginOptionEnabled("VIE");
-    await flightFinder.expectSearchValidationErrorHidden();
 
     await flightFinder.selectOrigin("BUD");
     await flightFinder.selectOrigin("VIE");

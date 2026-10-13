@@ -267,10 +267,36 @@ function removeActive(items) {
 /* ========================= */
 
 function showSearchValidationError(message = "") {
-  const error = document.getElementById("search-validation-error");
+  const container = document.getElementById("selected-container");
 
+  if (!message) {
+    if (container.querySelector(".error-card")) {
+      renderSelected();
+    }
+    return;
+  }
+
+  const error = document.createElement("div");
+
+  error.id = "search-validation-error";
+  error.className = "card error-card";
   error.textContent = message;
-  error.classList.toggle("hidden", !message);
+  error.tabIndex = 0;
+  error.setAttribute("role", "alert");
+  error.title = "Click to dismiss";
+
+  error.addEventListener("click", () => {
+    renderSelected();
+  });
+
+  error.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      renderSelected();
+    }
+  });
+
+  container.replaceChildren(error);
 }
 
 function updateOriginOptions() {
@@ -327,6 +353,7 @@ function renderSelected() {
     const badge = document.createElement("div");
     badge.className = "iata-badge";
     badge.textContent = code;
+    badge.title = "Click to remove";
 
     badge.addEventListener("click", () => {
       selectedDestinations = selectedDestinations.filter((c) => c !== code);
@@ -564,13 +591,7 @@ async function search() {
   showSearchValidationError();
 
   if (selectedDestinations.length === 0) {
-    const container = document.getElementById("selected-container");
-
-    container.innerHTML = `
-    <div class="card error-card">
-      ⚠️ Please select destination airport(s)
-    </div>
-  `;
+    showSearchValidationError("⚠️ Please select destination airport(s)");
     return;
   }
 

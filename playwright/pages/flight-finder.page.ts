@@ -157,6 +157,10 @@ export default class MainPage {
     await this.selectedContainer.getByText(code).click();
   }
 
+  async clickSearchValidationError(): Promise<void> {
+    await this.searchValidationError.click();
+  }
+
   async searchAirport(searchText: string): Promise<void> {
     await this.airportInput.fill(searchText);
   }

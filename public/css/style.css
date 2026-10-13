@@ -1,194 +1,262 @@
-/* ========================= */
-/* Global Settings */
-/* ========================= */
+/* =========================
+   Theme tokens: Google Flights palette
+   ========================= */
+
+:root {
+  --bg: #fff;
+  --card: #fff;
+  --surface: #fff;
+  --text: #202124;
+  --muted: #70757a;
+  --primary: #1a73e8;
+  --primary-hover: #1967d2;
+  --border: #dadce0;
+  --neon: var(--primary);
+  --error: #d93025;
+  --message-error: #d93025;
+  --success: #188038;
+  --input-text: #3c4043;
+  --focus-border: #4285f4;
+
+  --heading-color: var(--text);
+  --heading-shadow: none;
+  --container-shadow:
+    0 1px 2px rgba(60, 64, 67, 0.3), 0 2px 6px 2px rgba(60, 64, 67, 0.15);
+  --modal-shadow: 0 4px 8px rgba(60, 64, 67, 0.3);
+  --focus-ring: 0 0 0 2px rgba(66, 133, 244, 0.16);
+
+  --button-text: #fff;
+  --modal-button-text: #fff;
+  --button-shadow:
+    0 1px 3px rgba(60, 64, 67, 0.3), 0 4px 8px 3px rgba(60, 64, 67, 0.15);
+  --button-hover-transform: none;
+  --stepper-hover-transform: none;
+  --disabled-opacity: 0.75;
+
+  --result-card-bg: var(--card);
+  --result-card-border: var(--border);
+  --card-hover-shadow: none;
+  --badge-bg: #e8f0fe;
+  --badge-text: #1967d2;
+  --badge-border: #dadce0;
+  --dropdown-text: #3c4043;
+  --dropdown-active-bg: #e8f0fe;
+  --scrollbar-thumb: #dadce0;
+  --scrollbar-color: #dadce0;
+
+  --flex-border: #f9ab00;
+  --flex-badge-bg: #fef7e0;
+  --flex-badge-text: #b06000;
+  --error-card-bg: #fce8e6;
+  --error-card-text: var(--error);
+  --error-card-border: #fad2cf;
+  --error-animation: validation-pulse 1.4s ease-in-out infinite;
+  --validation-bg: #e8f0fe;
+  --validation-text: #1967d2;
+  --validation-border: #dadce0;
+
+  --auth-email-color: var(--text);
+  --auth-link-color: #1a73e8;
+  --auth-link-hover-color: #1967d2;
+  --placeholder-color: #70757a;
+  --modal-placeholder-color: #70757a;
+}
+
+body.dark {
+  --bg: #202124;
+  --card: #36373a;
+  --surface: #36373a;
+  --text: #e8eaed;
+  --muted: #9aa0a6;
+  --primary: #8ab4f8;
+  --primary-hover: #aecbfa;
+  --border: #5f6368;
+  --neon: var(--primary);
+  --error: #f28b82;
+  --message-error: #f28b82;
+  --success: #81c995;
+  --input-text: #e8eaed;
+  --focus-border: #8ab4f8;
+
+  --heading-color: var(--text);
+  --heading-shadow: none;
+  --container-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.3), 0 2px 6px 2px rgba(0, 0, 0, 0.15);
+  --modal-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+  --focus-ring: 0 0 0 2px rgba(138, 180, 248, 0.18);
+
+  --button-text: #202124;
+  --modal-button-text: #202124;
+  --button-shadow:
+    0 1px 3px rgba(60, 64, 67, 0.3), 0 4px 8px 3px rgba(60, 64, 67, 0.15);
+  --button-hover-transform: translateY(-2px);
+  --stepper-hover-transform: scale(1.05);
+  --disabled-opacity: 0.65;
+
+  --result-card-bg: #202124;
+  --result-card-border: #5f6368;
+  --card-hover-shadow: none;
+  --badge-bg: #394457;
+  --badge-text: #8ab4f8;
+  --badge-border: #5f6368;
+  --dropdown-text: #e8eaed;
+  --dropdown-active-bg: #394457;
+  --scrollbar-thumb: #5f6368;
+  --scrollbar-color: #5f6368;
+
+  --flex-border: #fdd663;
+  --flex-badge-bg: #303134;
+  --flex-badge-text: #fdd663;
+  --error-card-bg: #303134;
+  --error-card-text: var(--error);
+  --error-card-border: #5f6368;
+  --error-animation: none;
+  --validation-bg: #394457;
+  --validation-text: #8ab4f8;
+  --validation-border: #5f6368;
+
+  --auth-email-color: #e8eaed;
+  --auth-link-color: #8ab4f8;
+  --auth-link-hover-color: #aecbfa;
+  --placeholder-color: #9aa0a6;
+  --modal-placeholder-color: #9aa0a6;
+}
+
+/* =========================
+   Base layout and typography
+   ========================= */
 
 * {
   box-sizing: border-box;
 }
 
-:root {
-  --bg: #e6edf6;
-  --card: #f5f8fc;
-  --surface: #eaf0f9;
-  --text: #24344b;
-  --muted: #5e7089;
-  --primary: #3266d5;
-  --border: #c5d2e5;
-  --neon: #3266d5;
-  --error: #b94759;
-}
-
-/* ========================= */
-/* DARK MODE VARIABLES */
-/* ========================= */
-
-body.dark {
-  --bg: #111923;
-  --card: #1b2634;
-  --surface: #233143;
-  --text: #dce5ef;
-  --muted: #9babbd;
-  --primary: #79b6bd;
-  --border: #36485c;
-  --neon: #79b6bd;
-  --error: #ed9a9a;
-}
-
-/* ========================= */
-/* Base Layout */
-/* ========================= */
-
 body {
-  font-family: Arial, sans-serif;
-  background: var(--bg);
   margin: 0;
-  transition: background 0.3s ease;
+  background: var(--bg);
+  color: var(--text);
+  font-family: Arial, sans-serif;
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease;
 }
 
 .container {
   max-width: 800px;
   margin: 40px auto;
-  background: var(--card);
   padding: 30px;
+  background: var(--card);
   border-radius: 16px;
-  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.08);
-  transition: background 0.3s ease;
+  box-shadow: var(--container-shadow);
+  transition: background-color 0.3s ease;
 }
 
 h1 {
+  color: var(--heading-color);
   text-align: center;
-  color: var(--text);
-  transition: 0.3s ease;
+  text-shadow: var(--heading-shadow);
+  transition:
+    color 0.3s ease,
+    text-shadow 0.3s ease;
 }
-
-/* Neon glow only in DARK */
-body.dark h1 {
-  color: var(--primary);
-  text-shadow:
-    0 0 8px var(--primary),
-    0 0 25px rgba(0, 247, 255, 0.6);
-}
-
-/* ========================= */
-/* META TEXT */
-/* ========================= */
 
 .meta-info {
   margin-top: 10px;
   color: var(--muted);
 }
 
-body.dark .meta-info {
-  color: var(--primary);
-  text-shadow: 0 0 6px rgba(0, 247, 255, 0.6);
-}
-
 #loading {
   color: var(--muted);
 }
 
-body.dark #loading {
-  color: var(--primary);
-  text-shadow: 0 0 8px var(--primary);
-}
-
-/* ========================= */
-/* FORM */
-/* ========================= */
-
-.form {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
-  align-items: stretch;
-}
+/* =========================
+   Shared form controls
+   ========================= */
 
 input,
 select {
-  padding: 12px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
   flex: 1;
+  padding: 12px;
+  background: var(--surface);
+  color: var(--input-text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
   font-size: 14px;
-  background: var(--card);
-  color: var(--text);
-  transition: all 0.25s ease;
+  transition:
+    background-color 0.25s ease,
+    border-color 0.25s ease,
+    color 0.25s ease,
+    box-shadow 0.25s ease;
 }
 
-/* 🔥 SUBTLE FOCUS (LIGHT) */
+input::placeholder {
+  color: var(--placeholder-color);
+}
+
 input:focus,
 select:focus {
   outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 2px rgba(0, 102, 255, 0.15);
+  border-color: var(--focus-border);
+  box-shadow: var(--focus-ring);
 }
-
-/* Dark input refinement */
-body.dark input,
-body.dark select {
-  background: #243247;
-  border: 1px solid #3a4b63;
-  color: var(--text);
-}
-
-/* NEON FOCUS (DARK) */
-body.dark input:focus,
-body.dark select:focus {
-  box-shadow:
-    0 0 6px var(--primary),
-    0 0 12px rgba(0, 247, 255, 0.4);
-}
-
-/* ========================= */
-/* BUTTON */
-/* ========================= */
 
 button {
   padding: 12px 20px;
   background: var(--primary);
-  color: white;
+  color: var(--button-text);
   border: none;
   border-radius: 8px;
+  box-shadow: var(--button-shadow);
   cursor: pointer;
   font-weight: bold;
-  transition: all 0.25s ease;
+  transition:
+    background-color 0.25s ease,
+    border-color 0.25s ease,
+    color 0.25s ease,
+    opacity 0.25s ease,
+    transform 0.25s ease;
 }
 
 button:hover {
   opacity: 0.9;
+  transform: var(--button-hover-transform);
 }
 
-/* Dark mode neon button */
-body.dark button {
-  background: var(--primary);
-  color: #000;
-  box-shadow:
-    0 0 10px var(--primary),
-    0 0 25px rgba(0, 247, 255, 0.5);
+button:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
 }
 
-body.dark button:hover {
-  transform: translateY(-2px);
+/* =========================
+   Search form and nights stepper
+   ========================= */
+
+.form {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  margin-bottom: 20px;
 }
 
-/* ========================= */
-/* STEPPER (NIGHTS INPUT) */
-/* ========================= */
+.form > * {
+  min-width: 0;
+}
+
+.form-field {
+  display: contents;
+}
+
+.field-label {
+  display: none;
+}
 
 input[type="number"] {
   appearance: textfield;
 }
 
-/* Chrome arrows off */
 input[type="number"]::-webkit-outer-spin-button,
 input[type="number"]::-webkit-inner-spin-button {
-  appearance: none;
   margin: 0;
-}
-
-/* DARK MODE – custom neon arrows */
-body.dark input[type="number"] {
-  position: relative;
+  appearance: none;
 }
 
 .stepper {
@@ -209,92 +277,13 @@ body.dark input[type="number"] {
   font-size: 16px;
 }
 
-/* neon glow stepper buttons */
-body.dark .stepper button {
-  background: var(--primary);
-  color: #000;
-  box-shadow:
-    0 0 8px var(--primary),
-    0 0 20px rgba(0, 247, 255, 0.6);
+.stepper button:hover {
+  transform: var(--stepper-hover-transform);
 }
 
-body.dark .stepper button:hover {
-  transform: scale(1.05);
-}
-
-/* ========================= */
-/* RESULT CARDS */
-/* ========================= */
-
-.card {
-  padding: 15px;
-  margin-bottom: 12px;
-  border-radius: 12px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  color: var(--text);
-  cursor: pointer;
-  transition: transform 0.15s ease;
-}
-
-.card:hover {
-  transform: translateY(-2px);
-}
-
-.error-card {
-  font-size: 15px;
-  padding: 10px 20px;
-  border-radius: 8px;
-  background: var(--error);
-  color: white;
-  cursor: pointer;
-  font-weight: normal;
-  transition: all 0.25s ease;
-
-  animation: pulse-warning 0.5s infinite;
-}
-
-body.dark .error-card {
-  background: #000;
-  color: var(--primary);
-  text-shadow:
-    0 0 5px var(--primary),
-    0 0 20px var(--primary);
-  box-shadow:
-    0 0 10px var(--primary),
-    0 0 30px rgba(0, 247, 255, 0.6);
-}
-
-/* ========================= */
-/* FLEXIBLE DATE RESULTS */
-/* ========================= */
-
-.flex-card {
-  border-left: 4px solid #d97706;
-}
-
-.flex-badge {
-  display: inline-block;
-  margin-left: 8px;
-  padding: 2px 7px;
-  border-radius: 10px;
-  background: #fff3cd;
-  color: #8a5700;
-  font-size: 0.72rem;
-  font-weight: 600;
-  vertical-align: 1px;
-}
-
-.price-insight {
-  display: inline-block;
-  margin-top: 6px;
-  font-size: 0.85rem;
-  font-weight: 500;
-}
-
-/* ========================= */
-/* IATA BADGES */
-/* ========================= */
+/* =========================
+   Selected destinations
+   ========================= */
 
 .selected-container {
   display: flex;
@@ -307,43 +296,32 @@ body.dark .error-card {
 }
 
 .iata-badge {
+  padding: 10px 20px;
+  background: var(--badge-bg);
+  color: var(--badge-text);
+  border-radius: 8px;
+  box-shadow: inset 0 0 0 1px var(--badge-border);
+  cursor: pointer;
   font-family: monospace;
   font-size: 20px;
-  padding: 10px 20px;
-  border-radius: 8px;
-  background: #111;
-  color: white;
-  cursor: pointer;
-  transition: all 0.25s ease;
-}
-
-body.dark .iata-badge {
-  background: #000;
-  color: var(--primary);
-  text-shadow:
-    0 0 5px var(--primary),
-    0 0 20px var(--primary);
-  box-shadow:
-    0 0 10px var(--primary),
-    0 0 30px rgba(0, 247, 255, 0.6);
+  transition:
+    background-color 0.25s ease,
+    color 0.25s ease,
+    transform 0.25s ease;
 }
 
 .iata-badge:hover {
   transform: scale(1.08);
 }
 
-/* ========================= */
-/* AUTOCOMPLETE */
-/* ========================= */
+/* =========================
+   Autocomplete and scrollbar
+   ========================= */
 
 .autocomplete-wrapper {
   position: relative;
   flex: 2;
   width: 100%;
-  min-width: 0; /* overflow fix */
-}
-
-.form > * {
   min-width: 0;
 }
 
@@ -356,57 +334,39 @@ body.dark .iata-badge {
   top: 105%;
   left: 0;
   right: 0;
+  z-index: 1000;
+  max-height: 220px;
+  overflow-y: auto;
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: 8px;
-  max-height: 220px;
-  overflow-y: auto;
-  z-index: 1000;
-
-  /* smooth open */
   opacity: 0;
   transform: translateY(-5px);
   pointer-events: none;
-  transition: all 0.2s ease;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-color) transparent;
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
 }
 
-/* visible state */
 .autocomplete-list.open {
   opacity: 1;
   transform: translateY(0);
   pointer-events: auto;
 }
 
-/* Dark dropdown */
-body.dark .autocomplete-list {
-  background: #2b3a52;
-  border: 1px solid #3f5676;
-}
-
 .autocomplete-item {
   padding: 10px;
+  color: var(--dropdown-text);
   cursor: pointer;
-  transition: 0.2s ease;
-}
-
-body.dark .autocomplete-item {
-  color: #f1f5f9;
+  transition: background-color 0.2s ease;
 }
 
 .autocomplete-item:hover,
 .autocomplete-item.active {
-  background: rgba(0, 102, 255, 0.1);
+  background: var(--dropdown-active-bg);
 }
-
-body.dark .autocomplete-item:hover,
-body.dark .autocomplete-item.active {
-  background: rgba(0, 247, 255, 0.25);
-  box-shadow: inset 0 0 10px rgba(0, 247, 255, 0.3);
-}
-
-/* ========================= */
-/* CUSTOM SCROLLBAR */
-/* ========================= */
 
 .autocomplete-list::-webkit-scrollbar {
   width: 8px;
@@ -417,119 +377,95 @@ body.dark .autocomplete-item.active {
 }
 
 .autocomplete-list::-webkit-scrollbar-thumb {
-  background: #bbb;
+  background: var(--scrollbar-thumb);
   border-radius: 10px;
 }
 
-/* Dark scrollbar */
-body.dark .autocomplete-list::-webkit-scrollbar-thumb {
-  background: var(--primary);
-  box-shadow: 0 0 8px var(--primary);
+/* =========================
+   Results and error cards
+   ========================= */
+
+.card {
+  margin-bottom: 12px;
+  padding: 15px;
+  background: var(--result-card-bg);
+  color: var(--text);
+  border: 1px solid var(--result-card-border);
+  border-radius: 12px;
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
-/* Firefox */
-.autocomplete-list {
-  scrollbar-width: thin;
-  scrollbar-color: var(--border) transparent;
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--card-hover-shadow);
 }
 
-body.dark .autocomplete-list {
-  scrollbar-color: var(--primary) transparent;
+.error-card {
+  padding: 10px 20px;
+  background: var(--error-card-bg);
+  color: var(--error-card-text);
+  border-color: var(--error-card-border);
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: normal;
+  animation: var(--error-animation);
 }
 
-/* ========================= */
-/* UTIL */
-/* ========================= */
-
-.hidden {
-  display: none;
+.error-card:hover {
+  transform: none;
+  box-shadow: none;
 }
 
-/* ========================= */
-/* MOBILE UX */
-/* ========================= */
-
-@media (max-width: 768px) {
-  .container {
-    margin: 0;
-    min-height: 100vh;
-    border-radius: 0;
-  }
-
-  .form {
-    flex-direction: column;
-  }
-
-  input,
-  select,
-  button {
-    width: 100%;
-  }
-
-  .iata-badge {
-    font-size: 18px;
-    padding: 12px 24px;
-  }
+/* Click-to-dismiss warnings retain their geometry while pulsing. */
+#search-validation-error {
+  background: var(--validation-bg);
+  color: var(--validation-text);
+  border-color: var(--validation-border);
+  animation: validation-pulse 1.4s ease-in-out infinite;
 }
 
-input::placeholder {
-  color: var(--muted);
+#search-validation-error:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
 }
 
-body.dark input::placeholder {
-  color: #7c8aa0;
+.flex-card {
+  border-left: 4px solid var(--flex-border);
 }
 
-/* smoother cards dark mode */
-body.dark .card {
-  background: #1e293b;
-  border: 1px solid #334155;
+.flex-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 7px;
+  background: var(--flex-badge-bg);
+  color: var(--flex-badge-text);
+  border-radius: 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  vertical-align: 1px;
 }
 
-/* subtle glow on hover */
-body.dark .card:hover {
-  box-shadow: 0 0 12px rgba(0, 247, 255, 0.2);
+.price-insight {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 0.85rem;
+  font-weight: 500;
 }
 
-body.dark .flex-card {
-  border-left-color: #fbbf24;
-  box-shadow: 0 0 8px rgba(251, 191, 36, 0.12);
-}
-
-body.dark .flex-badge {
-  background: #3d3217;
-  color: #fcd34d;
-}
-
-/* Animations */
-@keyframes pulse-warning {
-  0% {
-    opacity: 1;
-    transform: scale(1);
-  }
-
-  50% {
-    opacity: 1;
-    transform: scale(0.99);
-  }
-
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-/* ========================= */
-/* AUTH */
-/* ========================= */
+/* =========================
+   Authentication bar and user card
+   ========================= */
 
 .auth-bar {
   display: flex;
   justify-content: center;
   align-items: center;
   gap: 12px;
-  margin-bottom: 20px;
   flex-wrap: wrap;
+  margin-bottom: 20px;
 }
 
 .auth-bar button {
@@ -541,18 +477,14 @@ body.dark .flex-badge {
   align-items: center;
   justify-content: center;
   gap: 14px;
-
   width: fit-content;
   max-width: 100%;
-
-  padding: 8px 14px;
   margin: 0 auto 20px;
-
-  border: 1px solid var(--border);
-  border-radius: 8px;
-
+  padding: 8px 14px;
   background: var(--card);
   color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
 }
 
 .auth-user-icon {
@@ -564,58 +496,38 @@ body.dark .flex-badge {
 }
 
 .auth-user-label {
-  font-size: 0.75rem;
   color: var(--muted);
+  font-size: 0.75rem;
 }
 
 .auth-user-email {
+  color: var(--auth-email-color);
   font-size: 0.9rem;
   font-weight: 600;
 }
 
-body.dark .auth-user-card {
-  background: #111c2c;
-  border-color: #315064;
-
-  box-shadow: 0 0 8px rgba(0, 247, 255, 0.08);
-}
-
-body.dark .auth-user-label {
-  color: #94a3b8;
-}
-
-body.dark .auth-user-email {
-  color: var(--primary);
-  text-shadow: 0 0 5px rgba(0, 247, 255, 0.45);
-}
-
 /* =========================
-   Auth modal
+   Authentication modal
    ========================= */
 
 .auth-modal {
   position: fixed;
   inset: 0;
+  z-index: 1000;
   display: flex;
   align-items: center;
   justify-content: center;
   background: rgba(0, 0, 0, 0.65);
-  z-index: 1000;
-}
-
-.auth-modal.hidden {
-  display: none !important;
 }
 
 .auth-modal-content {
   position: relative;
   width: min(90%, 400px);
   padding: 30px;
+  background: var(--card);
+  color: var(--text);
   border-radius: 12px;
-  background: #ffffff;
-  color: #222222;
-  box-sizing: border-box;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+  box-shadow: var(--modal-shadow);
 }
 
 .auth-modal-content h2 {
@@ -632,75 +544,59 @@ body.dark .auth-user-email {
 .auth-modal-content input {
   width: 100%;
   padding: 10px;
-  box-sizing: border-box;
-  color: #222222;
-  background: #ffffff;
-  border: 1px solid #aaaaaa;
   border-radius: 6px;
 }
 
-.auth-modal-content input:focus {
-  outline: none;
-  border-color: #555555;
+.auth-modal-content input::placeholder {
+  color: var(--modal-placeholder-color);
 }
-
-/* Main modal buttons */
 
 .auth-modal-content form button {
   padding: 10px 14px;
-  border: 1px solid #444444;
+  color: var(--modal-button-text);
+  border: 1px solid var(--primary);
   border-radius: 6px;
-  background: #333333;
-  color: #ffffff;
-  cursor: pointer;
   font-weight: 600;
-  transition:
-    background-color 0.2s,
-    border-color 0.2s;
 }
 
 .auth-modal-content form button:hover {
-  background: #222222;
-  border-color: #222222;
+  background: var(--primary-hover);
+  border-color: var(--primary-hover);
 }
-
-/* Close button */
 
 .auth-modal-close {
   position: absolute;
   top: 8px;
   right: 12px;
-  border: none;
   background: transparent;
-  color: #444444;
+  color: var(--auth-link-color);
+  border: none;
+  box-shadow: none;
   font-size: 28px;
-  cursor: pointer;
   line-height: 1;
 }
-
-.auth-modal-close:hover {
-  color: #000000;
-}
-
-/* Login/Register switch */
 
 .auth-switch-btn {
   display: block;
   margin: 15px auto 0;
   padding: 4px 8px;
-  border: none;
   background: transparent;
-  color: #444444;
-  cursor: pointer;
-  text-decoration: underline;
+  color: var(--auth-link-color);
+  border: none;
+  box-shadow: none;
   font-size: 0.9rem;
+  text-decoration: underline;
 }
 
+.auth-modal-close:hover,
 .auth-switch-btn:hover {
-  color: #000000;
+  color: var(--auth-link-hover-color);
+  transform: none;
 }
 
-/* Messages */
+/* =========================
+   Authentication and reset feedback
+   ========================= */
 
 .auth-message {
   min-height: 20px;
@@ -709,103 +605,25 @@ body.dark .auth-user-email {
   font-size: 0.9rem;
 }
 
-.auth-message.error {
-  color: #c62828;
+.auth-message.error,
+.reset-password-message.error {
+  color: var(--message-error);
 }
 
-.auth-message.success {
-  color: #2e7d32;
+.auth-message.success,
+.reset-password-message.success {
+  color: var(--success);
 }
 
-body.dark .auth-message.error {
-  color: #ff6b6b;
-  text-shadow: 0 0 5px rgba(255, 107, 107, 0.35);
-}
-
-body.dark .auth-message.success {
-  color: #66bb6a;
-  text-shadow: 0 0 5px rgba(102, 187, 106, 0.3);
-}
-
-/* Dark mode */
-
-body.dark .auth-modal-content {
-  background: #1e1e1e;
-  color: #ffffff;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
-}
-
-body.dark .auth-modal-content input {
-  background: #2a2a2a;
-  color: #ffffff;
-  border-color: #555555;
-}
-
-body.dark .auth-modal-content input::placeholder {
-  color: #aaaaaa;
-}
-
-body.dark .auth-modal-content input:focus {
-  border-color: #aaaaaa;
-}
-
-/* Main modal buttons - dark mode */
-
-body.dark .auth-modal-content form button {
-  background: #eeeeee;
-  color: #1a1a1a;
-  border-color: #eeeeee;
-}
-
-body.dark .auth-modal-content form button:hover {
-  background: #ffffff;
-  border-color: #ffffff;
-}
-
-/* Close button - dark mode */
-
-body.dark .auth-modal-close {
-  background: transparent !important;
-  color: var(--primary) !important;
-  border: none !important;
-  box-shadow: none !important;
-  text-shadow: 0 0 6px rgba(0, 247, 255, 0.6);
-}
-
-body.dark .auth-modal-close:hover {
-  background: transparent !important;
-  color: #ffffff !important;
-  box-shadow: none !important;
-  text-shadow:
-    0 0 8px var(--primary),
-    0 0 16px var(--primary);
+.auth-modal-content form button:disabled,
+.reset-password-button:disabled {
+  opacity: var(--disabled-opacity);
   transform: none;
 }
 
-/* Login/Register switch - dark mode */
-
-body.dark .auth-switch-btn {
-  background: transparent !important;
-  border: none !important;
-  color: var(--primary) !important;
-  text-shadow: 0 0 6px rgba(0, 247, 255, 0.5);
-  box-shadow: none !important;
-}
-
-body.dark .auth-switch-btn:hover {
-  color: #ffffff !important;
-  text-shadow:
-    0 0 8px var(--primary),
-    0 0 16px var(--primary);
-}
-
-/* ========================= */
-/* AUTH LOADING */
-/* ========================= */
-
-.auth-modal-content form button:disabled {
+.auth-modal-content form button:disabled,
+.reset-password-button.loading {
   cursor: wait;
-  opacity: 0.75;
 }
 
 .auth-spinner {
@@ -813,27 +631,16 @@ body.dark .auth-switch-btn:hover {
   width: 13px;
   height: 13px;
   margin-right: 7px;
-  vertical-align: -2px;
   border: 2px solid currentColor;
   border-top-color: transparent;
   border-radius: 50%;
+  vertical-align: -2px;
   animation: auth-spin 0.7s linear infinite;
 }
 
-@keyframes auth-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-body.dark .auth-modal-content form button:disabled {
-  opacity: 0.65;
-  transform: none;
-}
-
-/* ========================= */
-/* RESET PASSWORD PAGE */
-/* ========================= */
+/* =========================
+   Password reset page
+   ========================= */
 
 .reset-password-container {
   max-width: 500px;
@@ -841,10 +648,10 @@ body.dark .auth-modal-content form button:disabled {
 }
 
 .reset-password-input {
+  display: block;
   width: 100%;
   max-width: 320px;
   margin: 0 auto 16px;
-  display: block;
 }
 
 .reset-password-button {
@@ -852,8 +659,8 @@ body.dark .auth-modal-content form button:disabled {
 }
 
 .reset-password-message {
-  margin-top: 20px;
   min-height: 24px;
+  margin-top: 20px;
   text-align: center;
   font-size: 0.95rem;
 }
@@ -862,57 +669,38 @@ body.dark .auth-modal-content form button:disabled {
   display: inline-block;
   margin-top: 12px;
   color: var(--primary);
-  text-decoration: underline;
   font-weight: 600;
+  text-decoration: underline;
 }
 
 .reset-password-back-link:hover {
   opacity: 0.8;
 }
 
-body.dark .reset-password-back-link {
-  color: var(--primary);
-  text-shadow: 0 0 6px rgba(0, 247, 255, 0.4);
+/* =========================
+   Animations
+   ========================= */
+
+@keyframes validation-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.8;
+  }
 }
 
-.reset-password-message.success {
-  color: #2e7d32;
+@keyframes auth-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
-.reset-password-message.error {
-  color: #c62828;
-}
-
-body.dark .reset-password-message.success {
-  color: #66bb6a;
-  text-shadow: 0 0 5px rgba(102, 187, 106, 0.3);
-}
-
-body.dark .reset-password-message.error {
-  color: #ff6b6b;
-  text-shadow: 0 0 5px rgba(255, 107, 107, 0.35);
-}
-
-.reset-password-button:disabled {
-  opacity: 0.75;
-}
-
-.reset-password-button.loading {
-  cursor: wait;
-}
-
-body.dark .reset-password-button:disabled {
-  opacity: 0.65;
-}
-
-/* Keep the existing mobile layout. */
-.form-field {
-  display: contents;
-}
-
-.field-label {
-  display: none;
-}
+/* =========================
+   Responsive layout
+   ========================= */
 
 @media (min-width: 769px) {
   .form {
@@ -933,7 +721,7 @@ body.dark .reset-password-button:disabled {
     min-width: 0;
   }
 
-  .form .field-label {
+  .field-label {
     display: block;
     color: var(--muted);
     font-size: 11px;
@@ -971,153 +759,30 @@ body.dark .reset-password-button:disabled {
   }
 }
 
-/* Light theme */
-body:not(.dark) .container {
-  box-shadow: 0 12px 32px rgba(36, 52, 75, 0.09);
+@media (max-width: 768px) {
+  .container {
+    margin: 0;
+    min-height: 100vh;
+    border-radius: 0;
+  }
+
+  .form {
+    flex-direction: column;
+  }
+
+  input,
+  select,
+  button {
+    width: 100%;
+  }
+
+  .iata-badge {
+    padding: 12px 24px;
+    font-size: 18px;
+  }
 }
 
-body:not(.dark) input,
-body:not(.dark) select {
-  background: var(--surface);
-  color: var(--text);
-  border-color: var(--border);
-}
-
-body:not(.dark) input:focus,
-body:not(.dark) select:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 2px rgba(50, 102, 213, 0.16);
-}
-
-body:not(.dark) .autocomplete-list,
-body:not(.dark) .auth-modal-content {
-  background: var(--card);
-  color: var(--text);
-}
-
-body:not(.dark) .autocomplete-item:hover,
-body:not(.dark) .autocomplete-item.active {
-  background: #dce7fc;
-}
-
-body:not(.dark) .iata-badge {
-  background: #dce7fc;
-  color: #2855ad;
-  box-shadow: inset 0 0 0 1px #bfd0f2;
-}
-
-body:not(.dark) .auth-modal-content form button {
-  background: var(--primary);
-  border-color: var(--primary);
-  color: #fff;
-}
-
-body:not(.dark) .auth-modal-content form button:hover {
-  background: #2855ad;
-  border-color: #2855ad;
-}
-
-/* Dark theme: muted surfaces and accents */
-body.dark input,
-body.dark select,
-body.dark .auth-modal-content input {
-  background: var(--surface);
-  color: var(--text);
-  border-color: var(--border);
-}
-
-body.dark .autocomplete-list,
-body.dark .auth-modal-content,
-body.dark .auth-user-card {
-  background: var(--card);
-  color: var(--text);
-  border-color: var(--border);
-}
-
-body.dark h1 {
-  text-shadow: 0 0 8px rgba(121, 182, 189, 0.15);
-}
-
-body.dark .meta-info,
-body.dark #loading {
-  color: var(--muted);
-  text-shadow: none;
-}
-
-body.dark button,
-body.dark .stepper button {
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
-}
-
-body.dark input:focus,
-body.dark select:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 2px rgba(121, 182, 189, 0.18);
-}
-
-body.dark .iata-badge {
-  background: #243b46;
-  color: #a0cbd0;
-  text-shadow: none;
-  box-shadow: inset 0 0 0 1px #3b5963;
-}
-
-body.dark .autocomplete-item:hover,
-body.dark .autocomplete-item.active {
-  background: rgba(121, 182, 189, 0.12);
-  box-shadow: none;
-}
-
-body.dark .autocomplete-list::-webkit-scrollbar-thumb {
-  background: #587d88;
-  box-shadow: none;
-}
-
-body.dark .autocomplete-list {
-  scrollbar-color: #587d88 transparent;
-}
-
-body.dark .card:hover {
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.18);
-}
-
-body.dark .flex-card {
-  border-left-color: #c6a35e;
-  box-shadow: none;
-}
-
-body.dark .error-card {
-  background: #382630;
-  color: var(--error);
-  border-color: #65404c;
-  animation: none;
-  text-shadow: none;
-  box-shadow: none;
-}
-
-body.dark .auth-user-card,
-body.dark .auth-user-email,
-body.dark .auth-modal-close,
-body.dark .auth-modal-close:hover,
-body.dark .auth-switch-btn,
-body.dark .auth-switch-btn:hover,
-body.dark .auth-message,
-body.dark .reset-password-message,
-body.dark .reset-password-back-link {
-  text-shadow: none;
-}
-
-body.dark .auth-user-card {
-  box-shadow: none;
-}
-
-body.dark .auth-modal-content form button {
-  background: #79b6bd;
-  border-color: #79b6bd;
-  color: #111923;
-}
-
-body.dark .auth-modal-content form button:hover {
-  background: #8ac1c7;
-  border-color: #8ac1c7;
+/* Utilities follow component display rules, including the auth modal. */
+.hidden {
+  display: none;
 }
