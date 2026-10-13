@@ -8,11 +8,10 @@ let maxNights = 30;
 let maxResults = 5;
 let departureAirports = [{ code: "BUD", city: "Budapest" }];
 let defaultOrigin = "BUD";
-let previousOrigin = defaultOrigin;
 
-let currentFocus = -1;
-let debounceTimer;
-let dropdownCloseTimer;
+const dropdownCloseTimers = new WeakMap();
+let destinationAutocomplete;
+let originAutocomplete;
 
 let currentResults = [];
 let failedCount = 0;
@@ -86,10 +85,7 @@ window.onload = async function () {
     console.error("Failed to load config:", err);
   }
 
-  if (destinationsData.length > 0) {
-    configureDepartureAirports();
-  }
-
+  configureDepartureAirports();
   setupAutocomplete();
   loadTheme();
 
@@ -114,15 +110,19 @@ window.onload = async function () {
     .getElementById("weekday")
     .addEventListener("change", saveSearchSetup);
 
-  document
-    .getElementById("origin")
-    .addEventListener("change", handleOriginChange);
-
   await loadCurrentUser();
   renderAuthUI();
 
   restoreSearchSetup();
   restoreSearchState();
+
+  document.getElementById("origin-input").disabled =
+    destinationsData.length === 0;
+  document.getElementById("destination-input").disabled =
+    destinationsData.length === 0 ||
+    selectedDestinations.length >= maxDestinations;
+  document.getElementById("search-button").disabled =
+    destinationsData.length === 0;
 };
 
 /* ========================= */
@@ -130,88 +130,151 @@ window.onload = async function () {
 /* ========================= */
 
 function setupAutocomplete() {
-  const input = document.getElementById("destination-input");
-  const list = document.getElementById("autocomplete-list");
+  destinationAutocomplete = setupAirportAutocomplete({
+    inputId: "destination-input",
+    listId: "autocomplete-list",
+    available: (airport) =>
+      airport.value !== document.getElementById("origin").value,
+    onSelect: selectDestination,
+  });
 
-  input.addEventListener("input", function () {
-    clearTimeout(debounceTimer);
+  originAutocomplete = setupAirportAutocomplete({
+    inputId: "origin-input",
+    listId: "origin-autocomplete-list",
+    available: (airport) => !selectedDestinations.includes(airport.value),
+    onSelect: selectOriginAirport,
+    showOnFocus: true,
+    onBlur: renderOrigin,
+  });
+}
 
-    debounceTimer = setTimeout(() => {
-      const value = this.value.toLowerCase();
-      list.innerHTML = "";
-      currentFocus = -1;
+function setupAirportAutocomplete({
+  inputId,
+  listId,
+  available,
+  onSelect,
+  showOnFocus = false,
+  onBlur,
+}) {
+  const input = document.getElementById(inputId);
+  const list = document.getElementById(listId);
+  let focus = -1;
+  let timer;
 
-      if (!value) {
-        closeDropdown(list);
-        return;
+  function close() {
+    clearTimeout(timer);
+    timer = null;
+    focus = -1;
+    list.replaceChildren();
+    closeDropdown(list);
+    input.setAttribute("aria-expanded", "false");
+  }
+
+  function render(query = input.value) {
+    clearTimeout(timer);
+    timer = null;
+    focus = -1;
+    list.replaceChildren();
+    const value = query.trim().toLowerCase();
+    if (!value && !showOnFocus) {
+      close();
+      return;
+    }
+
+    const matches = destinationsData.filter(
+      (airport) =>
+        available(airport) &&
+        (airport.label.toLowerCase().includes(value) ||
+          airport.value.toLowerCase().includes(value)),
+    );
+
+    matches.forEach((airport) => {
+      const item = document.createElement("div");
+      item.className = "autocomplete-item";
+      const text = `${airport.label} (${airport.value})`;
+      let offset = 0;
+      let match = value ? text.toLowerCase().indexOf(value) : -1;
+      while (match !== -1) {
+        item.appendChild(document.createTextNode(text.slice(offset, match)));
+        const strong = document.createElement("strong");
+        strong.textContent = text.slice(match, match + value.length);
+        item.appendChild(strong);
+        offset = match + value.length;
+        match = text.toLowerCase().indexOf(value, offset);
       }
-
-      const origin = document.getElementById("origin").value;
-
-      const filtered = destinationsData.filter(
-        (d) =>
-          d.value !== origin &&
-          (d.label.toLowerCase().includes(value) ||
-            d.value.toLowerCase().includes(value)),
-      );
-
-      filtered.forEach((dest) => {
-        const item = document.createElement("div");
-        item.className = "autocomplete-item";
-
-        item.innerHTML = highlightMatch(`${dest.label} (${dest.value})`, value);
-
-        item.addEventListener("click", () => {
-          selectDestination(dest);
-        });
-
-        list.appendChild(item);
+      item.appendChild(document.createTextNode(text.slice(offset)));
+      item.addEventListener("mousedown", (event) => event.preventDefault());
+      item.addEventListener("click", () => {
+        if (!available(airport)) return;
+        onSelect(airport);
+        close();
       });
+      list.appendChild(item);
+    });
+    matches.length ? openDropdown(list) : closeDropdown(list);
+    input.setAttribute("aria-expanded", String(matches.length > 0));
+  }
 
-      filtered.length ? openDropdown(list) : closeDropdown(list);
-    }, 120); // debounce
+  input.setAttribute("aria-controls", listId);
+  input.setAttribute("aria-expanded", "false");
+  input.addEventListener("input", () => {
+    close();
+    timer = setTimeout(() => render(), 120);
   });
-
-  input.addEventListener("keydown", function (e) {
+  if (showOnFocus) {
+    input.addEventListener("focus", () => {
+      destinationAutocomplete?.close();
+      input.select();
+      render("");
+    });
+    input.addEventListener("click", () => {
+      input.select();
+      render("");
+    });
+  } else {
+    input.addEventListener("focus", () => originAutocomplete?.close());
+  }
+  input.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      close();
+      onBlur?.();
+      return;
+    }
+    if (!["ArrowDown", "ArrowUp", "Enter"].includes(event.key)) return;
+    event.preventDefault();
+    if (timer) render();
+    if (
+      list.classList.contains("hidden") &&
+      showOnFocus &&
+      event.key !== "Enter"
+    )
+      render("");
     const items = list.getElementsByClassName("autocomplete-item");
-
-    if (e.key === "ArrowDown") {
-      currentFocus++;
-      addActive(items);
-    } else if (e.key === "ArrowUp") {
-      currentFocus--;
-      addActive(items);
-    } else if (e.key === "Enter") {
-      e.preventDefault();
-
-      if (currentFocus === -1 && items.length > 0) {
-        items[0].click();
-      } else if (items[currentFocus]) {
-        items[currentFocus].click();
-      }
-    } else if (e.key === "Escape") {
-      closeDropdown(list);
+    if (!items.length) return;
+    if (event.key === "Enter") {
+      items[focus < 0 ? 0 : focus].click();
+      return;
     }
+    focus += event.key === "ArrowDown" ? 1 : -1;
+    if (focus >= items.length) focus = 0;
+    if (focus < 0) focus = items.length - 1;
+    for (const item of items) item.classList.remove("active");
+    items[focus].classList.add("active");
+    items[focus].scrollIntoView({ block: "nearest", behavior: "auto" });
   });
-
-  document.addEventListener("click", function (e) {
-    if (!e.target.closest(".autocomplete-wrapper")) {
-      closeDropdown(list);
-    }
+  input.addEventListener("blur", () => {
+    close();
+    onBlur?.();
   });
-}
-
-/* ========================= */
-/* HELPERS */
-/* ========================= */
-
-function escapeRegExp(value) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-function highlightMatch(text, query) {
-  const regex = new RegExp(`(${escapeRegExp(query)})`, "gi");
-  return text.replace(regex, "<strong>$1</strong>");
+  document.addEventListener("click", (event) => {
+    if (!input.parentElement.contains(event.target)) close();
+  });
+  return {
+    close,
+    refresh: () => {
+      if (document.activeElement === input) render();
+    },
+  };
 }
 
 /* ========================= */
@@ -219,7 +282,7 @@ function highlightMatch(text, query) {
 /* ========================= */
 
 function openDropdown(list) {
-  clearTimeout(dropdownCloseTimer);
+  clearTimeout(dropdownCloseTimers.get(list));
 
   list.classList.remove("hidden");
 
@@ -231,39 +294,14 @@ function openDropdown(list) {
 function closeDropdown(list) {
   list.classList.remove("open");
 
-  clearTimeout(dropdownCloseTimer);
+  clearTimeout(dropdownCloseTimers.get(list));
 
-  dropdownCloseTimer = setTimeout(() => {
-    list.classList.add("hidden");
-  }, 150);
-}
-
-/* ========================= */
-/* KEYBOARD */
-/* ========================= */
-
-function addActive(items) {
-  if (!items || items.length === 0) return;
-
-  removeActive(items);
-
-  if (currentFocus >= items.length) currentFocus = 0;
-  if (currentFocus < 0) currentFocus = items.length - 1;
-
-  const activeItem = items[currentFocus];
-  activeItem.classList.add("active");
-
-  /* always visible */
-  activeItem.scrollIntoView({
-    block: "nearest",
-    behavior: "auto",
-  });
-}
-
-function removeActive(items) {
-  for (let item of items) {
-    item.classList.remove("active");
-  }
+  dropdownCloseTimers.set(
+    list,
+    setTimeout(() => {
+      list.classList.add("hidden");
+    }, 150),
+  );
 }
 
 /* ========================= */
@@ -303,36 +341,20 @@ function showSearchValidationError(message = "") {
   container.replaceChildren(error);
 }
 
-function updateOriginOptions() {
-  const select = document.getElementById("origin");
-
-  for (const option of select.options) {
-    option.disabled = selectedDestinations.includes(option.value);
-  }
+function renderOrigin() {
+  const code = document.getElementById("origin").value;
+  const airport = departureAirports.find((item) => item.code === code);
+  document.getElementById("origin-input").value = airport
+    ? `${airport.city} (${code})`
+    : code;
 }
 
-function handleOriginChange() {
-  const select = document.getElementById("origin");
-
-  if (selectedDestinations.includes(select.value)) {
-    select.value = previousOrigin;
-
-    showSearchValidationError(
-      "Departure and destination airports must differ.",
-    );
-    return;
-  }
-
-  previousOrigin = select.value;
-
-  // Remove suggestions generated for the previous origin.
-  clearTimeout(debounceTimer);
-  currentFocus = -1;
-
-  const list = document.getElementById("autocomplete-list");
-  list.replaceChildren();
-  closeDropdown(list);
-
+function selectOriginAirport(airport) {
+  if (selectedDestinations.includes(airport.value)) return;
+  if (!destinationsData.some((item) => item.value === airport.value)) return;
+  document.getElementById("origin").value = airport.value;
+  renderOrigin();
+  destinationAutocomplete?.close();
   showSearchValidationError();
   saveSearchSetup();
 }
@@ -371,7 +393,7 @@ function renderSelected() {
     destinationsData.length === 0 ||
     selectedDestinations.length >= maxDestinations;
 
-  updateOriginOptions();
+  originAutocomplete?.refresh();
   showSearchValidationError();
   saveSearchSetup();
 }
@@ -479,42 +501,20 @@ function restoreSearchState() {
 }
 
 function configureDepartureAirports() {
-  const airports = destinationsData.map(({ value, label }) => ({
+  departureAirports = destinationsData.map(({ value, label }) => ({
     code: value,
     city: label,
   }));
-
+  const input = document.getElementById("origin-input");
+  input.disabled = true;
   if (
-    airports.length === 0 ||
-    !airports.every(
-      (airport) =>
-        /^[A-Z]{3}$/.test(airport.code) && typeof airport.city === "string",
-    ) ||
-    new Set(airports.map(({ code }) => code)).size !== airports.length
+    departureAirports.length &&
+    !departureAirports.some(({ code }) => code === defaultOrigin)
   ) {
-    throw new Error("Invalid departure airports list");
+    defaultOrigin = departureAirports[0].code;
   }
-
-  departureAirports = airports;
-
-  if (!airports.some(({ code }) => code === defaultOrigin)) {
-    defaultOrigin = airports[0].code;
-  }
-
-  const select = document.getElementById("origin");
-  select.replaceChildren();
-
-  airports.forEach(({ code, city }) => {
-    const option = document.createElement("option");
-    option.value = code;
-    option.textContent = `${city} (${code})`;
-    select.appendChild(option);
-  });
-
-  select.value = defaultOrigin;
-  previousOrigin = select.value;
-
-  updateOriginOptions();
+  document.getElementById("origin").value = defaultOrigin;
+  renderOrigin();
 }
 
 function saveSearchSetup() {
@@ -561,7 +561,7 @@ function restoreSearchSetup() {
       : defaultOrigin;
 
     const origin = document.getElementById("origin").value;
-    previousOrigin = origin;
+    renderOrigin();
 
     selectedDestinations = saved.destinations
       .filter(

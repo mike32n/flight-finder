@@ -287,7 +287,9 @@ test.describe("Flight Finder", () => {
 
     await flightFinder.expectSelectedDestinationCount(3);
     await flightFinder.expectAirportInputDisabled();
-    await flightFinder.expectOriginOptionDisabled("VIE");
+    await flightFinder.openOriginAutocomplete("v");
+    await flightFinder.expectOriginSuggestionAbsent("VIE");
+    await flightFinder.cancelOriginEdit();
 
     await flightFinder.forceOriginValue("VIE");
     await flightFinder.clickSearchButton();
@@ -311,7 +313,9 @@ test.describe("Flight Finder", () => {
     await flightFinder.expectAirportNotSelected("VIE");
     await flightFinder.expectSelectedDestinationCount(2);
     await flightFinder.expectAirportInputEnabled();
-    await flightFinder.expectOriginOptionEnabled("VIE");
+    await flightFinder.openOriginAutocomplete("vie");
+    await flightFinder.expectOriginSuggestionVisible("VIE");
+    await flightFinder.cancelOriginEdit();
 
     await flightFinder.selectOrigin("BUD");
     await flightFinder.selectOrigin("VIE");
@@ -319,18 +323,54 @@ test.describe("Flight Finder", () => {
   });
 
   test("TC-FLIGHT-22 | should select an origin from the shared airport list and preserve it after reload", async () => {
-    await flightFinder.selectOrigin("LCA");
+    await flightFinder.selectOriginByEnter("Larnaca");
     await flightFinder.expectOriginSelected("LCA");
 
     await flightFinder.selectAirportByEnter("ams");
     await flightFinder.expectAirportSelected("AMS");
-    await flightFinder.expectOriginOptionDisabled("AMS");
+    await flightFinder.openOriginAutocomplete("a");
+    await flightFinder.expectOriginSuggestionAbsent("AMS");
+    await flightFinder.cancelOriginEdit();
 
     await common.reloadPage();
 
     await flightFinder.expectOriginSelected("LCA");
     await flightFinder.expectAirportSelected("AMS");
-    await flightFinder.expectOriginOptionDisabled("AMS");
+    await flightFinder.openOriginAutocomplete("a");
+    await flightFinder.expectOriginSuggestionAbsent("AMS");
+    await flightFinder.cancelOriginEdit();
+  });
+  test("TC-FLIGHT-23 | should restore the selected origin when editing is cancelled or abandoned", async () => {
+    await flightFinder.selectOrigin("VIE");
+    await flightFinder.openOriginAutocomplete("London");
+    await flightFinder.cancelOriginEdit();
+    await flightFinder.expectOriginSelected("VIE");
+    await flightFinder.expectOriginDropdownHidden();
+    await flightFinder.openOriginAutocomplete("London");
+    await flightFinder.blurOriginInput();
+    await flightFinder.expectOriginSelected("VIE");
+    await common.reloadPage();
+    await flightFinder.expectOriginSelected("VIE");
+  });
+
+  test("TC-FLIGHT-24 | should enable airport controls only after initialization completes", async () => {
+    const config = await flightFinder.holdConfigRequest();
+    try {
+      await common.reloadPage();
+      await config.waitUntilRequested();
+      await flightFinder.expectAirportControlsDisabled();
+    } finally {
+      config.release();
+    }
+    await flightFinder.selectOrigin("LCA");
+    await flightFinder.expectOriginSelected("LCA");
+    await flightFinder.expectAirportInputEnabled();
+    await flightFinder.expectSearchButtonEnabled();
+  });
+
+  test("TC-FLIGHT-25 | should select the typed origin when Enter is pressed without waiting for suggestions", async () => {
+    await flightFinder.selectOriginImmediatelyByEnter("Larnaca");
+    await flightFinder.expectOriginSelected("LCA");
   });
 });
 

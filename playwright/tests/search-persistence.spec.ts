@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test } from "@playwright/test";
 
 import Env from "../utils/env";
 import CommonPage from "../pages/common.page";
@@ -18,7 +18,8 @@ const larnaca = {
   price: 25000,
 };
 
-const amsterdamText = "BUD → Amsterdam (AMS) 2026-10-09 → 2026-10-11 💶 HUF 30,000";
+const amsterdamText =
+  "BUD → Amsterdam (AMS) 2026-10-09 → 2026-10-11 💶 HUF 30,000";
 
 const larnacaText = "BUD → Larnaca (LCA) 2026-10-09 → 2026-10-11 💶 HUF 25,000";
 
@@ -141,23 +142,15 @@ test.describe("Search persistence", () => {
     await searchMock.expectRequestCount(2);
   });
 
-  test("TC-PERSIST-04 | should send selected origin and restore setup independently of results", async ({ page }) => {
+  test("TC-PERSIST-04 | should send selected origin and restore setup independently of results", async () => {
     const searchMock = await flightFinder.mockSearchSequence([amsterdam]);
 
     await flightFinder.selectOrigin("VIE");
     await flightFinder.selectAirportByEnter("ams");
 
-    const requestPromise = page.waitForRequest(
-      (request) =>
-        request.url().endsWith("/search-stream") && request.method() === "POST",
+    await flightFinder.expectSearchRequestOrigin("VIE", ["AMS"], () =>
+      flightFinder.clickSearchButton(),
     );
-
-    await flightFinder.clickSearchButton();
-    const request = await requestPromise;
-
-    expect(request.postDataJSON()).toMatchObject({
-      origin: "VIE", destinations: ["AMS"],
-    });
 
     const resultText =
       "VIE → Amsterdam (AMS) 2026-10-09 → 2026-10-11 💶 HUF 30,000";
@@ -173,5 +166,4 @@ test.describe("Search persistence", () => {
     await flightFinder.expectResultTexts([resultText]);
     await searchMock.expectRequestCount(1);
   });
-
 });

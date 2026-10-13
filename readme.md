@@ -1,35 +1,23 @@
 # ✈️ Flight Finder
 
-A lightweight web application for finding cheap short round-trip flights from Budapest (BUD), with multi-destination search, flexible dates, live results, caching, rate limiting, and user authentication.
+A lightweight web application for finding cheap short round-trip flights, with multi-destination search, flexible dates, live results, caching, rate limiting, and user authentication. Choose your departure airport, destinations, departure weekday and number of nights you wanna stay — Flight Finder searches the upcoming weeks and streams the cheapest options.
 
 ## Features
 
-- Multi-destination flight search from BUD
+- Multi-destination flight search
+- One departure airport and up to three destinations per search
 - Trip generation by weekday + number of nights
-- Configurable search limits
 - Smart Flex with controlled nearby-date search
-- Live results via Server-Sent Events (SSE)
-- Partial failure handling
-- Result deduplication and price sorting
-- Top 5 cheapest results (by default)
-- Google Flights booking links
-- Provider abstraction (`mock`, `serpapi`, legacy Amadeus)
-- Redis caching and rate limiting
-- User registration, email verification and login
-- Forgot-password and secure password-reset flow
+- Live, price-sorted results via Server-Sent Events (SSE)
+- Top 5 cheapest results (by default) with Google Flights booking links
+- User registration, email verification, login and password recovery
 - Light/dark theme
-- Jest/Supertest and Playwright + TypeScript test automation
-- Automated test execution with GitHub Actions
 
-## How It Works
+## Under the Hood
 
-1. Generate possible trip dates
-2. Execute flight searches through a concurrency-limited Promise Pool
-3. Search nearby dates with Smart Flex or as a fallback when needed
-4. Stream results to the browser as they become available
-5. Deduplicate, sort and keep the configured number of cheapest results
+A concurrency-limited Promise Pool runs searches, while results are streamed, deduplicated and sorted as they arrive. Individual provider failures do not stop the remaining searches.
 
-Individual API failures do not stop the remaining searches.
+Redis provides caching and rate limiting. Search limits and date flexibility are configurable. A provider abstraction separates flight access from the application: SerpApi / Google Flights powers real searches, with a mock provider for development and testing.
 
 ## Smart Flex
 
@@ -70,18 +58,20 @@ FLIGHT_PROVIDER=serpapi
 **Email:** Nodemailer, Mailtrap  
 **Testing:** Playwright + TypeScript, Jest, Supertest  
 **CI:** GitHub Actions  
-**Local infrastructure:** Docker Compose (Redis)
+**Local infrastructure:** Docker Compose for Redis
 
 ## Test Automation
 
 - Playwright + TypeScript E2E tests
 - Page Object Model (POM) with reusable page objects and helpers
-- Authentication, flight search, UI and booking-link coverage
-- Jest/Supertest unit and integration tests
+- Authentication, flight search, persistence, UI and booking-link coverage
+- Jest/Supertest unit and integration tests cover backend behavior
 - Automated Jest and Playwright execution in GitHub Actions
 - Playwright HTML reports available as CI artifacts
 
 ## Running Locally
+
+Configure API, Redis and email settings in `.env`, then:
 
 ```bash
 npm install
@@ -94,8 +84,6 @@ Open:
 ```text
 http://localhost:3000
 ```
-
-Configure the required API, Redis and email settings in `.env`.
 
 ## Testing
 

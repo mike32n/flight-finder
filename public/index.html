@@ -23,11 +23,23 @@
 
       <div class="form">
         <div class="form-field airport-field">
-          <label for="origin" class="field-label">Departure</label>
+          <label for="origin-input" class="field-label">Departure</label>
 
-          <select id="origin" aria-label="Departure airport">
-            <option value="BUD">Budapest (BUD)</option>
-          </select>
+          <input id="origin" type="hidden" value="BUD" />
+          <div class="autocomplete-wrapper origin-autocomplete-wrapper">
+            <input
+              id="origin-input"
+              disabled
+              type="text"
+              aria-label="Departure airport"
+              placeholder="Type city or IATA code..."
+              autocomplete="off"
+            />
+            <div
+              id="origin-autocomplete-list"
+              class="autocomplete-list hidden"
+            ></div>
+          </div>
         </div>
 
         <div class="form-field airport-field">
@@ -38,6 +50,7 @@
           <div class="autocomplete-wrapper">
             <input
               id="destination-input"
+              disabled
               type="text"
               aria-label="Destination"
               placeholder="Type city or IATA code..."
@@ -78,7 +91,7 @@
           </div>
         </div>
 
-        <button id="search-button" onclick="search()">Search</button>
+        <button id="search-button" onclick="search()" disabled>Search</button>
       </div>
 
       <div id="loading" class="hidden">Loading...</div>

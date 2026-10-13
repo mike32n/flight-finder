@@ -13,8 +13,10 @@ export default class MainPage {
   readonly incrementButton: Locator;
   readonly decrementButton: Locator;
 
-  readonly originSelect: Locator;
-  readonly originOptions: Locator;
+  readonly originInput: Locator;
+  readonly originValue: Locator;
+  readonly originAutocompleteList: Locator;
+  readonly originAutocompleteItems: Locator;
   readonly airportInput: Locator;
   readonly weekdaySelect: Locator;
   readonly nightsInput: Locator;
@@ -69,12 +71,14 @@ export default class MainPage {
       exact: true,
     });
 
-    this.originSelect = page.getByRole("combobox", {
+    this.originInput = page.getByRole("textbox", {
       name: "Departure airport",
       exact: true,
     });
-
-    this.originOptions = this.originSelect.locator("option");
+    this.originValue = page.locator("#origin");
+    this.originAutocompleteList = page.locator("#origin-autocomplete-list");
+    this.originAutocompleteItems =
+      this.originAutocompleteList.locator(".autocomplete-item");
 
     this.weekdaySelect = page.locator("#weekday");
 
@@ -92,9 +96,11 @@ export default class MainPage {
 
     this.searchValidationError = page.locator("#search-validation-error");
 
-    this.autocompleteItem = page.locator(".autocomplete-item");
+    this.autocompleteItem = this.autocompleteList.locator(".autocomplete-item");
 
-    this.activeAutocompleteItem = page.locator(".autocomplete-item.active");
+    this.activeAutocompleteItem = this.autocompleteList.locator(
+      ".autocomplete-item.active",
+    );
 
     this.results = page.locator("#results");
     this.resultCards = this.results.locator(".card");
@@ -123,6 +129,22 @@ export default class MainPage {
 
   async clickToggleTheme(): Promise<void> {
     await this.toggleThemeButton.click();
+  }
+
+  async expectMainPageElementsVisible(): Promise<void> {
+    for (const element of [
+      this.heading,
+      this.originInput,
+      this.airportInput,
+      this.weekdaySelect,
+      this.decrementButton,
+      this.incrementButton,
+      this.nightsInput,
+      this.searchButton,
+      this.toggleThemeButton,
+    ]) {
+      await expect(element).toBeVisible();
+    }
   }
 
   async expectThemeButtonText(text: string): Promise<void> {
@@ -223,18 +245,88 @@ export default class MainPage {
     await this.pressEnter();
   }
 
+  async openOriginAutocomplete(query: string): Promise<void> {
+    await this.originInput.fill(query);
+    await expect(this.originAutocompleteList).toHaveClass(/open/);
+    await expect(this.originAutocompleteItems.first()).toBeVisible();
+  }
+
   async selectOrigin(code: string): Promise<void> {
-    await this.originSelect.selectOption(code);
+    await this.openOriginAutocomplete(code);
+    await this.originAutocompleteItems.filter({ hasText: `(${code})` }).click();
+  }
+
+  async selectOriginByEnter(query: string): Promise<void> {
+    await this.openOriginAutocomplete(query);
+    await this.originInput.press("Enter");
+  }
+
+  async selectOriginImmediatelyByEnter(query: string): Promise<void> {
+    await this.originInput.fill(query);
+    await this.originInput.press("Enter");
+  }
+
+  async expectAirportControlsDisabled(): Promise<void> {
+    await expect(this.originInput).toBeDisabled();
+    await expect(this.airportInput).toBeDisabled();
+    await expect(this.searchButton).toBeDisabled();
+  }
+
+  async holdConfigRequest(): Promise<{
+    waitUntilRequested: () => Promise<void>;
+    release: () => void;
+  }> {
+    let release!: () => void;
+    let requested!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const arrived = new Promise<void>((resolve) => {
+      requested = resolve;
+    });
+    await this.page.route("**/config", async (route) => {
+      requested();
+      await gate;
+      await route.continue();
+    });
+    return { waitUntilRequested: () => arrived, release };
   }
 
   async expectOriginSelected(code: string): Promise<void> {
-    await expect(this.originSelect).toHaveValue(code);
+    await expect(this.originValue).toHaveValue(code);
+    await expect(this.originInput).toHaveValue(new RegExp(`\\(${code}\\)$`));
   }
 
   async forceOriginValue(code: string): Promise<void> {
-    await this.originSelect.evaluate((element, value) => {
-      (element as HTMLSelectElement).value = value;
+    await this.originValue.evaluate((element, value) => {
+      (element as HTMLInputElement).value = value;
     }, code);
+  }
+
+  async cancelOriginEdit(): Promise<void> {
+    await this.originInput.press("Escape");
+  }
+
+  async blurOriginInput(): Promise<void> {
+    await this.weekdaySelect.focus();
+  }
+
+  async expectOriginDropdownHidden(): Promise<void> {
+    await expect(this.originAutocompleteList).toBeHidden();
+  }
+
+  async expectSearchRequestOrigin(
+    origin: string,
+    destinations: string[],
+    action: () => Promise<void>,
+  ): Promise<void> {
+    const pending = this.page.waitForRequest(
+      (request) =>
+        request.url().endsWith("/search-stream") && request.method() === "POST",
+    );
+    await action();
+    const request = await pending;
+    expect(request.postDataJSON()).toMatchObject({ origin, destinations });
   }
 
   async selectWeekdayOption(option: string): Promise<void> {
@@ -505,16 +597,16 @@ export default class MainPage {
     ).toBeVisible();
   }
 
-  async expectOriginOptionDisabled(code: string): Promise<void> {
+  async expectOriginSuggestionAbsent(code: string): Promise<void> {
     await expect(
-      this.originOptions.filter({ hasText: `(${code})` }),
-    ).toBeDisabled();
+      this.originAutocompleteItems.filter({ hasText: `(${code})` }),
+    ).toHaveCount(0);
   }
 
-  async expectOriginOptionEnabled(code: string): Promise<void> {
+  async expectOriginSuggestionVisible(code: string): Promise<void> {
     await expect(
-      this.originOptions.filter({ hasText: `(${code})` }),
-    ).toBeEnabled();
+      this.originAutocompleteItems.filter({ hasText: `(${code})` }),
+    ).toBeVisible();
   }
 
   async expectDestinationSuggestionAbsent(code: string): Promise<void> {

@@ -22,13 +22,6 @@ test.describe("Flight Finder UI", () => {
   });
 
   test("TC-UI-02 | should display main page elements", async () => {
-    await common.expectVisible(flightFinder.heading);
-    await common.expectVisible(flightFinder.airportInput);
-    await common.expectVisible(flightFinder.weekdaySelect);
-    await common.expectVisible(flightFinder.decrementButton);
-    await common.expectVisible(flightFinder.incrementButton);
-    await common.expectVisible(flightFinder.nightsInput);
-    await common.expectVisible(flightFinder.searchButton);
-    await common.expectVisible(flightFinder.toggleThemeButton);
+    await flightFinder.expectMainPageElementsVisible();
   });
 });
