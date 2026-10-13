@@ -15,9 +15,14 @@ A lightweight web application for finding cheap short round-trip flights, with m
 
 ## Under the Hood
 
-A concurrency-limited Promise Pool runs searches, while results are streamed, deduplicated and sorted as they arrive. Individual provider failures do not stop the remaining searches.
+A concurrency-limited Promise Pool runs searches, while results are streamed, deduplicated and sorted as they arrive.
+Individual provider failures do not stop the remaining searches.
 
-Redis provides caching and rate limiting. Search limits and date flexibility are configurable. A provider abstraction separates flight access from the application: SerpApi / Google Flights powers real searches, with a mock provider for development and testing.
+- Redis provides caching and rate limiting.
+- Search limits and date flexibility are configurable.
+- A provider abstraction separates flight access from the application:
+    - SerpApi / Google Flights powers real searches
+    - Mock provider for development and testing
 
 ## Smart Flex
 
