@@ -7,14 +7,15 @@
 }
 
 :root {
-  --bg: #f4f6f8;
-  --card: #ffffff;
-  --text: #111;
-  --muted: #666;
-  --primary: #0066ff;
-  --border: #ddd;
-  --neon: #00f7ff;
-  --error: #ff6767;
+  --bg: #e6edf6;
+  --card: #f5f8fc;
+  --surface: #eaf0f9;
+  --text: #24344b;
+  --muted: #5e7089;
+  --primary: #3266d5;
+  --border: #c5d2e5;
+  --neon: #3266d5;
+  --error: #b94759;
 }
 
 /* ========================= */
@@ -22,12 +23,15 @@
 /* ========================= */
 
 body.dark {
-  --bg: #0f172a;
-  --card: #1e293b;
-  --text: #e2e8f0;
-  --muted: #94a3b8;
-  --primary: #00f7ff;
-  --border: #334155;
+  --bg: #111923;
+  --card: #1b2634;
+  --surface: #233143;
+  --text: #dce5ef;
+  --muted: #9babbd;
+  --primary: #79b6bd;
+  --border: #36485c;
+  --neon: #79b6bd;
+  --error: #ed9a9a;
 }
 
 /* ========================= */
@@ -965,4 +969,155 @@ body.dark .reset-password-button:disabled {
     padding-inline: 14px;
     white-space: nowrap;
   }
+}
+
+/* Light theme */
+body:not(.dark) .container {
+  box-shadow: 0 12px 32px rgba(36, 52, 75, 0.09);
+}
+
+body:not(.dark) input,
+body:not(.dark) select {
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--border);
+}
+
+body:not(.dark) input:focus,
+body:not(.dark) select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(50, 102, 213, 0.16);
+}
+
+body:not(.dark) .autocomplete-list,
+body:not(.dark) .auth-modal-content {
+  background: var(--card);
+  color: var(--text);
+}
+
+body:not(.dark) .autocomplete-item:hover,
+body:not(.dark) .autocomplete-item.active {
+  background: #dce7fc;
+}
+
+body:not(.dark) .iata-badge {
+  background: #dce7fc;
+  color: #2855ad;
+  box-shadow: inset 0 0 0 1px #bfd0f2;
+}
+
+body:not(.dark) .auth-modal-content form button {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+body:not(.dark) .auth-modal-content form button:hover {
+  background: #2855ad;
+  border-color: #2855ad;
+}
+
+/* Dark theme: muted surfaces and accents */
+body.dark input,
+body.dark select,
+body.dark .auth-modal-content input {
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--border);
+}
+
+body.dark .autocomplete-list,
+body.dark .auth-modal-content,
+body.dark .auth-user-card {
+  background: var(--card);
+  color: var(--text);
+  border-color: var(--border);
+}
+
+body.dark h1 {
+  text-shadow: 0 0 8px rgba(121, 182, 189, 0.15);
+}
+
+body.dark .meta-info,
+body.dark #loading {
+  color: var(--muted);
+  text-shadow: none;
+}
+
+body.dark button,
+body.dark .stepper button {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+}
+
+body.dark input:focus,
+body.dark select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(121, 182, 189, 0.18);
+}
+
+body.dark .iata-badge {
+  background: #243b46;
+  color: #a0cbd0;
+  text-shadow: none;
+  box-shadow: inset 0 0 0 1px #3b5963;
+}
+
+body.dark .autocomplete-item:hover,
+body.dark .autocomplete-item.active {
+  background: rgba(121, 182, 189, 0.12);
+  box-shadow: none;
+}
+
+body.dark .autocomplete-list::-webkit-scrollbar-thumb {
+  background: #587d88;
+  box-shadow: none;
+}
+
+body.dark .autocomplete-list {
+  scrollbar-color: #587d88 transparent;
+}
+
+body.dark .card:hover {
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.18);
+}
+
+body.dark .flex-card {
+  border-left-color: #c6a35e;
+  box-shadow: none;
+}
+
+body.dark .error-card {
+  background: #382630;
+  color: var(--error);
+  border-color: #65404c;
+  animation: none;
+  text-shadow: none;
+  box-shadow: none;
+}
+
+body.dark .auth-user-card,
+body.dark .auth-user-email,
+body.dark .auth-modal-close,
+body.dark .auth-modal-close:hover,
+body.dark .auth-switch-btn,
+body.dark .auth-switch-btn:hover,
+body.dark .auth-message,
+body.dark .reset-password-message,
+body.dark .reset-password-back-link {
+  text-shadow: none;
+}
+
+body.dark .auth-user-card {
+  box-shadow: none;
+}
+
+body.dark .auth-modal-content form button {
+  background: #79b6bd;
+  border-color: #79b6bd;
+  color: #111923;
+}
+
+body.dark .auth-modal-content form button:hover {
+  background: #8ac1c7;
+  border-color: #8ac1c7;
 }
