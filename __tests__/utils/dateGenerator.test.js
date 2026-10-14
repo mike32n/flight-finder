@@ -70,4 +70,41 @@ describe("generateTrips", () => {
       return: "2026-10-06",
     });
   });
+
+  test("should generate trips from the first matching weekday after the start date", () => {
+    const trips = generateTrips(6, 2, 2, "2027-03-01");
+
+    expect(trips).toEqual([
+      {
+        departure: "2027-03-06",
+        return: "2027-03-08",
+      },
+      {
+        departure: "2027-03-13",
+        return: "2027-03-15",
+      },
+    ]);
+  });
+
+  test("should include the start date when its weekday matches", () => {
+    const trips = generateTrips(6, 2, 1, "2027-03-06");
+
+    expect(trips).toEqual([
+      {
+        departure: "2027-03-06",
+        return: "2027-03-08",
+      },
+    ]);
+  });
+
+  test("should handle year rollover from the start date", () => {
+    const trips = generateTrips(6, 2, 1, "2026-12-31");
+
+    expect(trips).toEqual([
+      {
+        departure: "2027-01-02",
+        return: "2027-01-04",
+      },
+    ]);
+  });
 });

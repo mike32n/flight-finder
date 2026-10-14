@@ -5,18 +5,19 @@ function generateTrips(
   weekday,
   nights,
   weeks = search.weeksToGenerate || 8,
+  startDate,
 ) {
   const trips = [];
-  let current = dayjs();
+  const current = startDate ? dayjs(startDate) : dayjs();
 
-  // todays number (0-6, Sunday-Saturday)
+  // starting weekday (0-6, Sunday-Saturday)
   const todayWeekday = current.day();
 
-  // how many days from now is the desired weekday
+  // days until the requested weekday
   let diff = weekday - todayWeekday;
   if (diff < 0) diff += 7;
 
-  // first departure is the first desired weekday from now
+  // first departure is on or after the starting date
   let firstDeparture = current.add(diff, "day");
 
   for (let i = 0; i < weeks; i++) {
