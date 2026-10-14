@@ -1,5 +1,6 @@
 const appConfig = require("../config/appConfig");
 const airports = require("../data/airports");
+const getStartDateError = require("../utils/startDateValidator");
 
 const airportCodes = new Set(airports.map(({ iata }) => iata));
 
@@ -48,6 +49,18 @@ function validateSearch(req, res, next) {
     return res.status(400).json({
       error: "Departure and destination airports must differ",
     });
+  }
+
+  const startDateError = getStartDateError(req.body.startDate);
+
+  if (startDateError) {
+    return res.status(400).json({
+      error: startDateError,
+    });
+  }
+
+  if (req.body.startDate === "") {
+    delete req.body.startDate;
   }
 
   req.body.origin = origin;

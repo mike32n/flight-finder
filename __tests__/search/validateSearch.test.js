@@ -179,4 +179,51 @@ describe("validateSearch", () => {
     });
     expect(next).not.toHaveBeenCalled();
   });
+
+  describe("start date validation", () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+      jest.setSystemTime(new Date("2026-10-14T12:00:00"));
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    test.each(["2026-10-14", "2027-03-01"])(
+      "accepts and preserves a valid start date: %s",
+      (startDate) => {
+        req.body.startDate = startDate;
+
+        validateSearch(req, res, next);
+
+        expect(next).toHaveBeenCalledTimes(1);
+        expect(res.status).not.toHaveBeenCalled();
+        expect(req.body.startDate).toBe(startDate);
+      },
+    );
+
+    test("normalizes an empty start date to an omitted field", () => {
+      req.body.startDate = "";
+
+      validateSearch(req, res, next);
+
+      expect(next).toHaveBeenCalledTimes(1);
+      expect(req.body).not.toHaveProperty("startDate");
+    });
+
+    test.each([
+      [null, "Invalid start date"],
+      ["2027-02-29", "Invalid start date"],
+      ["2026-10-13", "Start date cannot be in the past"],
+    ])("rejects %p with the expected error", (startDate, error) => {
+      req.body.startDate = startDate;
+
+      validateSearch(req, res, next);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({ error });
+      expect(next).not.toHaveBeenCalled();
+    });
+  });
 });
