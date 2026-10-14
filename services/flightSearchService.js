@@ -17,7 +17,12 @@ function createBaseTasks(destinations, trips, origin) {
   for (const destination of destinations) {
     for (const trip of trips) {
       tasks.push(() =>
-        flightProvider.searchFlights(destination, trip.departure, trip.return, origin),
+        flightProvider.searchFlights(
+          destination,
+          trip.departure,
+          trip.return,
+          origin,
+        ),
       );
     }
   }
@@ -25,13 +30,15 @@ function createBaseTasks(destinations, trips, origin) {
   return tasks;
 }
 
-function createFlexTasks(destinations, trips, origin) {
+function createFlexTasks(destinations, trips, origin, startDate) {
   const tasks = [];
 
   for (const destination of destinations) {
     for (const trip of trips) {
       const variants = expandControlledFlexibility(trip);
-      const onlyFlex = variants.slice(1);
+      const onlyFlex = variants
+        .slice(1)
+        .filter((variant) => !startDate || variant.departure >= startDate);
 
       for (const variant of onlyFlex) {
         tasks.push(async () => {
@@ -75,9 +82,15 @@ async function searchFlights({
   destinations,
   weekday,
   nights,
+  startDate,
   enrichAirport,
 }) {
-  const trips = generateTrips(weekday, nights);
+  const trips = generateTrips(
+    weekday,
+    nights,
+    appConfig.search.weeksToGenerate,
+    startDate,
+  );
 
   const baseTasks = createBaseTasks(destinations, trips, origin);
 
@@ -96,7 +109,7 @@ async function searchFlights({
   const shouldSearchFlex = appConfig.smartFlex.enabled || isFallbackFlex;
 
   if (shouldSearchFlex) {
-    const flexTasks = createFlexTasks(destinations, trips, origin);
+    const flexTasks = createFlexTasks(destinations, trips, origin, startDate);
 
     flexResults = await runWithConcurrencyLimit(
       flexTasks,
@@ -172,10 +185,16 @@ async function searchFlightsStream({
   destinations,
   weekday,
   nights,
+  startDate,
   enrichAirport,
   onResult,
 }) {
-  const trips = generateTrips(weekday, nights);
+  const trips = generateTrips(
+    weekday,
+    nights,
+    appConfig.search.weeksToGenerate,
+    startDate,
+  );
 
   const sentKeys = new Set();
 
@@ -232,7 +251,7 @@ async function searchFlightsStream({
   const shouldSearchFlex = appConfig.smartFlex.enabled || isFallbackFlex;
 
   if (shouldSearchFlex) {
-    const flexTasks = createFlexTasks(destinations, trips, origin);
+    const flexTasks = createFlexTasks(destinations, trips, origin, startDate);
 
     const flexResultType = isFallbackFlex ? "fallback-flex" : "flex";
 
