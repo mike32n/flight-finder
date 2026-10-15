@@ -795,18 +795,15 @@ input[type="number"]::-webkit-inner-spin-button {
 
 .start-date-field {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
   margin-bottom: 20px;
 }
 
-.start-date-field label {
-  color: var(--muted);
-  font-size: 12px;
-}
-
 #start-date {
-  flex: 0 1 160px;
+  flex: none;
+  width: 160px;
   min-width: 0;
   color-scheme: light;
 }
