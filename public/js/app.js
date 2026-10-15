@@ -26,7 +26,23 @@ window.emailVerificationRequired = true;
 /* INIT */
 /* ========================= */
 
+function getTodayDate() {
+  const today = new Date();
+
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
 window.onload = async function () {
+  const startDateInput = document.getElementById("start-date");
+  const today = getTodayDate();
+
+  startDateInput.value = today;
+  startDateInput.min = today;
+
   try {
     const res = await fetch("/destinations");
 
@@ -588,6 +604,11 @@ async function search() {
   const origin = document.getElementById("origin").value;
   const weekday = Number(document.getElementById("weekday").value);
   const nights = Number(document.getElementById("nights").value);
+  const startDateInput = document.getElementById("start-date");
+  const startDate = startDateInput.value;
+  const today = getTodayDate();
+
+  startDateInput.min = today;
 
   const resultsDiv = document.getElementById("results");
 
@@ -606,6 +627,16 @@ async function search() {
     return;
   }
 
+  if (!startDate || startDateInput.validity.badInput) {
+    showSearchValidationError("Please enter a valid start date.");
+    return;
+  }
+
+  if (startDate < today) {
+    showSearchValidationError("Start date cannot be in the past.");
+    return;
+  }
+
   const searchButton = document.getElementById("search-button");
 
   saveSearchSetup();
@@ -616,6 +647,7 @@ async function search() {
     destinations: [...selectedDestinations],
     weekday,
     nights,
+    startDate,
     startedAt: new Date().toISOString(),
   };
 
@@ -649,6 +681,7 @@ async function search() {
         destinations: lastSearchParameters.destinations,
         weekday,
         nights,
+        startDate: lastSearchParameters.startDate,
       }),
     });
 

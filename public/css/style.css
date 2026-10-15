@@ -790,3 +790,40 @@ input[type="number"]::-webkit-inner-spin-button {
 .hidden {
   display: none;
 }
+
+/* Search start date */
+
+.start-date-field {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.start-date-field label {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+#start-date {
+  flex: 0 1 160px;
+  min-width: 0;
+  color-scheme: light;
+}
+
+body.dark #start-date {
+  color-scheme: dark;
+}
+
+@media (max-width: 768px) {
+  .start-date-field {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+
+  #start-date {
+    flex: none;
+    width: 100%;
+  }
+}

@@ -20,6 +20,7 @@ export default class MainPage {
   readonly airportInput: Locator;
   readonly weekdaySelect: Locator;
   readonly nightsInput: Locator;
+  readonly startDateInput: Locator;
   readonly autocompleteList: Locator;
   readonly selectedContainer: Locator;
   readonly selectedDestinationBadges: Locator;
@@ -83,6 +84,8 @@ export default class MainPage {
     this.weekdaySelect = page.locator("#weekday");
 
     this.nightsInput = page.locator("#nights");
+
+    this.startDateInput = page.locator("#start-date");
 
     this.autocompleteList = page.locator("#autocomplete-list");
 
@@ -345,6 +348,10 @@ export default class MainPage {
 
   async fillNights(value: string): Promise<void> {
     await this.nightsInput.fill(value);
+  }
+
+  async fillStartDate(value: string): Promise<void> {
+    await this.startDateInput.fill(value);
   }
 
   async clickFirstResult(): Promise<void> {
@@ -663,6 +670,29 @@ export default class MainPage {
 
   async expectNightsValue(value: string): Promise<void> {
     await expect(this.nightsInput).toHaveValue(value);
+  }
+
+  async expectStartDate(value: string): Promise<void> {
+    await expect(this.startDateInput).toHaveValue(value);
+  }
+
+  async expectStartDateMinimum(value: string): Promise<void> {
+    await expect(this.startDateInput).toHaveAttribute("min", value);
+  }
+
+  async searchAndExpectStartDate(value: string): Promise<void> {
+    const pendingRequest = this.page.waitForRequest(
+      (request) =>
+        request.url().endsWith("/search-stream") && request.method() === "POST",
+    );
+
+    await this.clickSearchButton();
+
+    const request = await pendingRequest;
+
+    expect(request.postDataJSON()).toMatchObject({
+      startDate: value,
+    });
   }
 
   async expectNoAirportsSelectedWarning(): Promise<void> {
