@@ -17,6 +17,16 @@ export default class CommonPage {
     await this.page.reload();
   }
 
+  async installClock(dateTime: string): Promise<void> {
+    await this.page.clock.install({
+      time: new Date(dateTime),
+    });
+  }
+
+  async setSystemTime(dateTime: string): Promise<void> {
+    await this.page.clock.setSystemTime(new Date(dateTime));
+  }
+
   async expectDarkThemeIsActive(): Promise<void> {
     await expect(this.body).toHaveClass(/dark/);
   }

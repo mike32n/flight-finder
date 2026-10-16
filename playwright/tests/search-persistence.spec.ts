@@ -33,7 +33,7 @@ test.describe("Search persistence", () => {
     flightFinder = new FlightFinderPage(page);
     auth = new AuthPage(page);
 
-    await page.goto(Env.test);
+    await common.openPage(Env.test);
   });
 
   test("TC-PERSIST-01 | should restore previous results and current search setup after reload", async () => {

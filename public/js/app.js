@@ -126,6 +126,8 @@ window.onload = async function () {
     .getElementById("weekday")
     .addEventListener("change", saveSearchSetup);
 
+  startDateInput.addEventListener("change", saveSearchSetup);
+
   await loadCurrentUser();
   renderAuthUI();
 
@@ -542,6 +544,7 @@ function saveSearchSetup() {
         destinations: [...selectedDestinations],
         weekday: Number(document.getElementById("weekday").value),
         nights: Number(document.getElementById("nights").value),
+        startDate: document.getElementById("start-date").value,
       }),
     );
   } catch (error) {
@@ -589,6 +592,17 @@ function restoreSearchSetup() {
 
     document.getElementById("weekday").value = saved.weekday;
     document.getElementById("nights").value = saved.nights;
+
+    const startDateInput = document.getElementById("start-date");
+    const today = getTodayDate();
+
+    startDateInput.min = today;
+    startDateInput.value =
+      typeof saved.startDate === "string" ? saved.startDate : "";
+
+    if (!startDateInput.value || startDateInput.value < today) {
+      startDateInput.value = today;
+    }
 
     if (destinationsData.length > 0) {
       renderSelected();

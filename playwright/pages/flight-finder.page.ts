@@ -354,6 +354,10 @@ export default class MainPage {
     await this.startDateInput.fill(value);
   }
 
+  async blurStartDate(): Promise<void> {
+    await this.startDateInput.blur();
+  }
+
   async clickFirstResult(): Promise<void> {
     await this.firstResult.click();
   }
@@ -693,6 +697,20 @@ export default class MainPage {
     expect(request.postDataJSON()).toMatchObject({
       startDate: value,
     });
+  }
+
+  async expectSavedSearchStartDate(value: string): Promise<void> {
+    await expect
+      .poll(() =>
+        this.page.evaluate(() => {
+          const stored = sessionStorage.getItem("flightFinder.lastSearch.v1");
+
+          if (!stored) return null;
+
+          return JSON.parse(stored).parameters?.startDate;
+        }),
+      )
+      .toBe(value);
   }
 
   async expectNoAirportsSelectedWarning(): Promise<void> {
