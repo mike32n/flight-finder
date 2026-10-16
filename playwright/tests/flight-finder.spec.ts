@@ -5,14 +5,14 @@ import CommonPage from "../pages/common.page";
 import FlightFinderPage from "../pages/flight-finder.page";
 
 test.describe("Flight Finder", () => {
-  let flightFinder: FlightFinderPage;
   let common: CommonPage;
+  let flightFinder: FlightFinderPage;
 
   test.beforeEach(async ({ page }) => {
-    flightFinder = new FlightFinderPage(page);
     common = new CommonPage(page);
+    flightFinder = new FlightFinderPage(page);
 
-    await page.goto(Env.test);
+    await common.openPage(Env.test);
   });
 
   test("TC-FLIGHT-01 | should toggle theme icons and preserve theme after reload", async () => {
@@ -250,7 +250,7 @@ test.describe("Flight Finder", () => {
   ] as const;
 
   for (const mode of destinationsFailureModes) {
-    test(`TC-FLIGHT-19 | should preserve other UI initialization when destinations fail: ${mode}`, async () => {
+    test(`TC-FLIGHT-19-${mode.toUpperCase()} | should preserve other UI initialization when destinations fail: ${mode}`, async () => {
       await flightFinder.mockDestinationsFailure(mode);
       await flightFinder.setStoredDarkTheme();
 
@@ -375,12 +375,14 @@ test.describe("Flight Finder", () => {
 });
 
 test.describe("Flight Search Error Handling", () => {
+  let common: CommonPage;
   let flightFinder: FlightFinderPage;
 
   test.beforeEach(async ({ page }) => {
+    common = new CommonPage(page);
     flightFinder = new FlightFinderPage(page);
 
-    await page.goto(Env.test);
+    await common.openPage(Env.test);
 
     await flightFinder.selectAirportByEnter("ams");
     await flightFinder.expectAirportSelected("AMS");

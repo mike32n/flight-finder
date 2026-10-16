@@ -24,7 +24,7 @@ test.describe("Authentication - Login", () => {
     flightFinder = new FlightFinderPage(page);
     auth = new AuthPage(page);
 
-    await page.goto(Env.test);
+    await common.openPage(Env.test);
   });
 
   test("TC-LOGIN-01 | should login an existing user successfully", async () => {

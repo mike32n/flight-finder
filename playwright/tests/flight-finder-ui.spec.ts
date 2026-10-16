@@ -12,7 +12,7 @@ test.describe("Flight Finder UI", () => {
     flightFinder = new FlightFinderPage(page);
     common = new CommonPage(page);
 
-    await page.goto(Env.test);
+    await common.openPage(Env.test);
   });
 
   test("TC-UI-01 | should display page title", async () => {

@@ -12,18 +12,18 @@ import {
 } from "../helpers/user.helper";
 
 test.describe("Authentication - Forgot Password", () => {
+  let common: CommonPage;
   let flightFinder: FlightFinderPage;
   let auth: AuthPage;
-  let common: CommonPage;
   let resetPassword: ResetPasswordPage;
 
   test.beforeEach(async ({ page }) => {
+    common = new CommonPage(page);
     flightFinder = new FlightFinderPage(page);
     auth = new AuthPage(page);
-    common = new CommonPage(page);
     resetPassword = new ResetPasswordPage(page);
 
-    await page.goto(Env.test);
+    await common.openPage(Env.test);
   });
 
   test("TC-FORGOT-01 | should show success message for existing email", async () => {
