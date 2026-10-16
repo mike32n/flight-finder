@@ -42,7 +42,7 @@ test.describe("Search persistence", () => {
     await flightFinder.selectAirportByEnter("ams");
     await flightFinder.selectWeekdayOption("5");
     await flightFinder.fillNights("2");
-    await flightFinder.clickSearchButton();
+    await common.click(flightFinder.searchButton);
 
     await flightFinder.expectResultsFooterText("Finished...(failed: 0)");
     await common.expectText(flightFinder.resultCards, [amsterdamText]);
@@ -76,15 +76,15 @@ test.describe("Search persistence", () => {
     await flightFinder.expectAuthControlsVisible();
 
     await flightFinder.selectAirportByEnter("ams");
-    await flightFinder.clickSearchButton();
+    await common.click(flightFinder.searchButton);
 
     await flightFinder.expectResultsFooterText("Finished...(failed: 0)");
     await common.expectText(flightFinder.resultCards, [amsterdamText]);
 
-    await auth.clickLoginButton();
+    await common.click(auth.loginButton);
     await common.expectVisible(auth.authModal);
     await auth.fillLoginForm(user.email, user.password);
-    await auth.submitLoginForm();
+    await common.click(auth.loginSubmitButton);
 
     await common.expectHidden(auth.authModal);
     await common.expectVisible(flightFinder.logoutButton);
@@ -97,7 +97,7 @@ test.describe("Search persistence", () => {
     await common.expectText(flightFinder.resultCards, [amsterdamText]);
     await searchMock.expectRequestCount(1);
 
-    await flightFinder.clickLogoutButton();
+    await common.click(flightFinder.logoutButton);
 
     await flightFinder.expectAuthControlsVisible();
     await flightFinder.expectResultsEmpty();
@@ -119,14 +119,14 @@ test.describe("Search persistence", () => {
     ]);
 
     await flightFinder.selectAirportByEnter("ams");
-    await flightFinder.clickSearchButton();
+    await common.click(flightFinder.searchButton);
 
     await flightFinder.expectResultsFooterText("Finished...(failed: 0)");
     await common.expectText(flightFinder.resultCards, [amsterdamText]);
 
     await flightFinder.clickSelectedContainer("AMS");
     await flightFinder.selectAirportByEnter("lca");
-    await flightFinder.clickSearchButton();
+    await common.click(flightFinder.searchButton);
 
     await common.expectText(flightFinder.resultCards, [larnacaText]);
     await flightFinder.expectResultsFooterText("Finished...(failed: 0)");
@@ -149,7 +149,7 @@ test.describe("Search persistence", () => {
     await flightFinder.selectAirportByEnter("ams");
 
     await flightFinder.expectSearchRequestOrigin("VIE", ["AMS"], () =>
-      flightFinder.clickSearchButton(),
+      common.click(flightFinder.searchButton),
     );
 
     const resultText =

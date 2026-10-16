@@ -23,13 +23,13 @@ test.describe("Authentication - Register", () => {
     const email = createUniqueTestEmail("e2e-register");
     const password = "TestPassword1";
 
-    await auth.clickRegisterButton();
+    await common.click(auth.registerButton);
 
     await common.expectVisible(auth.authModal);
     await common.expectVisible(auth.registerFormContainer);
 
     await auth.fillRegisterForm(email, password);
-    await auth.submitRegisterForm();
+    await common.click(auth.registerSubmitButton);
 
     await common.expectVisible(auth.loginFormContainer);
 
@@ -42,13 +42,13 @@ test.describe("Authentication - Register", () => {
   test("TC-REGISTER-02 | should not register with an already registered email", async () => {
     const user = await createVerifiedTestUser();
 
-    await auth.clickRegisterButton();
+    await common.click(auth.registerButton);
 
     await common.expectVisible(auth.authModal);
     await common.expectVisible(auth.registerFormContainer);
 
     await auth.fillRegisterForm(user.email, user.password);
-    await auth.submitRegisterForm();
+    await common.click(auth.registerSubmitButton);
 
     await common.expectContainsText(
       auth.registerMessage,
@@ -62,12 +62,12 @@ test.describe("Authentication - Register", () => {
   test("TC-REGISTER-03 | should resend verification for an unverified account with matching password", async () => {
     const user = await createTestUser();
 
-    await auth.clickRegisterButton();
+    await common.click(auth.registerButton);
     await common.expectVisible(auth.authModal);
     await common.expectVisible(auth.registerFormContainer);
 
     await auth.fillRegisterForm(user.email, user.password);
-    await auth.submitRegisterForm();
+    await common.click(auth.registerSubmitButton);
 
     await common.expectVisible(auth.loginFormContainer);
     await common.expectContainsText(

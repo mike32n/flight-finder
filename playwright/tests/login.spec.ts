@@ -30,13 +30,13 @@ test.describe("Authentication - Login", () => {
   test("TC-LOGIN-01 | should login an existing user successfully", async () => {
     const verifiedUser = await createVerifiedTestUser();
 
-    await auth.clickLoginButton();
+    await common.click(auth.loginButton);
 
     await common.expectVisible(auth.authModal);
     await common.expectVisible(auth.loginFormContainer);
 
     await auth.fillLoginForm(verifiedUser.email, verifiedUser.password);
-    await auth.submitLoginForm();
+    await common.click(auth.loginSubmitButton);
     await common.expectHidden(auth.authModal);
 
     await common.expectVisible(flightFinder.logoutButton);
@@ -45,13 +45,13 @@ test.describe("Authentication - Login", () => {
   test("TC-LOGIN-02 | should not login with invalid password", async () => {
     const verifiedUser = await createVerifiedTestUser();
 
-    await auth.clickLoginButton();
+    await common.click(auth.loginButton);
 
     await common.expectVisible(auth.authModal);
     await common.expectVisible(auth.loginFormContainer);
 
     await auth.fillLoginForm(verifiedUser.email, "WrongPassword");
-    await auth.submitLoginForm();
+    await common.click(auth.loginSubmitButton);
     await common.expectVisible(auth.authModal);
     await common.expectContainsText(
       auth.loginMessage,
@@ -64,13 +64,13 @@ test.describe("Authentication - Login", () => {
   test("TC-LOGIN-03 | should not login with unverified user", async () => {
     const user = await createTestUser();
 
-    await auth.clickLoginButton();
+    await common.click(auth.loginButton);
 
     await common.expectVisible(auth.authModal);
     await common.expectVisible(auth.loginFormContainer);
 
     await auth.fillLoginForm(user.email, user.password);
-    await auth.submitLoginForm();
+    await common.click(auth.loginSubmitButton);
     await common.expectVisible(auth.authModal);
     await common.expectContainsText(
       auth.loginMessage,
@@ -83,12 +83,12 @@ test.describe("Authentication - Login", () => {
   test("TC-LOGIN-04 | should not login with non-existent user", async () => {
     const email = createUniqueTestEmail("e2e-nonexistent");
 
-    await auth.clickLoginButton();
+    await common.click(auth.loginButton);
     await common.expectVisible(auth.authModal);
     await common.expectVisible(auth.loginFormContainer);
 
     await auth.fillLoginForm(email, "SomePassword1");
-    await auth.submitLoginForm();
+    await common.click(auth.loginSubmitButton);
     await common.expectVisible(auth.authModal);
     await common.expectContainsText(
       auth.loginMessage,
@@ -102,19 +102,19 @@ test.describe("Authentication - Login", () => {
     const user = await createTestUser();
     await verifyUser(user.userId);
 
-    await auth.clickLoginButton();
+    await common.click(auth.loginButton);
 
     await common.expectVisible(auth.authModal);
     await common.expectVisible(auth.loginFormContainer);
 
     await auth.fillLoginForm(user.email, user.password);
-    await auth.submitLoginForm();
+    await common.click(auth.loginSubmitButton);
 
     await common.expectHidden(auth.authModal);
 
     await common.expectVisible(flightFinder.logoutButton);
 
-    await flightFinder.clickLogoutButton();
+    await common.click(flightFinder.logoutButton);
 
     await common.expectHidden(flightFinder.logoutButton);
 
@@ -126,13 +126,13 @@ test.describe("Authentication - Login", () => {
 
     await verifyUser(user.userId);
 
-    await auth.clickLoginButton();
+    await common.click(auth.loginButton);
 
     await common.expectVisible(auth.authModal);
     await common.expectVisible(auth.loginFormContainer);
 
     await auth.fillLoginForm(user.email, user.password);
-    await auth.submitLoginForm();
+    await common.click(auth.loginSubmitButton);
 
     await common.expectHidden(auth.authModal);
 

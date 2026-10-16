@@ -55,7 +55,7 @@ test.describe("Search start date", () => {
     await flightFinder.expectResultsFooterText("Finished...(failed: 0)");
 
     await flightFinder.fillStartDate("2026-10-14");
-    await flightFinder.clickSearchButton();
+    await common.click(flightFinder.searchButton);
 
     await common.expectText(
       flightFinder.searchValidationError,
@@ -64,7 +64,7 @@ test.describe("Search start date", () => {
     await common.expectVisible(flightFinder.firstResult);
 
     await flightFinder.fillStartDate("");
-    await flightFinder.clickSearchButton();
+    await common.click(flightFinder.searchButton);
 
     await common.expectText(
       flightFinder.searchValidationError,

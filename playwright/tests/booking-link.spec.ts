@@ -20,9 +20,9 @@ test.describe("Booking links", () => {
     await flightFinder.expectAirportSelected("AMS");
 
     await flightFinder.selectWeekdayOption("5");
-    await flightFinder.clickIncrementButton(2);
+    await common.click(flightFinder.incrementButton, 2);
 
-    await flightFinder.clickSearchButton();
+    common.click(flightFinder.searchButton);
 
     await common.expectVisible(flightFinder.firstResult);
 

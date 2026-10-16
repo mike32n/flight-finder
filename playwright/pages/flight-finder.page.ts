@@ -130,10 +130,6 @@ export default class MainPage {
     });
   }
 
-  async clickToggleTheme(): Promise<void> {
-    await this.toggleThemeButton.click();
-  }
-
   async expectMainPageElementsVisible(): Promise<void> {
     for (const element of [
       this.heading,
@@ -150,36 +146,8 @@ export default class MainPage {
     }
   }
 
-  async clickAirportInput(): Promise<void> {
-    await this.airportInput.click();
-  }
-
-  async clickWeekdaySelect(): Promise<void> {
-    await this.weekdaySelect.click();
-  }
-
-  async clickIncrementButton(times = 1): Promise<void> {
-    for (let i = 0; i < times; i++) {
-      await this.incrementButton.click();
-    }
-  }
-
-  async clickDecrementButton(times = 1): Promise<void> {
-    for (let i = 0; i < times; i++) {
-      await this.decrementButton.click();
-    }
-  }
-
-  async clickSearchButton(): Promise<void> {
-    await this.searchButton.click();
-  }
-
   async clickSelectedContainer(code: string): Promise<void> {
     await this.selectedContainer.getByText(code).click();
-  }
-
-  async clickSearchValidationError(): Promise<void> {
-    await this.searchValidationError.click();
   }
 
   async searchAirport(searchText: string): Promise<void> {
@@ -215,7 +183,7 @@ export default class MainPage {
   }
 
   async openAutocomplete(searchText: string): Promise<void> {
-    await this.clickAirportInput();
+    await this.airportInput.click();
     await this.searchAirport(searchText);
     await this.expectAutocompleteOpen();
   }
@@ -238,7 +206,7 @@ export default class MainPage {
   }
 
   async selectAirportByEnter(searchText: string): Promise<void> {
-    await this.clickAirportInput();
+    await this.airportInput.click();
     await this.searchAirport(searchText);
     await this.expectAutocompleteOpen();
     await this.pressEnter();
@@ -329,7 +297,7 @@ export default class MainPage {
   }
 
   async selectWeekdayByName(weekDay: string): Promise<void> {
-    await this.clickWeekdaySelect();
+    await this.weekdaySelect.click();
     await this.typeWeekday(weekDay);
     await this.pressEnter();
   }
@@ -348,14 +316,6 @@ export default class MainPage {
 
   async blurStartDate(): Promise<void> {
     await this.startDateInput.blur();
-  }
-
-  async clickFirstResult(): Promise<void> {
-    await this.firstResult.click();
-  }
-
-  async clickLogoutButton(): Promise<void> {
-    await this.logoutButton.click();
   }
 
   async triggerSearchTwice(): Promise<void> {
@@ -662,7 +622,7 @@ export default class MainPage {
         request.url().endsWith("/search-stream") && request.method() === "POST",
     );
 
-    await this.clickSearchButton();
+    await this.searchButton.click();
 
     const request = await pendingRequest;
 

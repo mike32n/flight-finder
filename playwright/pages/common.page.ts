@@ -13,6 +13,12 @@ export default class CommonPage {
     await this.page.goto(url);
   }
 
+  async click(element: Locator, times = 1): Promise<void> {
+    for (let i = 0; i < times; i++) {
+      await element.click();
+    }
+  }
+
   async reloadPage(): Promise<void> {
     await this.page.reload();
   }

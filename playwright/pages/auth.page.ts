@@ -72,21 +72,9 @@ export default class AuthPage {
     this.forgotPasswordMessage = page.locator("#forgot-message");
   }
 
-  async clickLoginButton(): Promise<void> {
-    await this.loginButton.click();
-  }
-
   async fillLoginForm(email: string, password: string): Promise<void> {
     await this.loginEmailInput.fill(email);
     await this.loginPasswordInput.fill(password);
-  }
-
-  async submitLoginForm(): Promise<void> {
-    await this.loginSubmitButton.click();
-  }
-
-  async clickRegisterButton(): Promise<void> {
-    await this.registerButton.click();
   }
 
   async fillRegisterForm(email: string, password: string): Promise<void> {
@@ -94,20 +82,8 @@ export default class AuthPage {
     await this.registerPasswordInput.fill(password);
   }
 
-  async submitRegisterForm(): Promise<void> {
-    await this.registerSubmitButton.click();
-  }
-
-  async clickForgotPasswordButton(): Promise<void> {
-    await this.loginForgotPasswordButton.click();
-  }
-
   async fillForgotPasswordForm(email: string): Promise<void> {
     await this.forgotPasswordEmailInput.fill(email);
-  }
-
-  async submitForgotPasswordForm(): Promise<void> {
-    await this.forgotPasswordSubmitButton.click();
   }
 
   async expectRegisterFormEmpty(): Promise<void> {

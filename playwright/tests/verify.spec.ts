@@ -32,12 +32,12 @@ test.describe("Authentication - Email Verification", () => {
 
     await common.openPage(Env.test);
 
-    await auth.clickLoginButton();
+    await common.click(auth.loginButton);
     await common.expectVisible(auth.authModal);
     await common.expectVisible(auth.loginFormContainer);
 
     await auth.fillLoginForm(user.email, user.password);
-    await auth.submitLoginForm();
+    await common.click(auth.loginSubmitButton);
 
     await common.expectHidden(auth.authModal);
 

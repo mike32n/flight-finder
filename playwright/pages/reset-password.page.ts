@@ -19,10 +19,6 @@ export default class ResetPasswordPage {
     await this.newPasswordInput.fill(password);
   }
 
-  async submitPasswordReset(): Promise<void> {
-    await this.resetButton.click();
-  }
-
   async expectResetFormEnabled(): Promise<void> {
     await expect(this.newPasswordInput).toBeEnabled();
     await expect(this.resetButton).toBeEnabled();

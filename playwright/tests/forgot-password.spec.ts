@@ -29,14 +29,14 @@ test.describe("Authentication - Forgot Password", () => {
   test("TC-FORGOT-01 | should show success message for existing email", async () => {
     const user = await createTestUser();
 
-    await auth.clickLoginButton();
+    await common.click(auth.loginButton);
     await common.expectVisible(auth.authModal);
     await common.expectVisible(auth.loginFormContainer);
 
-    await auth.clickForgotPasswordButton();
+    await common.click(auth.loginForgotPasswordButton);
     await common.expectVisible(auth.forgotPasswordFormContainer);
     await auth.fillForgotPasswordForm(user.email);
-    await auth.submitForgotPasswordForm();
+    await common.click(auth.forgotPasswordSubmitButton);
     await common.expectContainsText(
       auth.forgotPasswordMessage,
       "If the email address is registered, a password reset email has been sent.",
@@ -46,14 +46,14 @@ test.describe("Authentication - Forgot Password", () => {
   test("TC-FORGOT-02 | should show success message for non-existing email", async () => {
     const email = createUniqueTestEmail("e2e-nonexistent");
 
-    await auth.clickLoginButton();
+    await common.click(auth.loginButton);
     await common.expectVisible(auth.authModal);
     await common.expectVisible(auth.loginFormContainer);
 
-    await auth.clickForgotPasswordButton();
+    await common.click(auth.loginForgotPasswordButton);
     await common.expectVisible(auth.forgotPasswordFormContainer);
     await auth.fillForgotPasswordForm(email);
-    await auth.submitForgotPasswordForm();
+    await common.click(auth.forgotPasswordSubmitButton);
     await common.expectContainsText(
       auth.forgotPasswordMessage,
       "If the email address is registered, a password reset email has been sent.",
@@ -85,7 +85,7 @@ test.describe("Authentication - Forgot Password", () => {
     await resetPassword.expectResetFormEnabled();
 
     await resetPassword.fillNewPassword(newPassword);
-    await resetPassword.submitPasswordReset();
+    await common.click(resetPassword.resetButton);
 
     await common.expectContainsText(
       resetPassword.resetMessage,
@@ -103,7 +103,7 @@ test.describe("Authentication - Forgot Password", () => {
     await resetPassword.expectResetFormEnabled();
 
     await resetPassword.fillNewPassword(newPassword);
-    await resetPassword.submitPasswordReset();
+    await common.click(resetPassword.resetButton);
 
     await common.expectContainsText(
       resetPassword.resetMessage,
@@ -112,12 +112,12 @@ test.describe("Authentication - Forgot Password", () => {
 
     await common.openPage(Env.test);
 
-    await auth.clickLoginButton();
+    await common.click(auth.loginButton);
     await common.expectVisible(auth.authModal);
     await common.expectVisible(auth.loginFormContainer);
 
     await auth.fillLoginForm(user.email, newPassword);
-    await auth.submitLoginForm();
+    await common.click(auth.loginSubmitButton);
 
     await common.expectVisible(flightFinder.logoutButton);
   });
@@ -131,7 +131,7 @@ test.describe("Authentication - Forgot Password", () => {
     await resetPassword.expectResetFormEnabled();
 
     await resetPassword.fillNewPassword(newPassword);
-    await resetPassword.submitPasswordReset();
+    await common.click(resetPassword.resetButton);
 
     await common.expectContainsText(
       resetPassword.resetMessage,
@@ -140,12 +140,12 @@ test.describe("Authentication - Forgot Password", () => {
 
     await common.openPage(Env.test);
 
-    await auth.clickLoginButton();
+    await common.click(auth.loginButton);
     await common.expectVisible(auth.authModal);
     await common.expectVisible(auth.loginFormContainer);
 
     await auth.fillLoginForm(user.email, user.password);
-    await auth.submitLoginForm();
+    await common.click(auth.loginSubmitButton);
 
     await common.expectVisible(auth.authModal);
     await common.expectContainsText(
@@ -165,7 +165,7 @@ test.describe("Authentication - Forgot Password", () => {
     await resetPassword.expectResetFormEnabled();
 
     await resetPassword.fillNewPassword(newPassword);
-    await resetPassword.submitPasswordReset();
+    await common.click(resetPassword.resetButton);
 
     await common.expectContainsText(
       resetPassword.resetMessage,
@@ -174,12 +174,12 @@ test.describe("Authentication - Forgot Password", () => {
 
     await common.openPage(Env.test);
 
-    await auth.clickLoginButton();
+    await common.click(auth.loginButton);
     await common.expectVisible(auth.authModal);
     await common.expectVisible(auth.loginFormContainer);
 
     await auth.fillLoginForm(user.email, newPassword);
-    await auth.submitLoginForm();
+    await common.click(auth.loginSubmitButton);
 
     await common.expectVisible(auth.authModal);
     await common.expectContainsText(
@@ -199,7 +199,7 @@ test.describe("Authentication - Forgot Password", () => {
     await resetPassword.expectResetFormEnabled();
 
     await resetPassword.fillNewPassword(newPassword);
-    await resetPassword.submitPasswordReset();
+    await common.click(resetPassword.resetButton);
 
     await common.expectContainsText(
       resetPassword.resetMessage,
