@@ -53,7 +53,10 @@ test.describe("Authentication - Login", () => {
     await auth.fillLoginForm(verifiedUser.email, "WrongPassword");
     await auth.submitLoginForm();
     await common.expectVisible(auth.authModal);
-    await auth.expectLoginMessage("Invalid email or password.");
+    await common.expectContainsText(
+      auth.loginMessage,
+      "Invalid email or password.",
+    );
 
     await common.expectNotPresent(flightFinder.logoutButton);
   });
@@ -69,7 +72,8 @@ test.describe("Authentication - Login", () => {
     await auth.fillLoginForm(user.email, user.password);
     await auth.submitLoginForm();
     await common.expectVisible(auth.authModal);
-    await auth.expectLoginMessage(
+    await common.expectContainsText(
+      auth.loginMessage,
       "Please verify your email before logging in.",
     );
 
@@ -86,7 +90,10 @@ test.describe("Authentication - Login", () => {
     await auth.fillLoginForm(email, "SomePassword1");
     await auth.submitLoginForm();
     await common.expectVisible(auth.authModal);
-    await auth.expectLoginMessage("Invalid email or password.");
+    await common.expectContainsText(
+      auth.loginMessage,
+      "Invalid email or password.",
+    );
 
     await common.expectNotPresent(flightFinder.logoutButton);
   });

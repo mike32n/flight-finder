@@ -25,7 +25,10 @@ test.describe("Authentication - Email Verification", () => {
 
     await common.openPage(`${Env.test}verify/${user.verificationToken}`);
 
-    await verify.expectVerificationMessage("Email verified successfully.");
+    await common.expectContainsText(
+      verify.verificationMessage,
+      "Email verified successfully.",
+    );
 
     await common.openPage(Env.test);
 
@@ -44,6 +47,9 @@ test.describe("Authentication - Email Verification", () => {
   test("TC-VERIFY-02 | should show error for invalid verification token", async () => {
     await common.openPage(`${Env.test}verify/i-n-v-a-l-i-d-t-o-k-e-n`);
 
-    await verify.expectVerificationMessage("Invalid verification token.");
+    await common.expectContainsText(
+      verify.verificationMessage,
+      "Invalid verification token.",
+    );
   });
 });

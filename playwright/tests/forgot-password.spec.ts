@@ -37,7 +37,8 @@ test.describe("Authentication - Forgot Password", () => {
     await common.expectVisible(auth.forgotPasswordFormContainer);
     await auth.fillForgotPasswordForm(user.email);
     await auth.submitForgotPasswordForm();
-    await auth.expectForgotPasswordSuccessMessage(
+    await common.expectContainsText(
+      auth.forgotPasswordMessage,
       "If the email address is registered, a password reset email has been sent.",
     );
   });
@@ -53,7 +54,8 @@ test.describe("Authentication - Forgot Password", () => {
     await common.expectVisible(auth.forgotPasswordFormContainer);
     await auth.fillForgotPasswordForm(email);
     await auth.submitForgotPasswordForm();
-    await auth.expectForgotPasswordSuccessMessage(
+    await common.expectContainsText(
+      auth.forgotPasswordMessage,
       "If the email address is registered, a password reset email has been sent.",
     );
   });
@@ -67,7 +69,8 @@ test.describe("Authentication - Forgot Password", () => {
 
   test("TC-FORGOT-04 | should get error on reset page with an invalid reset token", async () => {
     await common.openPage(`${Env.test}reset-password/i-n-v-a-l-i-d-t-o-k-e-n`);
-    await resetPassword.expectPasswordResetMessage(
+    await common.expectContainsText(
+      resetPassword.resetMessage,
       "Invalid or expired password reset token.",
     );
     await resetPassword.expectResetFormDisabled();
@@ -84,7 +87,8 @@ test.describe("Authentication - Forgot Password", () => {
     await resetPassword.fillNewPassword(newPassword);
     await resetPassword.submitPasswordReset();
 
-    await resetPassword.expectPasswordResetMessage(
+    await common.expectContainsText(
+      resetPassword.resetMessage,
       "Password reset successfully.",
     );
     await resetPassword.expectResetFormDisabled();
@@ -101,7 +105,8 @@ test.describe("Authentication - Forgot Password", () => {
     await resetPassword.fillNewPassword(newPassword);
     await resetPassword.submitPasswordReset();
 
-    await resetPassword.expectPasswordResetMessage(
+    await common.expectContainsText(
+      resetPassword.resetMessage,
       "Password reset successfully.",
     );
 
@@ -128,7 +133,8 @@ test.describe("Authentication - Forgot Password", () => {
     await resetPassword.fillNewPassword(newPassword);
     await resetPassword.submitPasswordReset();
 
-    await resetPassword.expectPasswordResetMessage(
+    await common.expectContainsText(
+      resetPassword.resetMessage,
       "Password reset successfully.",
     );
 
@@ -142,7 +148,10 @@ test.describe("Authentication - Forgot Password", () => {
     await auth.submitLoginForm();
 
     await common.expectVisible(auth.authModal);
-    await auth.expectLoginMessage("Invalid email or password.");
+    await common.expectContainsText(
+      auth.loginMessage,
+      "Invalid email or password.",
+    );
 
     await common.expectNotPresent(flightFinder.logoutButton);
   });
@@ -158,7 +167,8 @@ test.describe("Authentication - Forgot Password", () => {
     await resetPassword.fillNewPassword(newPassword);
     await resetPassword.submitPasswordReset();
 
-    await resetPassword.expectPasswordResetMessage(
+    await common.expectContainsText(
+      resetPassword.resetMessage,
       "Password reset successfully.",
     );
 
@@ -172,7 +182,8 @@ test.describe("Authentication - Forgot Password", () => {
     await auth.submitLoginForm();
 
     await common.expectVisible(auth.authModal);
-    await auth.expectLoginMessage(
+    await common.expectContainsText(
+      auth.loginMessage,
       "Please verify your email before logging in.",
     );
 
@@ -190,13 +201,15 @@ test.describe("Authentication - Forgot Password", () => {
     await resetPassword.fillNewPassword(newPassword);
     await resetPassword.submitPasswordReset();
 
-    await resetPassword.expectPasswordResetMessage(
+    await common.expectContainsText(
+      resetPassword.resetMessage,
       "Password reset successfully.",
     );
 
     await common.openPage(`${Env.test}reset-password/${user.resetToken}`);
 
-    await resetPassword.expectPasswordResetMessage(
+    await common.expectContainsText(
+      resetPassword.resetMessage,
       "Invalid or expired password reset token.",
     );
 

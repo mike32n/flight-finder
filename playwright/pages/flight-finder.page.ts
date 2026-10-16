@@ -150,10 +150,6 @@ export default class MainPage {
     }
   }
 
-  async expectThemeButtonText(text: string): Promise<void> {
-    await expect(this.toggleThemeButton).toHaveText(text);
-  }
-
   async clickAirportInput(): Promise<void> {
     await this.airportInput.click();
   }
@@ -626,10 +622,6 @@ export default class MainPage {
     await expect(this.selectedDestinationBadges).toHaveCount(count);
   }
 
-  async expectSearchValidationErrorText(message: string): Promise<void> {
-    await expect(this.searchValidationError).toHaveText(message);
-  }
-
   async expectAutocompleteOpen(): Promise<void> {
     await expect(this.autocompleteList).toHaveClass(/open/);
   }
@@ -658,14 +650,6 @@ export default class MainPage {
 
   async expectWeekdaySelected(weekDay: string): Promise<void> {
     await expect(this.weekdaySelect.filter({ hasText: weekDay })).toBeVisible();
-  }
-
-  async expectNightsValue(value: string): Promise<void> {
-    await expect(this.nightsInput).toHaveValue(value);
-  }
-
-  async expectStartDate(value: string): Promise<void> {
-    await expect(this.startDateInput).toHaveValue(value);
   }
 
   async expectStartDateMinimum(value: string): Promise<void> {
@@ -705,20 +689,12 @@ export default class MainPage {
     await expect(this.resultsFooter.filter({ hasText: text })).toBeVisible();
   }
 
-  async expectResultTexts(texts: string[]): Promise<void> {
-    await expect(this.resultCards).toHaveText(texts);
-  }
-
   async expectRestoredSearchVisible(): Promise<void> {
     await expect(this.results.getByText(/^Saved search:/)).toBeVisible();
   }
 
   async expectResultsEmpty(): Promise<void> {
     await expect(this.results).toBeEmpty();
-  }
-
-  async expectWeekdayValue(value: string): Promise<void> {
-    await expect(this.weekdaySelect).toHaveValue(value);
   }
 
   async expectFlexibleDateResult(): Promise<void> {
@@ -769,10 +745,6 @@ export default class MainPage {
 
   async expectBookingPageOpened(popup: Page): Promise<void> {
     await expect(popup).toHaveURL(/google\.com\/travel\/flights/);
-  }
-
-  async expectSearchError(message: string): Promise<void> {
-    await expect(this.results).toContainText(message);
   }
 
   async expectSearchUnavailable(): Promise<void> {

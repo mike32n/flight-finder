@@ -28,10 +28,6 @@ export default class ResetPasswordPage {
     await expect(this.resetButton).toBeEnabled();
   }
 
-  async expectPasswordResetMessage(message: string): Promise<void> {
-    await expect(this.resetMessage).toContainText(message);
-  }
-
   async expectResetFormDisabled(): Promise<void> {
     await expect(this.newPasswordInput).toBeDisabled();
     await expect(this.resetButton).toBeDisabled();

@@ -54,4 +54,22 @@ export default class CommonPage {
   async expectDisabled(element: Locator): Promise<void> {
     await expect(element).toBeDisabled();
   }
+
+  async expectText(
+    element: Locator,
+    text: string | RegExp | (string | RegExp)[],
+  ): Promise<void> {
+    await expect(element).toHaveText(text);
+  }
+
+  async expectContainsText(
+    element: Locator,
+    text: string | RegExp,
+  ): Promise<void> {
+    await expect(element).toContainText(text);
+  }
+
+  async expectValue(element: Locator, value: string | RegExp): Promise<void> {
+    await expect(element).toHaveValue(value);
+  }
 }

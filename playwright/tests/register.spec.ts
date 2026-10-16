@@ -33,7 +33,8 @@ test.describe("Authentication - Register", () => {
 
     await common.expectVisible(auth.loginFormContainer);
 
-    await auth.expectLoginMessage(
+    await common.expectContainsText(
+      auth.loginMessage,
       "Registration successful. Please check your email to verify your account.",
     );
   });
@@ -49,7 +50,10 @@ test.describe("Authentication - Register", () => {
     await auth.fillRegisterForm(user.email, user.password);
     await auth.submitRegisterForm();
 
-    await auth.expectRegisterMessage("Email already registered.");
+    await common.expectContainsText(
+      auth.registerMessage,
+      "Email already registered.",
+    );
 
     await common.expectVisible(auth.authModal);
     await common.expectVisible(auth.registerFormContainer);
@@ -66,7 +70,8 @@ test.describe("Authentication - Register", () => {
     await auth.submitRegisterForm();
 
     await common.expectVisible(auth.loginFormContainer);
-    await auth.expectLoginMessage(
+    await common.expectContainsText(
+      auth.loginMessage,
       "Registration successful. Please check your email to verify your account.",
     );
   });

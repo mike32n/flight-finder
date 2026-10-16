@@ -45,7 +45,7 @@ test.describe("Search persistence", () => {
     await flightFinder.clickSearchButton();
 
     await flightFinder.expectResultsFooterText("Finished...(failed: 0)");
-    await flightFinder.expectResultTexts([amsterdamText]);
+    await common.expectText(flightFinder.resultCards, [amsterdamText]);
 
     // Change the form without starting another search.
     await flightFinder.clickSelectedContainer("AMS");
@@ -58,10 +58,10 @@ test.describe("Search persistence", () => {
 
     await flightFinder.expectAirportSelected("LCA");
     await flightFinder.expectAirportNotSelected("AMS");
-    await flightFinder.expectWeekdayValue("2");
-    await flightFinder.expectNightsValue("3");
+    await common.expectValue(flightFinder.weekdaySelect, "2");
+    await common.expectValue(flightFinder.nightsInput, "3");
 
-    await flightFinder.expectResultTexts([amsterdamText]);
+    await common.expectText(flightFinder.resultCards, [amsterdamText]);
     await flightFinder.expectResultsFooterText("Finished...(failed: 0)");
     await common.expectEnabled(flightFinder.searchButton);
 
@@ -79,7 +79,7 @@ test.describe("Search persistence", () => {
     await flightFinder.clickSearchButton();
 
     await flightFinder.expectResultsFooterText("Finished...(failed: 0)");
-    await flightFinder.expectResultTexts([amsterdamText]);
+    await common.expectText(flightFinder.resultCards, [amsterdamText]);
 
     await auth.clickLoginButton();
     await common.expectVisible(auth.authModal);
@@ -88,13 +88,13 @@ test.describe("Search persistence", () => {
 
     await common.expectHidden(auth.authModal);
     await common.expectVisible(flightFinder.logoutButton);
-    await flightFinder.expectResultTexts([amsterdamText]);
+    await common.expectText(flightFinder.resultCards, [amsterdamText]);
 
     await common.reloadPage();
     await flightFinder.expectRestoredSearchVisible();
 
     await common.expectVisible(flightFinder.logoutButton);
-    await flightFinder.expectResultTexts([amsterdamText]);
+    await common.expectText(flightFinder.resultCards, [amsterdamText]);
     await searchMock.expectRequestCount(1);
 
     await flightFinder.clickLogoutButton();
@@ -122,13 +122,13 @@ test.describe("Search persistence", () => {
     await flightFinder.clickSearchButton();
 
     await flightFinder.expectResultsFooterText("Finished...(failed: 0)");
-    await flightFinder.expectResultTexts([amsterdamText]);
+    await common.expectText(flightFinder.resultCards, [amsterdamText]);
 
     await flightFinder.clickSelectedContainer("AMS");
     await flightFinder.selectAirportByEnter("lca");
     await flightFinder.clickSearchButton();
 
-    await flightFinder.expectResultTexts([larnacaText]);
+    await common.expectText(flightFinder.resultCards, [larnacaText]);
     await flightFinder.expectResultsFooterText("Finished...(failed: 0)");
     await searchMock.expectRequestCount(2);
 
@@ -136,7 +136,7 @@ test.describe("Search persistence", () => {
     await flightFinder.expectRestoredSearchVisible();
 
     await flightFinder.expectAirportSelected("LCA");
-    await flightFinder.expectResultTexts([larnacaText]);
+    await common.expectText(flightFinder.resultCards, [larnacaText]);
     await flightFinder.expectResultsFooterText("Finished...(failed: 0)");
 
     await searchMock.expectRequestCount(2);
@@ -156,14 +156,14 @@ test.describe("Search persistence", () => {
       "VIE → Amsterdam (AMS) 2026-10-09 → 2026-10-11 💶 HUF 30,000";
 
     await flightFinder.expectResultsFooterText("Finished...(failed: 0)");
-    await flightFinder.expectResultTexts([resultText]);
+    await common.expectText(flightFinder.resultCards, [resultText]);
 
     await flightFinder.selectOrigin("BTS");
     await common.reloadPage();
     await flightFinder.expectRestoredSearchVisible();
 
     await flightFinder.expectOriginSelected("BTS");
-    await flightFinder.expectResultTexts([resultText]);
+    await common.expectText(flightFinder.resultCards, [resultText]);
     await searchMock.expectRequestCount(1);
   });
 });

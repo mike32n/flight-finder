@@ -110,21 +110,9 @@ export default class AuthPage {
     await this.forgotPasswordSubmitButton.click();
   }
 
-  async expectLoginMessage(message: string): Promise<void> {
-    await expect(this.loginMessage).toContainText(message);
-  }
-
-  async expectRegisterMessage(message: string): Promise<void> {
-    await expect(this.registerMessage).toContainText(message);
-  }
-
   async expectRegisterFormEmpty(): Promise<void> {
     await expect(this.registerEmailInput).toHaveValue("");
     await expect(this.registerPasswordInput).toHaveValue("");
-  }
-
-  async expectForgotPasswordSuccessMessage(message: string): Promise<void> {
-    await expect(this.forgotPasswordMessage).toContainText(message);
   }
 
   async setInvalidAuthToken(): Promise<void> {

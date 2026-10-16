@@ -17,22 +17,22 @@ test.describe("Flight Finder", () => {
 
   test("TC-FLIGHT-01 | should toggle theme icons and preserve theme after reload", async () => {
     await common.expectLightThemeIsActive();
-    await flightFinder.expectThemeButtonText("Theme 🌙");
+    await common.expectText(flightFinder.toggleThemeButton, "Theme 🌙");
 
     await flightFinder.clickToggleTheme();
 
     await common.expectDarkThemeIsActive();
-    await flightFinder.expectThemeButtonText("Theme ☀️");
+    await common.expectText(flightFinder.toggleThemeButton, "Theme ☀️");
 
     await common.reloadPage();
 
     await common.expectDarkThemeIsActive();
-    await flightFinder.expectThemeButtonText("Theme ☀️");
+    await common.expectText(flightFinder.toggleThemeButton, "Theme ☀️");
 
     await flightFinder.clickToggleTheme();
 
     await common.expectLightThemeIsActive();
-    await flightFinder.expectThemeButtonText("Theme 🌙");
+    await common.expectText(flightFinder.toggleThemeButton, "Theme 🌙");
   });
 
   test("TC-FLIGHT-02 | should select active autocomplete item", async () => {
@@ -77,7 +77,8 @@ test.describe("Flight Finder", () => {
     await flightFinder.clickSearchButton();
 
     await common.expectVisible(flightFinder.noAirportsSelectedWarning);
-    await flightFinder.expectSearchValidationErrorText(
+    await common.expectText(
+      flightFinder.searchValidationError,
       "⚠️ Please select destination airport(s)",
     );
 
@@ -107,21 +108,21 @@ test.describe("Flight Finder", () => {
   test("TC-FLIGHT-09 | should not decrement nights below minimum", async () => {
     await flightFinder.clickDecrementButton(1);
 
-    await flightFinder.expectNightsValue("1");
+    await common.expectValue(flightFinder.nightsInput, "1");
   });
 
   test("TC-FLIGHT-10 | should not increment nights above maximum", async () => {
     await flightFinder.clickIncrementButton(30);
 
-    await flightFinder.expectNightsValue("30");
+    await common.expectValue(flightFinder.nightsInput, "30");
   });
 
   test("TC-FLIGHT-11 | should increment and decrement nights", async () => {
     await flightFinder.clickIncrementButton(3);
-    await flightFinder.expectNightsValue("4");
+    await common.expectValue(flightFinder.nightsInput, "4");
 
     await flightFinder.clickDecrementButton();
-    await flightFinder.expectNightsValue("3");
+    await common.expectValue(flightFinder.nightsInput, "3");
   });
 
   test("TC-FLIGHT-12 | should complete search for one airport", async () => {
@@ -185,7 +186,7 @@ test.describe("Flight Finder", () => {
     await common.expectDisabled(flightFinder.airportInput);
 
     await flightFinder.clickIncrementButton(30);
-    await flightFinder.expectNightsValue("30");
+    await common.expectValue(flightFinder.nightsInput, "30");
   });
 
   test("TC-FLIGHT-17 | should preserve interrupted search results after reload", async () => {
@@ -208,14 +209,14 @@ test.describe("Flight Finder", () => {
     await flightFinder.clickSearchButton();
 
     await flightFinder.expectResultsFooterText(interruptedMessage);
-    await flightFinder.expectResultTexts([resultText]);
+    await common.expectText(flightFinder.resultCards, [resultText]);
     await common.expectEnabled(flightFinder.searchButton);
 
     await common.reloadPage();
     await flightFinder.expectRestoredSearchVisible();
 
     await flightFinder.expectResultsFooterText(interruptedMessage);
-    await flightFinder.expectResultTexts([resultText]);
+    await common.expectText(flightFinder.resultCards, [resultText]);
     await common.expectEnabled(flightFinder.searchButton);
 
     await searchMock.expectRequestCount(1);
@@ -261,7 +262,7 @@ test.describe("Flight Finder", () => {
       await flightFinder.expectAuthControlsVisible();
 
       await flightFinder.fillNights("0");
-      await flightFinder.expectNightsValue("1");
+      await common.expectValue(flightFinder.nightsInput, "1");
     });
   }
 
@@ -294,7 +295,8 @@ test.describe("Flight Finder", () => {
     await flightFinder.forceOriginValue("VIE");
     await flightFinder.clickSearchButton();
 
-    await flightFinder.expectSearchValidationErrorText(
+    await common.expectText(
+      flightFinder.searchValidationError,
       "Departure and destination airports must differ.",
     );
     await flightFinder.expectSelectedDestinationCount(0);
@@ -393,7 +395,7 @@ test.describe("Flight Search Error Handling", () => {
 
     await flightFinder.clickSearchButton();
 
-    await flightFinder.expectSearchError("Error occurred.");
+    await common.expectContainsText(flightFinder.results, "Error occurred.");
   });
 
   test("TC-ERROR-02 | should show error when search stream fails", async () => {
@@ -401,7 +403,7 @@ test.describe("Flight Search Error Handling", () => {
 
     await flightFinder.clickSearchButton();
 
-    await flightFinder.expectSearchError("Error occurred.");
+    await common.expectContainsText(flightFinder.results, "Error occurred.");
   });
 
   test("TC-ERROR-03 | should request retry when provider failure leaves no results", async () => {

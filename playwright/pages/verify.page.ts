@@ -1,4 +1,4 @@
-import { Locator, Page, expect } from "@playwright/test";
+import { Locator, Page } from "@playwright/test";
 
 export default class VerifyPage {
   readonly page: Page;
@@ -8,9 +8,5 @@ export default class VerifyPage {
     this.page = page;
 
     this.verificationMessage = page.locator("#message");
-  }
-
-  async expectVerificationMessage(message: string): Promise<void> {
-    await expect(this.verificationMessage).toContainText(message);
   }
 }
