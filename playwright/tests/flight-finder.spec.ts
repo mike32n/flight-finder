@@ -95,16 +95,16 @@ test.describe("Flight Finder", () => {
   test("TC-FLIGHT-07 | should select weekday by typing", async () => {
     await flightFinder.selectWeekdayByName("Friday");
 
-    await flightFinder.expectWeekdaySelected("Friday");
+    await common.expectText(flightFinder.selectedWeekdayOption, "Friday");
   });
 
   test("TC-FLIGHT-08 | should navigate weekdays with arrow keys", async () => {
     await flightFinder.selectWeekdayByName("Friday");
     await common.press(flightFinder.weekdaySelect, "ArrowDown", 1);
-    await flightFinder.expectWeekdaySelected("Saturday");
+    await common.expectText(flightFinder.selectedWeekdayOption, "Saturday");
 
     await common.press(flightFinder.weekdaySelect, "ArrowUp", 2);
-    await flightFinder.expectWeekdaySelected("Thursday");
+    await common.expectText(flightFinder.selectedWeekdayOption, "Thursday");
   });
 
   test("TC-FLIGHT-09 | should not decrement nights below minimum", async () => {

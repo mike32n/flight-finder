@@ -19,6 +19,7 @@ export default class MainPage {
   readonly originAutocompleteItems: Locator;
   readonly airportInput: Locator;
   readonly weekdaySelect: Locator;
+  readonly selectedWeekdayOption: Locator;
   readonly nightsInput: Locator;
   readonly startDateInput: Locator;
   readonly autocompleteList: Locator;
@@ -80,6 +81,8 @@ export default class MainPage {
       this.originAutocompleteList.locator(".autocomplete-item");
 
     this.weekdaySelect = page.locator("#weekday");
+
+    this.selectedWeekdayOption = this.weekdaySelect.locator("option:checked");
 
     this.nightsInput = page.locator("#nights");
 
@@ -254,7 +257,7 @@ export default class MainPage {
   async selectWeekdayByName(weekDay: string): Promise<void> {
     await this.weekdaySelect.click();
     await this.typeWeekday(weekDay);
-    await this.airportInput.press("Enter");
+    await this.weekdaySelect.press("Enter");
   }
 
   async typeWeekday(weekDay: string): Promise<void> {
@@ -524,24 +527,26 @@ export default class MainPage {
 
   async expectAirportSelected(code: string): Promise<void> {
     await expect(
-      this.selectedContainer.filter({ hasText: code }),
+      this.selectedDestinationBadges.filter({
+        hasText: new RegExp(`^${code}$`),
+      }),
     ).toBeVisible();
   }
 
   async expectAirportSelectedOnlyOnce(code: string): Promise<void> {
-    await expect(this.selectedContainer.filter({ hasText: code })).toHaveCount(
-      1,
-    );
+    await expect(
+      this.selectedDestinationBadges.filter({
+        hasText: new RegExp(`^${code}$`),
+      }),
+    ).toHaveCount(1);
   }
 
   async expectAirportNotSelected(code: string): Promise<void> {
-    await expect(this.selectedContainer.filter({ hasText: code })).toHaveCount(
-      0,
-    );
-  }
-
-  async expectWeekdaySelected(weekDay: string): Promise<void> {
-    await expect(this.weekdaySelect.filter({ hasText: weekDay })).toBeVisible();
+    await expect(
+      this.selectedDestinationBadges.filter({
+        hasText: new RegExp(`^${code}$`),
+      }),
+    ).toHaveCount(0);
   }
 
   async expectStartDateMinimum(value: string): Promise<void> {
