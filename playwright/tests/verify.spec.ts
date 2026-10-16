@@ -30,13 +30,13 @@ test.describe("Authentication - Email Verification", () => {
     await common.openPage(Env.test);
 
     await auth.clickLoginButton();
-    await auth.expectAuthModalVisible();
-    await auth.expectLoginFormVisible();
+    await common.expectVisible(auth.authModal);
+    await common.expectVisible(auth.loginFormContainer);
 
     await auth.fillLoginForm(user.email, user.password);
     await auth.submitLoginForm();
 
-    await auth.expectAuthModalHidden();
+    await common.expectHidden(auth.authModal);
 
     await common.expectVisible(flightFinder.logoutButton);
   });

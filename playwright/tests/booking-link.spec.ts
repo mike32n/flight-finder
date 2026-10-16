@@ -24,7 +24,7 @@ test.describe("Booking links", () => {
 
     await flightFinder.clickSearchButton();
 
-    await flightFinder.expectFirstResultVisible();
+    await common.expectVisible(flightFinder.firstResult);
 
     const bookingPage = await flightFinder.clickFirstResultAndGetBookingPage();
 

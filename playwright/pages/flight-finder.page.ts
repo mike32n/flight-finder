@@ -314,10 +314,6 @@ export default class MainPage {
     await this.weekdaySelect.focus();
   }
 
-  async expectOriginDropdownHidden(): Promise<void> {
-    await expect(this.originAutocompleteList).toBeHidden();
-  }
-
   async expectSearchRequestOrigin(
     origin: string,
     destinations: string[],
@@ -630,16 +626,8 @@ export default class MainPage {
     await expect(this.selectedDestinationBadges).toHaveCount(count);
   }
 
-  async expectAirportInputEnabled(): Promise<void> {
-    await expect(this.airportInput).toBeEnabled();
-  }
-
   async expectSearchValidationErrorText(message: string): Promise<void> {
     await expect(this.searchValidationError).toHaveText(message);
-  }
-
-  async expectSearchValidationErrorHidden(): Promise<void> {
-    await expect(this.searchValidationError).toBeHidden();
   }
 
   async expectAutocompleteOpen(): Promise<void> {
@@ -711,18 +699,6 @@ export default class MainPage {
         }),
       )
       .toBe(value);
-  }
-
-  async expectNoAirportsSelectedWarning(): Promise<void> {
-    await expect(this.noAirportsSelectedWarning).toBeVisible();
-  }
-
-  async expectAirportInputDisabled(): Promise<void> {
-    await expect(this.airportInput).toBeDisabled();
-  }
-
-  async expectFirstResultVisible(): Promise<void> {
-    await expect(this.firstResult).toBeVisible();
   }
 
   async expectResultsFooterText(text: string): Promise<void> {
@@ -797,14 +773,6 @@ export default class MainPage {
 
   async expectSearchError(message: string): Promise<void> {
     await expect(this.results).toContainText(message);
-  }
-
-  async expectSearchButtonDisabled(): Promise<void> {
-    await expect(this.searchButton).toBeDisabled();
-  }
-
-  async expectSearchButtonEnabled(): Promise<void> {
-    await expect(this.searchButton).toBeEnabled();
   }
 
   async expectSearchUnavailable(): Promise<void> {

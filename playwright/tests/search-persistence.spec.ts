@@ -63,7 +63,7 @@ test.describe("Search persistence", () => {
 
     await flightFinder.expectResultTexts([amsterdamText]);
     await flightFinder.expectResultsFooterText("Finished...(failed: 0)");
-    await flightFinder.expectSearchButtonEnabled();
+    await common.expectEnabled(flightFinder.searchButton);
 
     await searchMock.expectRequestCount(1);
   });
@@ -82,11 +82,11 @@ test.describe("Search persistence", () => {
     await flightFinder.expectResultTexts([amsterdamText]);
 
     await auth.clickLoginButton();
-    await auth.expectAuthModalVisible();
+    await common.expectVisible(auth.authModal);
     await auth.fillLoginForm(user.email, user.password);
     await auth.submitLoginForm();
 
-    await auth.expectAuthModalHidden();
+    await common.expectHidden(auth.authModal);
     await common.expectVisible(flightFinder.logoutButton);
     await flightFinder.expectResultTexts([amsterdamText]);
 

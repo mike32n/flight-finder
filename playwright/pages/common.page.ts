@@ -46,4 +46,12 @@ export default class CommonPage {
   async expectNotPresent(element: Locator): Promise<void> {
     await expect(element).toHaveCount(0);
   }
+
+  async expectEnabled(element: Locator): Promise<void> {
+    await expect(element).toBeEnabled();
+  }
+
+  async expectDisabled(element: Locator): Promise<void> {
+    await expect(element).toBeDisabled();
+  }
 }

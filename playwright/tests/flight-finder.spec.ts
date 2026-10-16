@@ -76,17 +76,17 @@ test.describe("Flight Finder", () => {
   test("TC-FLIGHT-06 | should dismiss the missing-destination warning on click", async () => {
     await flightFinder.clickSearchButton();
 
-    await flightFinder.expectNoAirportsSelectedWarning();
+    await common.expectVisible(flightFinder.noAirportsSelectedWarning);
     await flightFinder.expectSearchValidationErrorText(
       "⚠️ Please select destination airport(s)",
     );
 
     await flightFinder.clickSearchValidationError();
 
-    await flightFinder.expectSearchValidationErrorHidden();
+    await common.expectHidden(flightFinder.searchValidationError);
     await flightFinder.expectSelectedDestinationCount(0);
-    await flightFinder.expectAirportInputEnabled();
-    await flightFinder.expectSearchButtonEnabled();
+    await common.expectEnabled(flightFinder.airportInput);
+    await common.expectEnabled(flightFinder.searchButton);
   });
 
   test("TC-FLIGHT-07 | should select weekday by typing", async () => {
@@ -133,7 +133,7 @@ test.describe("Flight Finder", () => {
 
     await flightFinder.clickSearchButton();
 
-    await flightFinder.expectFirstResultVisible();
+    await common.expectVisible(flightFinder.firstResult);
     await flightFinder.expectResultsFooterText("Finished");
   });
 
@@ -182,7 +182,7 @@ test.describe("Flight Finder", () => {
     await flightFinder.expectAirportSelected("AMS");
     await flightFinder.expectAirportSelected("LCA");
     await flightFinder.expectAirportSelected("EIN");
-    await flightFinder.expectAirportInputDisabled();
+    await common.expectDisabled(flightFinder.airportInput);
 
     await flightFinder.clickIncrementButton(30);
     await flightFinder.expectNightsValue("30");
@@ -209,14 +209,14 @@ test.describe("Flight Finder", () => {
 
     await flightFinder.expectResultsFooterText(interruptedMessage);
     await flightFinder.expectResultTexts([resultText]);
-    await flightFinder.expectSearchButtonEnabled();
+    await common.expectEnabled(flightFinder.searchButton);
 
     await common.reloadPage();
     await flightFinder.expectRestoredSearchVisible();
 
     await flightFinder.expectResultsFooterText(interruptedMessage);
     await flightFinder.expectResultTexts([resultText]);
-    await flightFinder.expectSearchButtonEnabled();
+    await common.expectEnabled(flightFinder.searchButton);
 
     await searchMock.expectRequestCount(1);
   });
@@ -229,14 +229,14 @@ test.describe("Flight Finder", () => {
     try {
       await flightFinder.triggerSearchTwice();
 
-      await flightFinder.expectSearchButtonDisabled();
+      await common.expectDisabled(flightFinder.searchButton);
       await pendingSearch.expectRequestCount(1);
     } finally {
       pendingSearch.complete();
     }
 
     await flightFinder.expectNoResults();
-    await flightFinder.expectSearchButtonEnabled();
+    await common.expectEnabled(flightFinder.searchButton);
 
     await pendingSearch.expectRequestCount(1);
   });
@@ -286,7 +286,7 @@ test.describe("Flight Finder", () => {
     await flightFinder.selectAirportByEnter("lca");
 
     await flightFinder.expectSelectedDestinationCount(3);
-    await flightFinder.expectAirportInputDisabled();
+    await common.expectDisabled(flightFinder.airportInput);
     await flightFinder.openOriginAutocomplete("v");
     await flightFinder.expectOriginSuggestionAbsent("VIE");
     await flightFinder.cancelOriginEdit();
@@ -301,18 +301,18 @@ test.describe("Flight Finder", () => {
 
     await flightFinder.clickSearchValidationError();
 
-    await flightFinder.expectSearchValidationErrorHidden();
+    await common.expectHidden(flightFinder.searchValidationError);
     await flightFinder.expectSelectedDestinationCount(3);
     await flightFinder.expectAirportSelected("VIE");
     await flightFinder.expectAirportSelected("AMS");
     await flightFinder.expectAirportSelected("LCA");
-    await flightFinder.expectAirportInputDisabled();
+    await common.expectDisabled(flightFinder.airportInput);
 
     await flightFinder.clickSelectedContainer("VIE");
 
     await flightFinder.expectAirportNotSelected("VIE");
     await flightFinder.expectSelectedDestinationCount(2);
-    await flightFinder.expectAirportInputEnabled();
+    await common.expectEnabled(flightFinder.airportInput);
     await flightFinder.openOriginAutocomplete("vie");
     await flightFinder.expectOriginSuggestionVisible("VIE");
     await flightFinder.cancelOriginEdit();
@@ -345,7 +345,7 @@ test.describe("Flight Finder", () => {
     await flightFinder.openOriginAutocomplete("London");
     await flightFinder.cancelOriginEdit();
     await flightFinder.expectOriginSelected("VIE");
-    await flightFinder.expectOriginDropdownHidden();
+    await common.expectHidden(flightFinder.originAutocompleteList);
     await flightFinder.openOriginAutocomplete("London");
     await flightFinder.blurOriginInput();
     await flightFinder.expectOriginSelected("VIE");
@@ -364,8 +364,8 @@ test.describe("Flight Finder", () => {
     }
     await flightFinder.selectOrigin("LCA");
     await flightFinder.expectOriginSelected("LCA");
-    await flightFinder.expectAirportInputEnabled();
-    await flightFinder.expectSearchButtonEnabled();
+    await common.expectEnabled(flightFinder.airportInput);
+    await common.expectEnabled(flightFinder.searchButton);
   });
 
   test("TC-FLIGHT-25 | should select the typed origin when Enter is pressed without waiting for suggestions", async () => {
@@ -411,7 +411,7 @@ test.describe("Flight Search Error Handling", () => {
 
     await flightFinder.expectSearchUnavailable();
     await flightFinder.expectResultsFooterText("Finished...(failed: 1)");
-    await flightFinder.expectSearchButtonEnabled();
+    await common.expectEnabled(flightFinder.searchButton);
   });
 
   test("TC-ERROR-04 | should retain results when another provider request fails", async () => {
@@ -419,9 +419,9 @@ test.describe("Flight Search Error Handling", () => {
 
     await flightFinder.clickSearchButton();
 
-    await flightFinder.expectFirstResultVisible();
+    await common.expectVisible(flightFinder.firstResult);
     await flightFinder.expectResultsFooterText("Finished...(failed: 1)");
     await flightFinder.expectNoSearchUnavailableMessage();
-    await flightFinder.expectSearchButtonEnabled();
+    await common.expectEnabled(flightFinder.searchButton);
   });
 });

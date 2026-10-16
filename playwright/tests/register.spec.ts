@@ -1,5 +1,6 @@
 import { test } from "@playwright/test";
 import Env from "../utils/env";
+import CommonPage from "../pages/common.page";
 import AuthPage from "../pages/auth.page";
 import {
   createTestUser,
@@ -8,9 +9,11 @@ import {
 } from "../helpers/user.helper";
 
 test.describe("Authentication - Register", () => {
+  let common: CommonPage;
   let auth: AuthPage;
 
   test.beforeEach(async ({ page }) => {
+    common = new CommonPage(page);
     auth = new AuthPage(page);
 
     await page.goto(Env.test);
@@ -22,13 +25,13 @@ test.describe("Authentication - Register", () => {
 
     await auth.clickRegisterButton();
 
-    await auth.expectAuthModalVisible();
-    await auth.expectRegisterFormVisible();
+    await common.expectVisible(auth.authModal);
+    await common.expectVisible(auth.registerFormContainer);
 
     await auth.fillRegisterForm(email, password);
     await auth.submitRegisterForm();
 
-    await auth.expectLoginFormVisible();
+    await common.expectVisible(auth.loginFormContainer);
 
     await auth.expectLoginMessage(
       "Registration successful. Please check your email to verify your account.",
@@ -40,29 +43,29 @@ test.describe("Authentication - Register", () => {
 
     await auth.clickRegisterButton();
 
-    await auth.expectAuthModalVisible();
-    await auth.expectRegisterFormVisible();
+    await common.expectVisible(auth.authModal);
+    await common.expectVisible(auth.registerFormContainer);
 
     await auth.fillRegisterForm(user.email, user.password);
     await auth.submitRegisterForm();
 
     await auth.expectRegisterMessage("Email already registered.");
 
-    await auth.expectAuthModalVisible();
-    await auth.expectRegisterFormVisible();
+    await common.expectVisible(auth.authModal);
+    await common.expectVisible(auth.registerFormContainer);
   });
 
   test("TC-REGISTER-03 | should resend verification for an unverified account with matching password", async () => {
     const user = await createTestUser();
 
     await auth.clickRegisterButton();
-    await auth.expectAuthModalVisible();
-    await auth.expectRegisterFormVisible();
+    await common.expectVisible(auth.authModal);
+    await common.expectVisible(auth.registerFormContainer);
 
     await auth.fillRegisterForm(user.email, user.password);
     await auth.submitRegisterForm();
 
-    await auth.expectLoginFormVisible();
+    await common.expectVisible(auth.loginFormContainer);
     await auth.expectLoginMessage(
       "Registration successful. Please check your email to verify your account.",
     );

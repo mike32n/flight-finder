@@ -30,11 +30,11 @@ test.describe("Authentication - Forgot Password", () => {
     const user = await createTestUser();
 
     await auth.clickLoginButton();
-    await auth.expectAuthModalVisible();
-    await auth.expectLoginFormVisible();
+    await common.expectVisible(auth.authModal);
+    await common.expectVisible(auth.loginFormContainer);
 
     await auth.clickForgotPasswordButton();
-    await auth.expectForgotPasswordFormVisible();
+    await common.expectVisible(auth.forgotPasswordFormContainer);
     await auth.fillForgotPasswordForm(user.email);
     await auth.submitForgotPasswordForm();
     await auth.expectForgotPasswordSuccessMessage(
@@ -46,11 +46,11 @@ test.describe("Authentication - Forgot Password", () => {
     const email = createUniqueTestEmail("e2e-nonexistent");
 
     await auth.clickLoginButton();
-    await auth.expectAuthModalVisible();
-    await auth.expectLoginFormVisible();
+    await common.expectVisible(auth.authModal);
+    await common.expectVisible(auth.loginFormContainer);
 
     await auth.clickForgotPasswordButton();
-    await auth.expectForgotPasswordFormVisible();
+    await common.expectVisible(auth.forgotPasswordFormContainer);
     await auth.fillForgotPasswordForm(email);
     await auth.submitForgotPasswordForm();
     await auth.expectForgotPasswordSuccessMessage(
@@ -108,8 +108,8 @@ test.describe("Authentication - Forgot Password", () => {
     await common.openPage(Env.test);
 
     await auth.clickLoginButton();
-    await auth.expectAuthModalVisible();
-    await auth.expectLoginFormVisible();
+    await common.expectVisible(auth.authModal);
+    await common.expectVisible(auth.loginFormContainer);
 
     await auth.fillLoginForm(user.email, newPassword);
     await auth.submitLoginForm();
@@ -135,13 +135,13 @@ test.describe("Authentication - Forgot Password", () => {
     await common.openPage(Env.test);
 
     await auth.clickLoginButton();
-    await auth.expectAuthModalVisible();
-    await auth.expectLoginFormVisible();
+    await common.expectVisible(auth.authModal);
+    await common.expectVisible(auth.loginFormContainer);
 
     await auth.fillLoginForm(user.email, user.password);
     await auth.submitLoginForm();
 
-    await auth.expectAuthModalVisible();
+    await common.expectVisible(auth.authModal);
     await auth.expectLoginMessage("Invalid email or password.");
 
     await common.expectNotPresent(flightFinder.logoutButton);
@@ -165,13 +165,13 @@ test.describe("Authentication - Forgot Password", () => {
     await common.openPage(Env.test);
 
     await auth.clickLoginButton();
-    await auth.expectAuthModalVisible();
-    await auth.expectLoginFormVisible();
+    await common.expectVisible(auth.authModal);
+    await common.expectVisible(auth.loginFormContainer);
 
     await auth.fillLoginForm(user.email, newPassword);
     await auth.submitLoginForm();
 
-    await auth.expectAuthModalVisible();
+    await common.expectVisible(auth.authModal);
     await auth.expectLoginMessage(
       "Please verify your email before logging in.",
     );

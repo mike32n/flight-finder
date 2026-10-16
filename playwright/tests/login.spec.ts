@@ -32,12 +32,12 @@ test.describe("Authentication - Login", () => {
 
     await auth.clickLoginButton();
 
-    await auth.expectAuthModalVisible();
-    await auth.expectLoginFormVisible();
+    await common.expectVisible(auth.authModal);
+    await common.expectVisible(auth.loginFormContainer);
 
     await auth.fillLoginForm(verifiedUser.email, verifiedUser.password);
     await auth.submitLoginForm();
-    await auth.expectAuthModalHidden();
+    await common.expectHidden(auth.authModal);
 
     await common.expectVisible(flightFinder.logoutButton);
   });
@@ -47,12 +47,12 @@ test.describe("Authentication - Login", () => {
 
     await auth.clickLoginButton();
 
-    await auth.expectAuthModalVisible();
-    await auth.expectLoginFormVisible();
+    await common.expectVisible(auth.authModal);
+    await common.expectVisible(auth.loginFormContainer);
 
     await auth.fillLoginForm(verifiedUser.email, "WrongPassword");
     await auth.submitLoginForm();
-    await auth.expectAuthModalVisible();
+    await common.expectVisible(auth.authModal);
     await auth.expectLoginMessage("Invalid email or password.");
 
     await common.expectNotPresent(flightFinder.logoutButton);
@@ -63,12 +63,12 @@ test.describe("Authentication - Login", () => {
 
     await auth.clickLoginButton();
 
-    await auth.expectAuthModalVisible();
-    await auth.expectLoginFormVisible();
+    await common.expectVisible(auth.authModal);
+    await common.expectVisible(auth.loginFormContainer);
 
     await auth.fillLoginForm(user.email, user.password);
     await auth.submitLoginForm();
-    await auth.expectAuthModalVisible();
+    await common.expectVisible(auth.authModal);
     await auth.expectLoginMessage(
       "Please verify your email before logging in.",
     );
@@ -80,12 +80,12 @@ test.describe("Authentication - Login", () => {
     const email = createUniqueTestEmail("e2e-nonexistent");
 
     await auth.clickLoginButton();
-    await auth.expectAuthModalVisible();
-    await auth.expectLoginFormVisible();
+    await common.expectVisible(auth.authModal);
+    await common.expectVisible(auth.loginFormContainer);
 
     await auth.fillLoginForm(email, "SomePassword1");
     await auth.submitLoginForm();
-    await auth.expectAuthModalVisible();
+    await common.expectVisible(auth.authModal);
     await auth.expectLoginMessage("Invalid email or password.");
 
     await common.expectNotPresent(flightFinder.logoutButton);
@@ -97,13 +97,13 @@ test.describe("Authentication - Login", () => {
 
     await auth.clickLoginButton();
 
-    await auth.expectAuthModalVisible();
-    await auth.expectLoginFormVisible();
+    await common.expectVisible(auth.authModal);
+    await common.expectVisible(auth.loginFormContainer);
 
     await auth.fillLoginForm(user.email, user.password);
     await auth.submitLoginForm();
 
-    await auth.expectAuthModalHidden();
+    await common.expectHidden(auth.authModal);
 
     await common.expectVisible(flightFinder.logoutButton);
 
@@ -121,13 +121,13 @@ test.describe("Authentication - Login", () => {
 
     await auth.clickLoginButton();
 
-    await auth.expectAuthModalVisible();
-    await auth.expectLoginFormVisible();
+    await common.expectVisible(auth.authModal);
+    await common.expectVisible(auth.loginFormContainer);
 
     await auth.fillLoginForm(user.email, user.password);
     await auth.submitLoginForm();
 
-    await auth.expectAuthModalHidden();
+    await common.expectHidden(auth.authModal);
 
     await common.expectVisible(flightFinder.logoutButton);
 

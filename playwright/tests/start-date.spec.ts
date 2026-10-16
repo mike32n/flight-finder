@@ -15,7 +15,7 @@ test.describe("Search start date", () => {
     await common.installClock("2026-10-15T12:00:00");
     await common.openPage(Env.test);
 
-    await flightFinder.expectSearchButtonEnabled();
+    await common.expectEnabled(flightFinder.searchButton);
   });
 
   test("TC-START-DATE-01 | should default to today and prevent earlier calendar dates", async () => {
@@ -60,7 +60,7 @@ test.describe("Search start date", () => {
     await flightFinder.expectSearchValidationErrorText(
       "Start date cannot be in the past.",
     );
-    await flightFinder.expectFirstResultVisible();
+    await common.expectVisible(flightFinder.firstResult);
 
     await flightFinder.fillStartDate("");
     await flightFinder.clickSearchButton();
@@ -68,7 +68,7 @@ test.describe("Search start date", () => {
     await flightFinder.expectSearchValidationErrorText(
       "Please enter a valid start date.",
     );
-    await flightFinder.expectFirstResultVisible();
+    await common.expectVisible(flightFinder.firstResult);
 
     await searchMock.expectRequestCount(1);
   });
@@ -80,7 +80,7 @@ test.describe("Search start date", () => {
 
     await common.reloadPage();
 
-    await flightFinder.expectSearchButtonEnabled();
+    await common.expectEnabled(flightFinder.searchButton);
     await flightFinder.expectStartDate("2027-03-01");
     await flightFinder.expectAirportSelected("AMS");
   });
@@ -105,11 +105,11 @@ test.describe("Search start date", () => {
 
     await common.reloadPage();
 
-    await flightFinder.expectSearchButtonEnabled();
+    await common.expectEnabled(flightFinder.searchButton);
     await flightFinder.expectStartDate("2027-04-01");
     await flightFinder.expectSavedSearchStartDate("2027-03-01");
     await flightFinder.expectRestoredSearchVisible();
-    await flightFinder.expectFirstResultVisible();
+    await common.expectVisible(flightFinder.firstResult);
 
     await searchMock.expectRequestCount(1);
   });
@@ -122,7 +122,7 @@ test.describe("Search start date", () => {
     await common.setSystemTime("2026-10-16T12:00:00");
     await common.reloadPage();
 
-    await flightFinder.expectSearchButtonEnabled();
+    await common.expectEnabled(flightFinder.searchButton);
     await flightFinder.expectStartDate("2026-10-16");
     await flightFinder.expectStartDateMinimum("2026-10-16");
     await flightFinder.expectAirportSelected("AMS");

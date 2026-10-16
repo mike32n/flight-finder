@@ -110,24 +110,8 @@ export default class AuthPage {
     await this.forgotPasswordSubmitButton.click();
   }
 
-  async expectAuthModalVisible(): Promise<void> {
-    await expect(this.authModal).toBeVisible();
-  }
-
-  async expectAuthModalHidden(): Promise<void> {
-    await expect(this.authModal).toBeHidden();
-  }
-
-  async expectLoginFormVisible(): Promise<void> {
-    await expect(this.loginFormContainer).toBeVisible();
-  }
-
   async expectLoginMessage(message: string): Promise<void> {
     await expect(this.loginMessage).toContainText(message);
-  }
-
-  async expectRegisterFormVisible(): Promise<void> {
-    await expect(this.registerFormContainer).toBeVisible();
   }
 
   async expectRegisterMessage(message: string): Promise<void> {
@@ -137,10 +121,6 @@ export default class AuthPage {
   async expectRegisterFormEmpty(): Promise<void> {
     await expect(this.registerEmailInput).toHaveValue("");
     await expect(this.registerPasswordInput).toHaveValue("");
-  }
-
-  async expectForgotPasswordFormVisible(): Promise<void> {
-    await expect(this.forgotPasswordFormContainer).toBeVisible();
   }
 
   async expectForgotPasswordSuccessMessage(message: string): Promise<void> {
