@@ -9,10 +9,7 @@ import {
   createUniqueTestEmail,
 } from "../helpers/user.helper";
 
-const bcrypt = require("bcrypt");
-const crypto = require("crypto");
-
-const { createUser, verifyUser } = require("../../models/userModel");
+const { verifyUser } = require("../../models/userModel");
 
 test.describe("Authentication - Login", () => {
   let common: CommonPage;

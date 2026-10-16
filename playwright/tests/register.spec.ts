@@ -16,7 +16,7 @@ test.describe("Authentication - Register", () => {
     common = new CommonPage(page);
     auth = new AuthPage(page);
 
-    await page.goto(Env.test);
+    await common.openPage(Env.test);
   });
 
   test("TC-REGISTER-01 | should register a new user successfully", async () => {

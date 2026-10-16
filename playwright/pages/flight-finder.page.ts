@@ -35,8 +35,6 @@ export default class MainPage {
 
   readonly flexCard: Locator;
   readonly fallbackFlexCard: Locator;
-  readonly flexBadge: Locator;
-  readonly priceInsight: Locator;
 
   readonly noResultsCard: Locator;
 
@@ -119,8 +117,6 @@ export default class MainPage {
       has: page.getByText("Alternative dates", { exact: true }),
     });
 
-    this.flexBadge = page.locator(".flex-badge");
-    this.priceInsight = page.locator(".price-insight");
     this.noResultsCard = page.locator(".no-results-card");
   }
 
@@ -166,11 +162,6 @@ export default class MainPage {
     }
 
     return match[1];
-  }
-
-  async getAutocompleteItemText(index: number): Promise<string> {
-    const item = this.autocompleteItem.nth(index);
-    return (await item.textContent())?.trim() ?? "";
   }
 
   async selectAirportByEnter(searchText: string): Promise<void> {
@@ -422,21 +413,6 @@ export default class MainPage {
         status: 200,
         contentType: "text/event-stream",
         body: "event: error\ndata: error\n\n",
-      });
-    });
-  }
-
-  async mockUnexpectedStreamClose(): Promise<void> {
-    await this.page.route("**/search-stream", async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: "text/event-stream",
-        body: [
-          "event: data",
-          'data: {"destination":{"city":"Amsterdam","code":"AMS"},"departure":"2026-10-09","return":"2026-10-11","price":30000,"currency":"HUF","bookingUrl":"https://example.com"}',
-          "",
-          "",
-        ].join("\n"),
       });
     });
   }

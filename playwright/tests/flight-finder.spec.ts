@@ -38,7 +38,7 @@ test.describe("Flight Finder", () => {
   test("TC-FLIGHT-02 | should select active autocomplete item", async () => {
     await flightFinder.openAutocomplete("c");
 
-    common.press(flightFinder.airportInput, "ArrowDown", 2);
+    await common.press(flightFinder.airportInput, "ArrowDown", 2);
     await flightFinder.expectItemActive(1);
 
     const iata = await flightFinder.getActiveAutocompleteItemIata();

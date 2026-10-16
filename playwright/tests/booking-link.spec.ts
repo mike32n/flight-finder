@@ -22,7 +22,7 @@ test.describe("Booking links", () => {
     await flightFinder.selectWeekdayOption("5");
     await common.click(flightFinder.incrementButton, 2);
 
-    common.click(flightFinder.searchButton);
+    await common.click(flightFinder.searchButton);
 
     await common.expectVisible(flightFinder.firstResult);
 

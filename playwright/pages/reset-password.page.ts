@@ -1,15 +1,11 @@
 import { Locator, Page, expect } from "@playwright/test";
 
 export default class ResetPasswordPage {
-  readonly page: Page;
-
   readonly newPasswordInput: Locator;
   readonly resetButton: Locator;
   readonly resetMessage: Locator;
 
   constructor(page: Page) {
-    this.page = page;
-
     this.newPasswordInput = page.locator("#password");
     this.resetButton = page.locator("#reset-btn");
     this.resetMessage = page.locator("#message");

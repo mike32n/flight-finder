@@ -82,11 +82,6 @@ export default class AuthPage {
     await this.registerPasswordInput.fill(password);
   }
 
-  async expectRegisterFormEmpty(): Promise<void> {
-    await expect(this.registerEmailInput).toHaveValue("");
-    await expect(this.registerPasswordInput).toHaveValue("");
-  }
-
   async setInvalidAuthToken(): Promise<void> {
     await this.page.evaluate(() => {
       localStorage.setItem("authToken", "invalid-token");
