@@ -19,6 +19,16 @@ export default class CommonPage {
     }
   }
 
+  async fill(element: Locator, value: string): Promise<void> {
+    await element.fill(value);
+  }
+
+  async press(element: Locator, key: string, times = 1): Promise<void> {
+    for (let i = 0; i < times; i++) {
+      await element.press(key);
+    }
+  }
+
   async reloadPage(): Promise<void> {
     await this.page.reload();
   }

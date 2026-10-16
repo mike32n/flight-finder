@@ -150,41 +150,9 @@ export default class MainPage {
     await this.selectedContainer.getByText(code).click();
   }
 
-  async searchAirport(searchText: string): Promise<void> {
-    await this.airportInput.fill(searchText);
-  }
-
-  async pressEnter(): Promise<void> {
-    await this.airportInput.press("Enter");
-  }
-
-  async pressArrowDown(element: Locator, times = 1): Promise<void> {
-    for (let i = 0; i < times; i++) {
-      await element.press("ArrowDown");
-    }
-  }
-
-  async pressArrowUp(element: Locator, times = 1): Promise<void> {
-    for (let i = 0; i < times; i++) {
-      await element.press("ArrowUp");
-    }
-  }
-
-  async pressAirportArrowDown(times = 1): Promise<void> {
-    await this.pressArrowDown(this.airportInput, times);
-  }
-
-  async pressWeekdayArrowDown(times = 1): Promise<void> {
-    await this.pressArrowDown(this.weekdaySelect, times);
-  }
-
-  async pressWeekdayArrowUp(times = 1): Promise<void> {
-    await this.pressArrowUp(this.weekdaySelect, times);
-  }
-
   async openAutocomplete(searchText: string): Promise<void> {
     await this.airportInput.click();
-    await this.searchAirport(searchText);
+    await this.airportInput.fill(searchText);
     await this.expectAutocompleteOpen();
   }
 
@@ -207,9 +175,9 @@ export default class MainPage {
 
   async selectAirportByEnter(searchText: string): Promise<void> {
     await this.airportInput.click();
-    await this.searchAirport(searchText);
+    await this.airportInput.fill(searchText);
     await this.expectAutocompleteOpen();
-    await this.pressEnter();
+    await this.airportInput.press("Enter");
   }
 
   async openOriginAutocomplete(query: string): Promise<void> {
@@ -270,10 +238,6 @@ export default class MainPage {
     }, code);
   }
 
-  async cancelOriginEdit(): Promise<void> {
-    await this.originInput.press("Escape");
-  }
-
   async blurOriginInput(): Promise<void> {
     await this.weekdaySelect.focus();
   }
@@ -299,19 +263,11 @@ export default class MainPage {
   async selectWeekdayByName(weekDay: string): Promise<void> {
     await this.weekdaySelect.click();
     await this.typeWeekday(weekDay);
-    await this.pressEnter();
+    await this.airportInput.press("Enter");
   }
 
   async typeWeekday(weekDay: string): Promise<void> {
     await this.weekdaySelect.type(weekDay);
-  }
-
-  async fillNights(value: string): Promise<void> {
-    await this.nightsInput.fill(value);
-  }
-
-  async fillStartDate(value: string): Promise<void> {
-    await this.startDateInput.fill(value);
   }
 
   async blurStartDate(): Promise<void> {

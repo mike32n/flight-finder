@@ -15,10 +15,6 @@ export default class ResetPasswordPage {
     this.resetMessage = page.locator("#message");
   }
 
-  async fillNewPassword(password: string): Promise<void> {
-    await this.newPasswordInput.fill(password);
-  }
-
   async expectResetFormEnabled(): Promise<void> {
     await expect(this.newPasswordInput).toBeEnabled();
     await expect(this.resetButton).toBeEnabled();

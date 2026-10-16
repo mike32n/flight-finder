@@ -82,10 +82,6 @@ export default class AuthPage {
     await this.registerPasswordInput.fill(password);
   }
 
-  async fillForgotPasswordForm(email: string): Promise<void> {
-    await this.forgotPasswordEmailInput.fill(email);
-  }
-
   async expectRegisterFormEmpty(): Promise<void> {
     await expect(this.registerEmailInput).toHaveValue("");
     await expect(this.registerPasswordInput).toHaveValue("");

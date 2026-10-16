@@ -33,7 +33,7 @@ test.describe("Search start date", () => {
     ]);
 
     await flightFinder.selectAirportByEnter("ams");
-    await flightFinder.fillStartDate("2027-03-01");
+    await common.fill(flightFinder.startDateInput, "2027-03-01");
 
     await flightFinder.searchAndExpectStartDate("2027-03-01");
 
@@ -54,7 +54,7 @@ test.describe("Search start date", () => {
 
     await flightFinder.expectResultsFooterText("Finished...(failed: 0)");
 
-    await flightFinder.fillStartDate("2026-10-14");
+    await common.fill(flightFinder.startDateInput, "2026-10-14");
     await common.click(flightFinder.searchButton);
 
     await common.expectText(
@@ -63,7 +63,7 @@ test.describe("Search start date", () => {
     );
     await common.expectVisible(flightFinder.firstResult);
 
-    await flightFinder.fillStartDate("");
+    await common.fill(flightFinder.startDateInput, "");
     await common.click(flightFinder.searchButton);
 
     await common.expectText(
@@ -77,7 +77,7 @@ test.describe("Search start date", () => {
 
   test("TC-START-DATE-04 | should restore the selected future date after reload", async () => {
     await flightFinder.selectAirportByEnter("ams");
-    await flightFinder.fillStartDate("2027-03-01");
+    await common.fill(flightFinder.startDateInput, "2027-03-01");
     await flightFinder.blurStartDate();
 
     await common.reloadPage();
@@ -97,12 +97,12 @@ test.describe("Search start date", () => {
     ]);
 
     await flightFinder.selectAirportByEnter("ams");
-    await flightFinder.fillStartDate("2027-03-01");
+    await common.fill(flightFinder.startDateInput, "2027-03-01");
     await flightFinder.searchAndExpectStartDate("2027-03-01");
 
     await flightFinder.expectResultsFooterText("Finished...(failed: 0)");
 
-    await flightFinder.fillStartDate("2027-04-01");
+    await common.fill(flightFinder.startDateInput, "2027-04-01");
     await flightFinder.blurStartDate();
 
     await common.reloadPage();
@@ -118,7 +118,7 @@ test.describe("Search start date", () => {
 
   test("TC-START-DATE-06 | should replace a saved past date with today", async () => {
     await flightFinder.selectAirportByEnter("ams");
-    await flightFinder.fillStartDate("2026-10-15");
+    await common.fill(flightFinder.startDateInput, "2026-10-15");
     await flightFinder.blurStartDate();
 
     await common.setSystemTime("2026-10-16T12:00:00");

@@ -35,7 +35,7 @@ test.describe("Authentication - Forgot Password", () => {
 
     await common.click(auth.loginForgotPasswordButton);
     await common.expectVisible(auth.forgotPasswordFormContainer);
-    await auth.fillForgotPasswordForm(user.email);
+    await common.fill(auth.forgotPasswordEmailInput, user.email);
     await common.click(auth.forgotPasswordSubmitButton);
     await common.expectContainsText(
       auth.forgotPasswordMessage,
@@ -52,7 +52,7 @@ test.describe("Authentication - Forgot Password", () => {
 
     await common.click(auth.loginForgotPasswordButton);
     await common.expectVisible(auth.forgotPasswordFormContainer);
-    await auth.fillForgotPasswordForm(email);
+    await common.fill(auth.forgotPasswordEmailInput, email);
     await common.click(auth.forgotPasswordSubmitButton);
     await common.expectContainsText(
       auth.forgotPasswordMessage,
@@ -84,7 +84,7 @@ test.describe("Authentication - Forgot Password", () => {
 
     await resetPassword.expectResetFormEnabled();
 
-    await resetPassword.fillNewPassword(newPassword);
+    await common.fill(resetPassword.newPasswordInput, newPassword);
     await common.click(resetPassword.resetButton);
 
     await common.expectContainsText(
@@ -102,7 +102,7 @@ test.describe("Authentication - Forgot Password", () => {
 
     await resetPassword.expectResetFormEnabled();
 
-    await resetPassword.fillNewPassword(newPassword);
+    await common.fill(resetPassword.newPasswordInput, newPassword);
     await common.click(resetPassword.resetButton);
 
     await common.expectContainsText(
@@ -130,7 +130,7 @@ test.describe("Authentication - Forgot Password", () => {
 
     await resetPassword.expectResetFormEnabled();
 
-    await resetPassword.fillNewPassword(newPassword);
+    await common.fill(resetPassword.newPasswordInput, newPassword);
     await common.click(resetPassword.resetButton);
 
     await common.expectContainsText(
@@ -164,7 +164,7 @@ test.describe("Authentication - Forgot Password", () => {
 
     await resetPassword.expectResetFormEnabled();
 
-    await resetPassword.fillNewPassword(newPassword);
+    await common.fill(resetPassword.newPasswordInput, newPassword);
     await common.click(resetPassword.resetButton);
 
     await common.expectContainsText(
@@ -198,7 +198,7 @@ test.describe("Authentication - Forgot Password", () => {
 
     await resetPassword.expectResetFormEnabled();
 
-    await resetPassword.fillNewPassword(newPassword);
+    await common.fill(resetPassword.newPasswordInput, newPassword);
     await common.click(resetPassword.resetButton);
 
     await common.expectContainsText(

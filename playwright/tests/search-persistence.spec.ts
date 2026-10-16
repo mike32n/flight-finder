@@ -41,7 +41,7 @@ test.describe("Search persistence", () => {
 
     await flightFinder.selectAirportByEnter("ams");
     await flightFinder.selectWeekdayOption("5");
-    await flightFinder.fillNights("2");
+    await common.fill(flightFinder.nightsInput, "2");
     await common.click(flightFinder.searchButton);
 
     await flightFinder.expectResultsFooterText("Finished...(failed: 0)");
@@ -51,7 +51,7 @@ test.describe("Search persistence", () => {
     await flightFinder.clickSelectedContainer("AMS");
     await flightFinder.selectAirportByEnter("lca");
     await flightFinder.selectWeekdayOption("2");
-    await flightFinder.fillNights("3");
+    await common.fill(flightFinder.nightsInput, "3");
 
     await common.reloadPage();
     await flightFinder.expectRestoredSearchVisible();

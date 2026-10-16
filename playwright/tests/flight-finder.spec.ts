@@ -37,11 +37,13 @@ test.describe("Flight Finder", () => {
 
   test("TC-FLIGHT-02 | should select active autocomplete item", async () => {
     await flightFinder.openAutocomplete("c");
-    await flightFinder.pressAirportArrowDown(2);
+
+    common.press(flightFinder.airportInput, "ArrowDown", 2);
+    await flightFinder.expectItemActive(1);
 
     const iata = await flightFinder.getActiveAutocompleteItemIata();
 
-    await flightFinder.pressEnter();
+    await common.press(flightFinder.airportInput, "Enter");
 
     await flightFinder.expectAirportSelected(iata);
   });
@@ -98,10 +100,10 @@ test.describe("Flight Finder", () => {
 
   test("TC-FLIGHT-08 | should navigate weekdays with arrow keys", async () => {
     await flightFinder.selectWeekdayByName("Friday");
-    await flightFinder.pressWeekdayArrowDown();
+    await common.press(flightFinder.weekdaySelect, "ArrowDown", 1);
     await flightFinder.expectWeekdaySelected("Saturday");
 
-    await flightFinder.pressWeekdayArrowUp(2);
+    await common.press(flightFinder.weekdaySelect, "ArrowUp", 2);
     await flightFinder.expectWeekdaySelected("Thursday");
   });
 
@@ -261,7 +263,7 @@ test.describe("Flight Finder", () => {
       await common.expectDarkThemeIsActive();
       await flightFinder.expectAuthControlsVisible();
 
-      await flightFinder.fillNights("0");
+      await common.fill(flightFinder.nightsInput, "0");
       await common.expectValue(flightFinder.nightsInput, "1");
     });
   }
@@ -273,7 +275,7 @@ test.describe("Flight Finder", () => {
     await flightFinder.openAutocomplete("v");
     await flightFinder.expectDestinationSuggestionAbsent("VIE");
 
-    await flightFinder.pressEnter();
+    await common.press(flightFinder.airportInput, "Enter");
 
     await flightFinder.expectSelectedDestinationCount(1);
     await flightFinder.expectAirportNotSelected("VIE");
@@ -290,7 +292,7 @@ test.describe("Flight Finder", () => {
     await common.expectDisabled(flightFinder.airportInput);
     await flightFinder.openOriginAutocomplete("v");
     await flightFinder.expectOriginSuggestionAbsent("VIE");
-    await flightFinder.cancelOriginEdit();
+    await common.press(flightFinder.originInput, "Escape");
 
     await flightFinder.forceOriginValue("VIE");
     await common.click(flightFinder.searchButton);
@@ -317,7 +319,7 @@ test.describe("Flight Finder", () => {
     await common.expectEnabled(flightFinder.airportInput);
     await flightFinder.openOriginAutocomplete("vie");
     await flightFinder.expectOriginSuggestionVisible("VIE");
-    await flightFinder.cancelOriginEdit();
+    await common.press(flightFinder.originInput, "Escape");
 
     await flightFinder.selectOrigin("BUD");
     await flightFinder.selectOrigin("VIE");
@@ -332,7 +334,7 @@ test.describe("Flight Finder", () => {
     await flightFinder.expectAirportSelected("AMS");
     await flightFinder.openOriginAutocomplete("a");
     await flightFinder.expectOriginSuggestionAbsent("AMS");
-    await flightFinder.cancelOriginEdit();
+    await common.press(flightFinder.originInput, "Escape");
 
     await common.reloadPage();
 
@@ -340,12 +342,12 @@ test.describe("Flight Finder", () => {
     await flightFinder.expectAirportSelected("AMS");
     await flightFinder.openOriginAutocomplete("a");
     await flightFinder.expectOriginSuggestionAbsent("AMS");
-    await flightFinder.cancelOriginEdit();
+    await common.press(flightFinder.originInput, "Escape");
   });
   test("TC-FLIGHT-23 | should restore the selected origin when editing is cancelled or abandoned", async () => {
     await flightFinder.selectOrigin("VIE");
     await flightFinder.openOriginAutocomplete("London");
-    await flightFinder.cancelOriginEdit();
+    await common.press(flightFinder.originInput, "Escape");
     await flightFinder.expectOriginSelected("VIE");
     await common.expectHidden(flightFinder.originAutocompleteList);
     await flightFinder.openOriginAutocomplete("London");
