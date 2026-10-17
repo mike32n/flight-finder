@@ -2,6 +2,7 @@ const sqlite3 = require("sqlite3").verbose();
 const path = require("path");
 const cities = require("./data/airports");
 const initializePlanPolicies = require("./db/initializePlanPolicies");
+const migrateUserAccess = require("./db/migrateUserAccess");
 
 let db;
 
@@ -80,6 +81,7 @@ async function initDb() {
     });
   });
 
+  await migrateUserAccess(db);
   await initializePlanPolicies(db);
 
   console.log("Database initialized successfully.");
