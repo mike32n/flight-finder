@@ -790,7 +790,7 @@ function updateThemeButton() {
   const isDark = document.body.classList.contains("dark");
   const label = isDark ? "Switch to light theme" : "Switch to dark theme";
 
-  button.textContent = isDark ? "Theme ☀️" : "Theme 🌙";
+  button.textContent = isDark ? "☀️" : "🌙";
   button.title = label;
   button.setAttribute("aria-label", label);
 }
