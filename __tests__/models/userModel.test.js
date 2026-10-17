@@ -4,6 +4,7 @@ const { initDb, closeDb } = require("../../db");
 
 const {
   createUser,
+  findUserById,
   findUserByEmail,
   findUserByVerificationToken,
   verifyUser,
@@ -242,4 +243,27 @@ describe("userModel", () => {
       expect(user.password_reset_token).toBe("stored-token");
     },
   );
+
+  test("finds current user access by ID", async () => {
+    const created = await createUser({
+      email: "access-by-id@example.com",
+      passwordHash: "hashed-password",
+      verificationToken: null,
+      emailVerified: true,
+    });
+
+    const user = await findUserById(created.id);
+
+    expect(user).toEqual({
+      id: created.id,
+      email: "access-by-id@example.com",
+      email_verified: 1,
+      plan: "registered",
+      is_admin: 0,
+    });
+  });
+
+  test("returns null for a missing user ID", async () => {
+    expect(await findUserById(-1)).toBeNull();
+  });
 });

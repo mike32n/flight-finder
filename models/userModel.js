@@ -38,6 +38,26 @@ function createUser({
   });
 }
 
+function findUserById(userId) {
+  return new Promise((resolve, reject) => {
+    getDb().get(
+      `
+        SELECT id, email, email_verified, plan, is_admin
+        FROM users
+        WHERE id = ?
+      `,
+      [userId],
+      (error, row) => {
+        if (error) {
+          return reject(error);
+        }
+
+        resolve(row || null);
+      },
+    );
+  });
+}
+
 function findUserByEmail(email) {
   const db = getDb();
   return new Promise((resolve, reject) => {
@@ -179,6 +199,7 @@ function updatePassword(userId, passwordHash, token) {
 
 module.exports = {
   createUser,
+  findUserById,
   findUserByEmail,
   findUserByVerificationToken,
   verifyUser,

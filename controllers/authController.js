@@ -405,33 +405,11 @@ async function resetPassword(req, res) {
   }
 }
 
-async function getCurrentUser(req, res) {
-  try {
-    const user = await findUserByEmail(req.user.email);
-
-    if (!user) {
-      return res.status(401).json({
-        success: false,
-        message: "User not found.",
-      });
-    }
-
-    res.status(200).json({
-      success: true,
-      user: {
-        id: user.id,
-        email: user.email,
-        emailVerified: Boolean(user.email_verified),
-      },
-    });
-  } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      success: false,
-      message: "Internal server error.",
-    });
-  }
+function getCurrentUser(req, res) {
+  return res.status(200).json({
+    success: true,
+    user: req.currentUser,
+  });
 }
 
 module.exports = {

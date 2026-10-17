@@ -9,6 +9,7 @@ const {
   resetPassword,
   getCurrentUser,
 } = require("../controllers/authController");
+const { loadUserAccess } = require("../middlewares/loadUserAccess");
 
 const { authenticateToken } = require("../middlewares/authMiddleware");
 
@@ -26,6 +27,6 @@ router.get("/reset-password/:token", validateResetToken);
 
 router.post("/reset-password/:token", resetPassword);
 
-router.get("/me", authenticateToken, getCurrentUser);
+router.get("/me", authenticateToken, loadUserAccess, getCurrentUser);
 
 module.exports = router;
