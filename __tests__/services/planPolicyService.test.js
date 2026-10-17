@@ -1,6 +1,21 @@
+jest.mock("../../models/planPolicyModel", () => ({
+  findPlanPolicyByName: jest.fn(),
+}));
+
 const { getPlanPolicy } = require("../../services/planPolicyService");
+const planDefaults = require("../../config/planDefaults");
+const { findPlanPolicyByName } = require("../../models/planPolicyModel");
 
 describe("getPlanPolicy", () => {
+  beforeEach(() => {
+    findPlanPolicyByName.mockReset();
+
+    findPlanPolicyByName.mockImplementation(async (plan) => ({
+      plan,
+      policy_json: JSON.stringify(planDefaults[plan]),
+    }));
+  });
+
   test("restricts anonymous users to a fixed weekend search", async () => {
     const policy = await getPlanPolicy("anonymous");
 
@@ -79,5 +94,70 @@ describe("getPlanPolicy", () => {
     ].map((plan) => [plan]),
   )("rejects an unknown or invalid plan: %p", async (plan) => {
     await expect(getPlanPolicy(plan)).rejects.toThrow("Unknown plan");
+  });
+
+  test("returns the stored policy instead of the defaults", async () => {
+    const customPolicy = {
+      ...planDefaults.registered,
+      maxDestinations: 1,
+      canSelectStartDate: true,
+    };
+
+    findPlanPolicyByName.mockResolvedValue({
+      plan: "registered",
+      policy_json: JSON.stringify(customPolicy),
+    });
+
+    const policy = await getPlanPolicy("registered");
+
+    expect(findPlanPolicyByName).toHaveBeenCalledWith("registered");
+    expect(policy).toEqual(customPolicy);
+  });
+
+  test("rejects a missing stored policy", async () => {
+    findPlanPolicyByName.mockResolvedValue(null);
+
+    await expect(getPlanPolicy("premium")).rejects.toThrow(
+      "Missing policy for premium",
+    );
+  });
+
+  test("rejects invalid stored JSON", async () => {
+    findPlanPolicyByName.mockResolvedValue({
+      plan: "premium",
+      policy_json: "{invalid-json",
+    });
+
+    await expect(getPlanPolicy("premium")).rejects.toThrow(
+      "Invalid stored policy for premium: invalid JSON",
+    );
+  });
+
+  test("rejects an invalid stored configuration", async () => {
+    findPlanPolicyByName.mockResolvedValue({
+      plan: "premium",
+      policy_json: JSON.stringify({
+        ...planDefaults.premium,
+        maxDestinations: 0,
+      }),
+    });
+
+    await expect(getPlanPolicy("premium")).rejects.toThrow(
+      "Invalid stored policy for premium: Invalid maxDestinations",
+    );
+  });
+
+  test("propagates database errors", async () => {
+    const error = new Error("Database unavailable");
+
+    findPlanPolicyByName.mockRejectedValue(error);
+
+    await expect(getPlanPolicy("premium")).rejects.toBe(error);
+  });
+
+  test("does not query storage for an unknown plan", async () => {
+    await expect(getPlanPolicy("admin")).rejects.toThrow("Unknown plan");
+
+    expect(findPlanPolicyByName).not.toHaveBeenCalled();
   });
 });
