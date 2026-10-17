@@ -3,6 +3,7 @@ const {
   findPlanPolicyByName,
   updatePlanPolicyByName,
 } = require("../models/planPolicyModel");
+const PlanPolicyError = require("../utils/planPolicyError");
 const getPlanPolicyError = require("../utils/planPolicyValidator");
 
 function assertKnownPlan(plan) {
@@ -10,7 +11,7 @@ function assertKnownPlan(plan) {
     typeof plan !== "string" ||
     !Object.prototype.hasOwnProperty.call(planDefaults, plan)
   ) {
-    throw new Error("Unknown plan");
+    throw new PlanPolicyError("UNKNOWN_PLAN", "Unknown plan");
   }
 }
 
@@ -20,7 +21,7 @@ async function getPlanPolicy(plan) {
   const row = await findPlanPolicyByName(plan);
 
   if (!row) {
-    throw new Error(`Missing policy for ${plan}`);
+    throw new PlanPolicyError("MISSING_POLICY", `Missing policy for ${plan}`);
   }
 
   let policy;
@@ -46,14 +47,17 @@ async function updatePlanPolicy(plan, policy) {
   const error = getPlanPolicyError(policy);
 
   if (error) {
-    throw new Error(`Invalid policy for ${plan}: ${error}`);
+    throw new PlanPolicyError(
+      "INVALID_POLICY",
+      `Invalid policy for ${plan}: ${error}`,
+    );
   }
 
   const policyJson = JSON.stringify(policy);
   const updated = await updatePlanPolicyByName(plan, policyJson);
 
   if (!updated) {
-    throw new Error(`Missing policy for ${plan}`);
+    throw new PlanPolicyError("MISSING_POLICY", `Missing policy for ${plan}`);
   }
 
   return JSON.parse(policyJson);

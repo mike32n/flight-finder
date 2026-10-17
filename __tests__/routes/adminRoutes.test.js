@@ -8,10 +8,14 @@ jest.mock("../../models/userModel", () => ({
 
 jest.mock("../../models/planPolicyModel", () => ({
   findPlanPolicyByName: jest.fn(),
+  updatePlanPolicyByName: jest.fn(),
 }));
 
 const { findUserById } = require("../../models/userModel");
-const { findPlanPolicyByName } = require("../../models/planPolicyModel");
+const {
+  findPlanPolicyByName,
+  updatePlanPolicyByName,
+} = require("../../models/planPolicyModel");
 const planDefaults = require("../../config/planDefaults");
 const adminRoutes = require("../../routes/adminRoutes");
 
@@ -171,5 +175,170 @@ describe("GET /api/admin/plan-policies", () => {
         message: "Internal server error.",
       });
     });
+  });
+});
+
+describe("PUT /api/admin/plan-policies/:plan", () => {
+  beforeEach(() => {
+    process.env.JWT_SECRET = "test-jwt-secret";
+
+    findUserById.mockReset();
+    findUserById.mockResolvedValue({
+      id: 1,
+      email: "admin@example.com",
+      email_verified: 1,
+      plan: "registered",
+      is_admin: 1,
+    });
+
+    updatePlanPolicyByName.mockReset();
+    updatePlanPolicyByName.mockResolvedValue(true);
+  });
+
+  test("rejects unauthenticated requests without writing", async () => {
+    const response = await request(app)
+      .put("/api/admin/plan-policies/registered")
+      .send(planDefaults.registered);
+
+    expect(response.status).toBe(401);
+    expect(updatePlanPolicyByName).not.toHaveBeenCalled();
+  });
+
+  test.each(["registered", "premium"])(
+    "rejects non-admin users with the %s plan",
+    async (plan) => {
+      findUserById.mockResolvedValue({
+        id: 1,
+        email: "user@example.com",
+        email_verified: 1,
+        plan,
+        is_admin: 0,
+      });
+
+      const response = await request(app)
+        .put("/api/admin/plan-policies/registered")
+        .set("Authorization", `Bearer ${createToken()}`)
+        .send(planDefaults.registered);
+
+      expect(response.status).toBe(403);
+      expect(updatePlanPolicyByName).not.toHaveBeenCalled();
+    },
+  );
+
+  test("saves a valid configuration", async () => {
+    const policy = {
+      ...planDefaults.registered,
+      maxDestinations: 1,
+      canSelectStartDate: true,
+    };
+
+    const response = await request(app)
+      .put("/api/admin/plan-policies/registered")
+      .set("Authorization", `Bearer ${createToken()}`)
+      .send(policy);
+
+    expect(response.status).toBe(200);
+    expect(response.headers["cache-control"]).toBe("no-store");
+
+    expect(response.body).toEqual({
+      success: true,
+      plan: "registered",
+      policy,
+    });
+
+    expect(updatePlanPolicyByName).toHaveBeenCalledTimes(1);
+
+    const [savedPlan, savedJson] = updatePlanPolicyByName.mock.calls[0];
+
+    expect(savedPlan).toBe("registered");
+    expect(JSON.parse(savedJson)).toEqual(policy);
+  });
+
+  test.each([
+    [
+      "an invalid destination limit",
+      {
+        ...planDefaults.registered,
+        maxDestinations: 0,
+      },
+    ],
+    [
+      "an unknown field",
+      {
+        ...planDefaults.registered,
+        isAdmin: true,
+      },
+    ],
+    [
+      "an incomplete configuration",
+      {
+        maxDestinations: 1,
+      },
+    ],
+  ])("rejects %s without writing", async (label, policy) => {
+    const response = await request(app)
+      .put("/api/admin/plan-policies/registered")
+      .set("Authorization", `Bearer ${createToken()}`)
+      .send(policy);
+
+    expect(response.status).toBe(400);
+    expect(response.body.success).toBe(false);
+    expect(response.body.message).toEqual(expect.any(String));
+    expect(updatePlanPolicyByName).not.toHaveBeenCalled();
+  });
+
+  test("rejects an unknown plan without writing", async () => {
+    const response = await request(app)
+      .put("/api/admin/plan-policies/admin")
+      .set("Authorization", `Bearer ${createToken()}`)
+      .send(planDefaults.premium);
+
+    expect(response.status).toBe(404);
+    expect(response.body).toEqual({
+      success: false,
+      message: "Unknown plan",
+    });
+
+    expect(updatePlanPolicyByName).not.toHaveBeenCalled();
+  });
+
+  test("returns 404 when the stored plan is missing", async () => {
+    updatePlanPolicyByName.mockResolvedValue(false);
+
+    const response = await request(app)
+      .put("/api/admin/plan-policies/premium")
+      .set("Authorization", `Bearer ${createToken()}`)
+      .send(planDefaults.premium);
+
+    expect(response.status).toBe(404);
+    expect(response.body).toEqual({
+      success: false,
+      message: "Missing policy for premium",
+    });
+  });
+
+  test("returns a generic error when saving fails", async () => {
+    updatePlanPolicyByName.mockRejectedValue(
+      new Error("Database write failed"),
+    );
+
+    const consoleSpy = jest
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+
+    try {
+      const response = await request(app)
+        .put("/api/admin/plan-policies/registered")
+        .set("Authorization", `Bearer ${createToken()}`)
+        .send(planDefaults.registered);
+
+      expect(response.status).toBe(500);
+      expect(response.body).toEqual({
+        success: false,
+        message: "Internal server error.",
+      });
+    } finally {
+      consoleSpy.mockRestore();
+    }
   });
 });
