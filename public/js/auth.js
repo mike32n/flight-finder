@@ -293,7 +293,10 @@ document
 
 document
   .getElementById("forgot-password-btn")
-  .addEventListener("click", () => openAuthModal("forgot"));
+  .addEventListener("click", (event) => {
+    event.preventDefault();
+    openAuthModal("forgot");
+  });
 
 document
   .getElementById("back-to-login-btn")
