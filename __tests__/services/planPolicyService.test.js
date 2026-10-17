@@ -1,21 +1,31 @@
 jest.mock("../../models/planPolicyModel", () => ({
   findPlanPolicyByName: jest.fn(),
+  updatePlanPolicyByName: jest.fn(),
 }));
 
-const { getPlanPolicy } = require("../../services/planPolicyService");
+const {
+  getPlanPolicy,
+  updatePlanPolicy,
+} = require("../../services/planPolicyService");
 const planDefaults = require("../../config/planDefaults");
-const { findPlanPolicyByName } = require("../../models/planPolicyModel");
+const {
+  findPlanPolicyByName,
+  updatePlanPolicyByName,
+} = require("../../models/planPolicyModel");
+
+beforeEach(() => {
+  findPlanPolicyByName.mockReset();
+
+  findPlanPolicyByName.mockImplementation(async (plan) => ({
+    plan,
+    policy_json: JSON.stringify(planDefaults[plan]),
+  }));
+
+  updatePlanPolicyByName.mockReset();
+  updatePlanPolicyByName.mockResolvedValue(true);
+});
 
 describe("getPlanPolicy", () => {
-  beforeEach(() => {
-    findPlanPolicyByName.mockReset();
-
-    findPlanPolicyByName.mockImplementation(async (plan) => ({
-      plan,
-      policy_json: JSON.stringify(planDefaults[plan]),
-    }));
-  });
-
   test("restricts anonymous users to a fixed weekend search", async () => {
     const policy = await getPlanPolicy("anonymous");
 
@@ -159,5 +169,64 @@ describe("getPlanPolicy", () => {
     await expect(getPlanPolicy("admin")).rejects.toThrow("Unknown plan");
 
     expect(findPlanPolicyByName).not.toHaveBeenCalled();
+  });
+});
+
+describe("updatePlanPolicy", () => {
+  test("saves a valid policy and returns an independent object", async () => {
+    const policy = {
+      ...planDefaults.registered,
+      maxDestinations: 1,
+      canSelectStartDate: true,
+    };
+
+    const result = await updatePlanPolicy("registered", policy);
+
+    expect(updatePlanPolicyByName).toHaveBeenCalledWith(
+      "registered",
+      JSON.stringify(policy),
+    );
+
+    expect(result).toEqual(policy);
+    expect(result).not.toBe(policy);
+  });
+
+  test("does not write an invalid policy", async () => {
+    const policy = {
+      ...planDefaults.registered,
+      maxDestinations: 0,
+    };
+
+    await expect(updatePlanPolicy("registered", policy)).rejects.toThrow(
+      "Invalid policy for registered: Invalid maxDestinations",
+    );
+
+    expect(updatePlanPolicyByName).not.toHaveBeenCalled();
+  });
+
+  test("does not write an unknown plan", async () => {
+    await expect(
+      updatePlanPolicy("admin", planDefaults.premium),
+    ).rejects.toThrow("Unknown plan");
+
+    expect(updatePlanPolicyByName).not.toHaveBeenCalled();
+  });
+
+  test("rejects an update when the stored plan is missing", async () => {
+    updatePlanPolicyByName.mockResolvedValue(false);
+
+    await expect(
+      updatePlanPolicy("premium", planDefaults.premium),
+    ).rejects.toThrow("Missing policy for premium");
+  });
+
+  test("propagates write errors", async () => {
+    const error = new Error("Database write failed");
+
+    updatePlanPolicyByName.mockRejectedValue(error);
+
+    await expect(
+      updatePlanPolicy("premium", planDefaults.premium),
+    ).rejects.toBe(error);
   });
 });

@@ -20,6 +20,27 @@ function findPlanPolicyByName(plan) {
   });
 }
 
+function updatePlanPolicyByName(plan, policyJson) {
+  return new Promise((resolve, reject) => {
+    getDb().run(
+      `
+        UPDATE plan_policies
+        SET policy_json = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE plan = ?
+      `,
+      [policyJson, plan],
+      function (error) {
+        if (error) {
+          return reject(error);
+        }
+
+        resolve(this.changes > 0);
+      },
+    );
+  });
+}
+
 module.exports = {
   findPlanPolicyByName,
+  updatePlanPolicyByName,
 };
