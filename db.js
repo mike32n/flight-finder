@@ -1,6 +1,7 @@
 const sqlite3 = require("sqlite3").verbose();
 const path = require("path");
 const cities = require("./data/airports");
+const initializePlanPolicies = require("./db/initializePlanPolicies");
 
 let db;
 
@@ -21,7 +22,7 @@ function getDb() {
 async function initDb() {
   const db = getDb();
 
-  return new Promise((resolve, reject) => {
+  await new Promise((resolve, reject) => {
     db.serialize(() => {
       db.run(
         `
@@ -70,7 +71,6 @@ async function initDb() {
                   return reject(err);
                 }
 
-                console.log("Database initialized successfully.");
                 resolve();
               },
             );
@@ -79,6 +79,10 @@ async function initDb() {
       );
     });
   });
+
+  await initializePlanPolicies(db);
+
+  console.log("Database initialized successfully.");
 }
 
 function closeDb() {
