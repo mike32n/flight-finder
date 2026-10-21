@@ -83,6 +83,7 @@ async function searchFlights({
   weekday,
   nights,
   startDate,
+  allowFlexSearch = true,
   enrichAirport,
 }) {
   const trips = generateTrips(
@@ -104,9 +105,12 @@ async function searchFlights({
   let flexResults = [];
 
   const isFallbackFlex =
-    !appConfig.smartFlex.enabled && shouldRunFallbackFlex(baseResults);
+    allowFlexSearch &&
+    !appConfig.smartFlex.enabled &&
+    shouldRunFallbackFlex(baseResults);
 
-  const shouldSearchFlex = appConfig.smartFlex.enabled || isFallbackFlex;
+  const shouldSearchFlex =
+    allowFlexSearch && (appConfig.smartFlex.enabled || isFallbackFlex);
 
   if (shouldSearchFlex) {
     const flexTasks = createFlexTasks(destinations, trips, origin, startDate);
@@ -186,6 +190,7 @@ async function searchFlightsStream({
   weekday,
   nights,
   startDate,
+  allowFlexSearch = true,
   enrichAirport,
   onResult,
 }) {
@@ -246,9 +251,12 @@ async function searchFlightsStream({
 
   // SMART FLEX / FALLBACK FLEX
   const isFallbackFlex =
-    !appConfig.smartFlex.enabled && shouldRunFallbackFlex(baseResults);
+    allowFlexSearch &&
+    !appConfig.smartFlex.enabled &&
+    shouldRunFallbackFlex(baseResults);
 
-  const shouldSearchFlex = appConfig.smartFlex.enabled || isFallbackFlex;
+  const shouldSearchFlex =
+    allowFlexSearch && (appConfig.smartFlex.enabled || isFallbackFlex);
 
   if (shouldSearchFlex) {
     const flexTasks = createFlexTasks(destinations, trips, origin, startDate);
