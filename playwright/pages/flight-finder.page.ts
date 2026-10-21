@@ -370,20 +370,35 @@ export default class MainPage {
     });
   }
 
-  async mockFallbackFlexSearch(): Promise<void> {
+  async mockFlexSearch(resultType: "flex" | "fallback-flex"): Promise<void> {
     await this.page.route("**/search-stream", async (route) => {
+      const flight = {
+        origin: { code: "BUD" },
+        destination: {
+          city: "Larnaca",
+          code: "LCA",
+        },
+        departure: "2026-10-08",
+        return: "2026-10-11",
+        price: 25000,
+        currency: "HUF",
+        bookingUrl: "https://www.google.com/travel/flights?test",
+        resultType,
+        ...(resultType === "flex"
+          ? {
+              priceInsight: {
+                percent: 20,
+                basePrice: 31250,
+              },
+            }
+          : {}),
+      };
+
       await route.fulfill({
         status: 200,
         contentType: "text/event-stream",
-        body: [
-          "event: data",
-          'data: {"destination":{"city":"Larnaca","code":"LCA"},"departure":"2026-10-08","return":"2026-10-11","price":25000,"currency":"HUF","bookingUrl":"https://www.google.com/travel/flights?test","resultType":"fallback-flex"}',
-          "",
-          "event: end",
-          "data: {}",
-          "",
-          "",
-        ].join("\n"),
+        body:
+          `data: ${JSON.stringify(flight)}\n\n` + "event: end\ndata: done\n\n",
       });
     });
   }

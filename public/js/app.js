@@ -684,11 +684,14 @@ async function search() {
     failedCount = 0;
     resultNodes = [];
 
+    const token = getToken();
+
     const response = await fetch("/search-stream", {
       method: "POST",
       signal: controller.signal,
       headers: {
         "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       body: JSON.stringify({
         origin: lastSearchParameters.origin,

@@ -141,13 +141,9 @@ test.describe("Flight Finder", () => {
   });
 
   test("TC-FLIGHT-13 | should show price insight for flexible date results", async () => {
+    await flightFinder.mockFlexSearch("flex");
+
     await flightFinder.selectAirportByEnter("lca");
-    await flightFinder.selectAirportByEnter("pmi");
-    await flightFinder.selectAirportByEnter("cfu");
-
-    await flightFinder.selectWeekdayOption("5");
-    await common.click(flightFinder.incrementButton);
-
     await common.click(flightFinder.searchButton);
 
     await flightFinder.expectResultsFooterText("Finished");
@@ -155,7 +151,7 @@ test.describe("Flight Finder", () => {
   });
 
   test("TC-FLIGHT-14 | should show alternative dates for fallback flex results", async () => {
-    await flightFinder.mockFallbackFlexSearch();
+    await flightFinder.mockFlexSearch("fallback-flex");
 
     await flightFinder.selectAirportByEnter("lca");
     await common.click(flightFinder.searchButton);

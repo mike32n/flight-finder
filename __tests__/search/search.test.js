@@ -22,6 +22,21 @@ jest.mock("../../db", () => ({
   closeDb: jest.fn().mockResolvedValue(),
 }));
 
+// These tests cover search execution with unrestricted access.
+// Authentication and plan enforcement are covered in searchAccess.test.js.
+jest.mock("../../middlewares/resolveSearchAccess", () => ({
+  resolveSearchAccess(req, res, next) {
+    req.searchAccess = {
+      plan: "premium",
+      policy: {
+        ...require("../../config/planDefaults").premium,
+      },
+    };
+
+    next();
+  },
+}));
+
 const request = require("supertest");
 const app = require("../../app");
 const { getProvider } = require("../../providers/providerFactory");
