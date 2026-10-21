@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>Flight Finder | Administration</title>
+
+    <link rel="stylesheet" href="/css/style.css" />
+    <link rel="stylesheet" href="/css/admin.css" />
+
+    <script src="/js/theme.js" defer></script>
+    <script src="/js/admin.js" defer></script>
+  </head>
+
+  <body>
+    <main class="container admin-container">
+      <header class="admin-header">
+        <h1>Administration</h1>
+        <a href="/" class="admin-back-link">Back to Flight Finder</a>
+      </header>
+
+      <p id="admin-status" role="status">Loading plan policies...</p>
+
+      <section id="admin-content" aria-labelledby="policies-heading" hidden>
+        <h2 id="policies-heading">Plan policies</h2>
+        <p class="admin-description">
+          Stored access settings for each plan. Read-only view.
+        </p>
+
+        <div class="admin-table-wrapper">
+          <table id="plan-policies-table" class="admin-table">
+            <thead>
+              <tr>
+                <th scope="col">Setting</th>
+                <th scope="col">Anonymous</th>
+                <th scope="col">Registered</th>
+                <th scope="col">Premium</th>
+              </tr>
+            </thead>
+            <tbody id="plan-policies-body"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

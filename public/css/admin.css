@@ -1,0 +1,65 @@
+.admin-container {
+  max-width: 1000px;
+}
+
+.admin-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.admin-header h1 {
+  margin: 0;
+  text-align: left;
+}
+
+.admin-back-link {
+  color: var(--auth-link-color);
+}
+
+.admin-description {
+  color: var(--muted);
+}
+
+#admin-status {
+  margin-top: 24px;
+  color: var(--muted);
+}
+
+#admin-status[data-state="error"] {
+  color: var(--error);
+}
+
+.admin-table-wrapper {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.admin-table {
+  width: 100%;
+  min-width: 640px;
+  border-collapse: collapse;
+}
+
+.admin-table th,
+.admin-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  text-align: center;
+}
+
+.admin-table th:first-child {
+  text-align: left;
+}
+
+.admin-table tbody th {
+  font-weight: normal;
+}
+
+.admin-table tbody tr:last-child th,
+.admin-table tbody tr:last-child td {
+  border-bottom: none;
+}
