@@ -197,6 +197,27 @@ function updatePassword(userId, passwordHash, token) {
   });
 }
 
+function grantAdminByEmail(email) {
+  return new Promise((resolve, reject) => {
+    getDb().run(
+      `
+        UPDATE users
+        SET is_admin = 1
+        WHERE email = ?
+          AND email_verified = 1
+      `,
+      [email],
+      function (error) {
+        if (error) {
+          return reject(error);
+        }
+
+        resolve(this.changes === 1);
+      },
+    );
+  });
+}
+
 module.exports = {
   createUser,
   findUserById,
@@ -206,4 +227,5 @@ module.exports = {
   savePasswordResetToken,
   findUserByPasswordResetToken,
   updatePassword,
+  grantAdminByEmail,
 };
