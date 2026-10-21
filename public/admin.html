@@ -25,8 +25,12 @@
       <section id="admin-content" aria-labelledby="policies-heading" hidden>
         <h2 id="policies-heading">Plan policies</h2>
         <p class="admin-description">
-          Stored access settings for each plan. Read-only view.
+          Update the settings for each plan, then save that plan.
         </p>
+
+        <form id="policy-form-anonymous"></form>
+        <form id="policy-form-registered"></form>
+        <form id="policy-form-premium"></form>
 
         <div class="admin-table-wrapper">
           <table id="plan-policies-table" class="admin-table">
@@ -39,6 +43,59 @@
               </tr>
             </thead>
             <tbody id="plan-policies-body"></tbody>
+            <tfoot>
+              <tr>
+                <th scope="row">Save changes</th>
+
+                <td>
+                  <button
+                    type="submit"
+                    form="policy-form-anonymous"
+                    aria-label="Save Anonymous"
+                    disabled
+                  >
+                    Save
+                  </button>
+                  <span
+                    id="anonymous-save-status"
+                    class="policy-save-status"
+                    role="status"
+                  ></span>
+                </td>
+
+                <td>
+                  <button
+                    type="submit"
+                    form="policy-form-registered"
+                    aria-label="Save Registered"
+                    disabled
+                  >
+                    Save
+                  </button>
+                  <span
+                    id="registered-save-status"
+                    class="policy-save-status"
+                    role="status"
+                  ></span>
+                </td>
+
+                <td>
+                  <button
+                    type="submit"
+                    form="policy-form-premium"
+                    aria-label="Save Premium"
+                    disabled
+                  >
+                    Save
+                  </button>
+                  <span
+                    id="premium-save-status"
+                    class="policy-save-status"
+                    role="status"
+                  ></span>
+                </td>
+              </tr>
+            </tfoot>
           </table>
         </div>
       </section>

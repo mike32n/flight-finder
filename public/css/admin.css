@@ -63,3 +63,40 @@
 .admin-table tbody tr:last-child td {
   border-bottom: none;
 }
+
+.admin-table input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  vertical-align: middle;
+}
+
+.admin-table input[type="number"] {
+  width: 90px;
+  text-align: center;
+}
+
+.admin-table select {
+  width: 120px;
+}
+
+.admin-table tfoot th,
+.admin-table tfoot td {
+  border-bottom: none;
+}
+
+.policy-save-status {
+  display: block;
+  min-height: 1.3em;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.policy-save-status[data-state="success"] {
+  color: var(--success);
+}
+
+.policy-save-status[data-state="error"] {
+  color: var(--error);
+}

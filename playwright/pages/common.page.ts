@@ -29,6 +29,10 @@ export default class CommonPage {
     }
   }
 
+  async setChecked(element: Locator, checked: boolean): Promise<void> {
+    await element.setChecked(checked);
+  }
+
   async reloadPage(): Promise<void> {
     await this.page.reload();
   }
@@ -87,5 +91,13 @@ export default class CommonPage {
 
   async expectValue(element: Locator, value: string | RegExp): Promise<void> {
     await expect(element).toHaveValue(value);
+  }
+
+  async expectChecked(element: Locator, checked = true): Promise<void> {
+    if (checked) {
+      await expect(element).toBeChecked();
+    } else {
+      await expect(element).not.toBeChecked();
+    }
   }
 }

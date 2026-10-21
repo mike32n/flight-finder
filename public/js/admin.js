@@ -1,6 +1,15 @@
 (() => {
   const plans = ["anonymous", "registered", "premium"];
 
+  const planLabels = {
+    anonymous: "Anonymous",
+    registered: "Registered",
+    premium: "Premium",
+  };
+
+  let canEdit = false;
+  let isSaving = false;
+
   const weekdays = [
     "Sunday",
     "Monday",
@@ -69,40 +78,67 @@
     },
   ];
 
-  function hasValidPolicies(policies) {
-    if (!policies || typeof policies !== "object") return false;
+  function hasValidPolicy(policy) {
+    if (!policy || typeof policy !== "object" || Array.isArray(policy)) {
+      return false;
+    }
 
-    return plans.every((plan) => {
-      const policy = policies[plan];
+    return fields.every((field) => {
+      const value = policy[field.key];
 
-      if (!policy || typeof policy !== "object") return false;
+      if (field.type === "boolean") {
+        return typeof value === "boolean";
+      }
 
-      return fields.every((field) => {
-        const value = policy[field.key];
+      if (field.type === "weekday") {
+        return Number.isInteger(value) && value >= 0 && value <= 6;
+      }
 
-        if (field.type === "boolean") {
-          return typeof value === "boolean";
-        }
-
-        if (field.type === "weekday") {
-          return Number.isInteger(value) && value >= 0 && value <= 6;
-        }
-
-        return Number.isInteger(value) && value > 0;
-      });
+      return Number.isInteger(value) && value > 0;
     });
   }
 
-  function formatValue(field, value) {
+  function hasValidPolicies(policies) {
+    return (
+      policies &&
+      typeof policies === "object" &&
+      plans.every((plan) => hasValidPolicy(policies[plan]))
+    );
+  }
+
+  function createPolicyControl(field, plan, value) {
+    const control = document.createElement(
+      field.type === "weekday" ? "select" : "input",
+    );
+
+    control.id = `${plan}-${field.key}`;
+    control.name = field.key;
+    control.setAttribute("form", `policy-form-${plan}`);
+    control.setAttribute("aria-label", `${planLabels[plan]}: ${field.label}`);
+
     if (field.type === "boolean") {
-      return value ? "Yes" : "No";
+      control.type = "checkbox";
+      control.checked = value;
+    } else if (field.type === "weekday") {
+      weekdays.forEach((label, index) => {
+        const option = document.createElement("option");
+
+        option.value = String(index);
+        option.textContent = label;
+        control.appendChild(option);
+      });
+
+      control.value = String(value);
+      control.required = true;
+    } else {
+      control.type = "number";
+      control.min = "1";
+      control.step = "1";
+      control.required = true;
+      control.value = String(value);
     }
 
-    if (field.type === "weekday") {
-      return weekdays[value];
-    }
-
-    return String(value);
+    return control;
   }
 
   function renderPolicies(policies) {
@@ -119,7 +155,9 @@
       for (const plan of plans) {
         const cell = document.createElement("td");
 
-        cell.textContent = formatValue(field, policies[plan][field.key]);
+        cell.appendChild(
+          createPolicyControl(field, plan, policies[plan][field.key]),
+        );
         row.appendChild(cell);
       }
 
@@ -130,6 +168,8 @@
   }
 
   function showError(message) {
+    canEdit = false;
+    setControlsDisabled(true);
     const status = document.getElementById("admin-status");
 
     status.textContent = message;
@@ -137,6 +177,48 @@
     status.hidden = false;
 
     document.getElementById("admin-content").hidden = true;
+  }
+
+  function setControlsDisabled(disabled) {
+    document
+      .querySelectorAll(
+        "#admin-content input, #admin-content select, #admin-content button",
+      )
+      .forEach((control) => {
+        control.disabled = disabled;
+      });
+  }
+
+  function showSaveStatus(plan, message, state) {
+    const status = document.getElementById(`${plan}-save-status`);
+
+    status.textContent = message;
+    status.dataset.state = state;
+  }
+
+  function readPolicy(plan) {
+    return Object.fromEntries(
+      fields.map((field) => {
+        const control = document.getElementById(`${plan}-${field.key}`);
+
+        const value =
+          field.type === "boolean" ? control.checked : Number(control.value);
+
+        return [field.key, value];
+      }),
+    );
+  }
+
+  function applyPolicy(plan, policy) {
+    for (const field of fields) {
+      const control = document.getElementById(`${plan}-${field.key}`);
+
+      if (field.type === "boolean") {
+        control.checked = policy[field.key];
+      } else {
+        control.value = String(policy[field.key]);
+      }
+    }
   }
 
   async function loadPolicies() {
@@ -176,6 +258,8 @@
       }
 
       renderPolicies(data.policies);
+      canEdit = true;
+      setControlsDisabled(false);
 
       document.getElementById("admin-status").hidden = true;
       document.getElementById("admin-content").hidden = false;
@@ -186,5 +270,93 @@
     }
   }
 
-  document.addEventListener("DOMContentLoaded", loadPolicies);
+  async function savePolicy(plan) {
+    if (!canEdit || isSaving) return;
+
+    const form = document.getElementById(`policy-form-${plan}`);
+
+    if (!form.reportValidity()) return;
+
+    const policy = readPolicy(plan);
+
+    isSaving = true;
+    setControlsDisabled(true);
+    showSaveStatus(plan, "Saving...", "saving");
+
+    try {
+      const token = localStorage.getItem("authToken");
+
+      if (!token) {
+        showError("Please sign in to access administration.");
+        return;
+      }
+
+      const response = await fetch(`/api/admin/plan-policies/${plan}`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(policy),
+        cache: "no-store",
+      });
+
+      if (response.status === 401) {
+        showError("Your session has expired. Please sign in again.");
+        return;
+      }
+
+      if (response.status === 403) {
+        showError("Admin access required.");
+        return;
+      }
+
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        const message =
+          response.status >= 400 &&
+          response.status < 500 &&
+          typeof data?.message === "string"
+            ? data.message
+            : "Changes could not be saved. Please try again.";
+
+        showSaveStatus(plan, message, "error");
+        return;
+      }
+
+      if (
+        data?.success !== true ||
+        data.plan !== plan ||
+        !hasValidPolicy(data.policy)
+      ) {
+        throw new Error("Invalid save response.");
+      }
+
+      applyPolicy(plan, data.policy);
+      showSaveStatus(plan, "Saved.", "success");
+    } catch {
+      showSaveStatus(
+        plan,
+        "Changes could not be saved. Please try again.",
+        "error",
+      );
+    } finally {
+      isSaving = false;
+      setControlsDisabled(!canEdit);
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    for (const plan of plans) {
+      document
+        .getElementById(`policy-form-${plan}`)
+        .addEventListener("submit", (event) => {
+          event.preventDefault();
+          void savePolicy(plan);
+        });
+    }
+
+    void loadPolicies();
+  });
 })();
