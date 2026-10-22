@@ -12,9 +12,21 @@
   </head>
   <body>
     <div class="container">
+      <a
+        id="admin-link"
+        class="corner-icon corner-icon--left"
+        href="/admin.html"
+        aria-label="Administration"
+        title="Administration"
+        hidden
+      >
+        <span aria-hidden="true">⚙</span>
+      </a>
+
       <button
         type="button"
         id="theme-button"
+        class="corner-icon corner-icon--right"
         onclick="toggleTheme()"
         aria-label="Switch to dark theme"
         title="Switch to dark theme"

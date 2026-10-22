@@ -151,10 +151,9 @@ body {
   position: relative;
 }
 
-#theme-button {
+.corner-icon {
   position: absolute;
   top: 12px;
-  right: 12px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -166,19 +165,38 @@ body {
   border: 1px solid var(--border);
   border-radius: 50%;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  font-family: inherit;
   font-size: 1.4rem;
+  font-weight: bold;
   line-height: 1;
+  text-decoration: none;
   cursor: pointer;
+  transition:
+    background-color 0.25s ease,
+    color 0.25s ease,
+    border-color 0.25s ease;
 }
 
-#theme-button:hover {
+.corner-icon--left {
+  left: 12px;
+}
+
+.corner-icon--right {
+  right: 12px;
+}
+
+.corner-icon:hover {
   background: var(--bg);
   transform: none;
 }
 
-#theme-button:focus-visible {
+.corner-icon:focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
+}
+
+.corner-icon[hidden] {
+  display: none;
 }
 
 h1 {

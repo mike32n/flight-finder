@@ -5,6 +5,7 @@ const {
   createUser,
   verifyUser,
   savePasswordResetToken,
+  grantAdminByEmail,
 } = require("../../models/userModel");
 
 const { auth } = require("../../config/appConfig");
@@ -54,6 +55,18 @@ export async function createVerifiedTestUser() {
     password,
     userId: user.id,
   };
+}
+
+export async function createVerifiedAdminTestUser() {
+  const user = await createVerifiedTestUser();
+
+  const updated = await grantAdminByEmail(user.email);
+
+  if (!updated) {
+    throw new Error("Could not grant admin access to the test user.");
+  }
+
+  return user;
 }
 
 export async function createTestUserWithResetToken() {

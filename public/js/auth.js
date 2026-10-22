@@ -43,6 +43,11 @@ async function loadCurrentUser() {
 }
 
 function renderAuthUI() {
+  const adminLink = document.getElementById("admin-link");
+
+  if (adminLink) {
+    adminLink.hidden = authUser?.isAdmin !== true;
+  }
   const container = document.getElementById("auth-container");
 
   if (!container) return;

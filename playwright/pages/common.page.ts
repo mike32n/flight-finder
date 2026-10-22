@@ -100,4 +100,8 @@ export default class CommonPage {
       await expect(element).not.toBeChecked();
     }
   }
+
+  async expectURL(url: string | RegExp): Promise<void> {
+    await expect(this.page).toHaveURL(url);
+  }
 }
