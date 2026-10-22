@@ -1,9 +1,14 @@
 import { Locator, Page, expect } from "@playwright/test";
+import {
+  getSearchAccess,
+  SearchPlan,
+  SearchPolicy,
+} from "../data/search-access";
 
 export default class MainPage {
   readonly page: Page;
-
   readonly heading: Locator;
+  readonly searchAccessStatus: Locator;
 
   readonly authContainer: Locator;
   readonly logoutButton: Locator;
@@ -41,8 +46,8 @@ export default class MainPage {
 
   constructor(page: Page) {
     this.page = page;
-
     this.heading = page.getByRole("heading", { level: 1 });
+    this.searchAccessStatus = page.locator("#search-access-status");
 
     this.authContainer = page.locator("#auth-container");
     this.logoutButton = page.getByRole("button", {
@@ -276,6 +281,58 @@ export default class MainPage {
 
       void app.search();
       void app.search();
+    });
+  }
+
+  async mockSearchAccessResponse(status: number, body: unknown): Promise<void> {
+    await this.page.route("**/api/search-access", async (route) => {
+      await route.fulfill({
+        status,
+        json: body,
+      });
+    });
+  }
+
+  async mockSearchAccess(
+    plan: SearchPlan,
+    overrides: Partial<SearchPolicy> = {},
+  ): Promise<void> {
+    await this.mockSearchAccessResponse(200, getSearchAccess(plan, overrides));
+  }
+
+  async mockSearchSession(plan: "registered" | "premium"): Promise<void> {
+    const token = "search-access-test-token";
+
+    await this.page.route("**/api/auth/login", async (route) => {
+      await route.fulfill({
+        json: { success: true, token },
+      });
+    });
+
+    await this.page.route("**/api/auth/me", async (route) => {
+      await route.fulfill({
+        json: {
+          success: true,
+          user: {
+            id: 1,
+            email: "search@example.com",
+            emailVerified: true,
+            plan,
+            isAdmin: false,
+          },
+        },
+      });
+    });
+
+    await this.page.route("**/api/search-access", async (route) => {
+      const authorization = route.request().headers().authorization;
+
+      const currentPlan =
+        authorization === `Bearer ${token}` ? plan : "anonymous";
+
+      await route.fulfill({
+        json: getSearchAccess(currentPlan),
+      });
     });
   }
 

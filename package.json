@@ -9,7 +9,8 @@
     "pw:test": "playwright test",
     "pw:headed": "playwright test --headed",
     "pw:ui": "playwright test --ui",
-    "pw:report": "playwright show-report"
+    "pw:report": "playwright show-report",
+    "admin:grant": "node scripts/grant-admin.js"
   },
   "keywords": [],
   "author": "",

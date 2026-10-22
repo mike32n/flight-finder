@@ -20,6 +20,11 @@ let isSearching = false;
 let lastSearchParameters = null;
 let searchAbortController = null;
 
+let searchAccess = null;
+let searchAccessLoading = true;
+let searchAccessRequestId = 0;
+let configuredMaxDestinations = 3;
+
 window.emailVerificationRequired = true;
 
 /* ========================= */
@@ -35,6 +40,187 @@ function getTodayDate() {
 
   return `${year}-${month}-${day}`;
 }
+
+function isSearchAccessReady() {
+  return searchAccess !== null && !searchAccessLoading;
+}
+
+function updateSearchControls() {
+  const ready = isSearchAccessReady();
+  const policy = searchAccess?.policy;
+  const airportsAvailable = destinationsData.length > 0;
+
+  document.getElementById("origin-input").disabled =
+    !ready || !airportsAvailable || !policy.canSelectOrigin;
+
+  document.getElementById("destination-input").disabled =
+    !ready ||
+    !airportsAvailable ||
+    selectedDestinations.length >= maxDestinations;
+
+  document.getElementById("weekday").disabled =
+    !ready || !policy.canSelectWeekday;
+
+  document.getElementById("nights").disabled =
+    !ready || !policy.canSelectNights;
+
+  document.getElementById("start-date").disabled =
+    !ready || !policy.canSelectStartDate;
+
+  document.querySelectorAll(".stepper button").forEach((button) => {
+    button.disabled = !ready || !policy.canSelectNights;
+  });
+
+  document.getElementById("search-button").disabled =
+    !ready || !airportsAvailable || isSearching;
+}
+
+function isValidSearchAccess(data) {
+  const policy = data?.policy;
+
+  return (
+    data?.success === true &&
+    ["anonymous", "registered", "premium"].includes(data.plan) &&
+    policy !== null &&
+    typeof policy === "object" &&
+    !Array.isArray(policy) &&
+    [
+      "canSelectOrigin",
+      "canSelectWeekday",
+      "canSelectNights",
+      "canSelectStartDate",
+      "smartFlexEnabled",
+    ].every((field) => typeof policy[field] === "boolean") &&
+    Number.isInteger(policy.maxDestinations) &&
+    policy.maxDestinations >= 1 &&
+    Number.isInteger(policy.fixedWeekday) &&
+    policy.fixedWeekday >= 0 &&
+    policy.fixedWeekday <= 6 &&
+    Number.isInteger(policy.fixedNights) &&
+    policy.fixedNights >= 1 &&
+    policy.fixedNights <= maxNights
+  );
+}
+
+function applySearchAccessToForm() {
+  const { plan, policy } = searchAccess;
+
+  maxDestinations = Math.min(configuredMaxDestinations, policy.maxDestinations);
+
+  if (!policy.canSelectOrigin) {
+    document.getElementById("origin").value = defaultOrigin;
+  }
+
+  if (!policy.canSelectWeekday) {
+    document.getElementById("weekday").value = policy.fixedWeekday;
+  }
+
+  if (!policy.canSelectNights) {
+    document.getElementById("nights").value = policy.fixedNights;
+  }
+
+  const dateInput = document.getElementById("start-date");
+  const today = getTodayDate();
+
+  dateInput.min = today;
+
+  if (
+    !policy.canSelectStartDate ||
+    !dateInput.value ||
+    dateInput.value < today
+  ) {
+    dateInput.value = today;
+  }
+
+  const previousCount = selectedDestinations.length;
+  const origin = document.getElementById("origin").value;
+
+  selectedDestinations = selectedDestinations
+    .filter((code) => code !== origin)
+    .slice(0, maxDestinations);
+
+  originAutocomplete?.close();
+  destinationAutocomplete?.close();
+
+  renderOrigin();
+  renderSelected();
+
+  const labels = {
+    anonymous: "Guest",
+    registered: "Registered",
+    premium: "Premium",
+  };
+
+  const noun = maxDestinations === 1 ? "destination" : "destinations";
+
+  let message =
+    `${labels[plan]} · Up to ${maxDestinations} ${noun}` +
+    ` · Smart Flex: ${policy.smartFlexEnabled ? "on" : "off"}.`;
+
+  if (previousCount !== selectedDestinations.length) {
+    message +=
+      " Some destinations were removed to match your current search settings.";
+  }
+
+  document.getElementById("search-access-status").textContent = message;
+}
+
+async function refreshSearchAccess() {
+  const requestId = ++searchAccessRequestId;
+  const token = getToken();
+
+  searchAccess = null;
+  searchAccessLoading = true;
+
+  originAutocomplete?.close();
+  destinationAutocomplete?.close();
+  updateSearchControls();
+
+  const status = document.getElementById("search-access-status");
+  status.textContent = "Loading search settings...";
+
+  try {
+    const response = await fetch("/api/search-access", {
+      cache: "no-store",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+
+    if (!response.ok) {
+      throw new Error(`Search access request failed: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    if (requestId !== searchAccessRequestId) return;
+
+    if (!isValidSearchAccess(data)) {
+      throw new Error("Invalid search access response");
+    }
+
+    searchAccess = data;
+    searchAccessLoading = false;
+
+    applySearchAccessToForm();
+  } catch (error) {
+    if (requestId !== searchAccessRequestId) return;
+
+    searchAccess = null;
+    searchAccessLoading = false;
+
+    status.textContent =
+      "Search settings could not be loaded. Please reload the page to try again.";
+
+    console.error("Failed to load search access:", error);
+  } finally {
+    if (requestId === searchAccessRequestId) {
+      updateSearchControls();
+    }
+  }
+}
+
+window.addEventListener("auth-changed", () => {
+  void refreshSearchAccess();
+});
 
 window.onload = async function () {
   const startDateInput = document.getElementById("start-date");
@@ -101,6 +287,7 @@ window.onload = async function () {
     console.error("Failed to load config:", err);
   }
 
+  configuredMaxDestinations = maxDestinations;
   configureDepartureAirports();
   setupAutocomplete();
   loadTheme();
@@ -134,13 +321,7 @@ window.onload = async function () {
   restoreSearchSetup();
   restoreSearchState();
 
-  document.getElementById("origin-input").disabled =
-    destinationsData.length === 0;
-  document.getElementById("destination-input").disabled =
-    destinationsData.length === 0 ||
-    selectedDestinations.length >= maxDestinations;
-  document.getElementById("search-button").disabled =
-    destinationsData.length === 0;
+  await refreshSearchAccess();
 };
 
 /* ========================= */
@@ -189,6 +370,10 @@ function setupAirportAutocomplete({
   }
 
   function render(query = input.value) {
+    if (input.disabled) {
+      close();
+      return;
+    }
     clearTimeout(timer);
     timer = null;
     focus = -1;
@@ -368,6 +553,9 @@ function renderOrigin() {
 }
 
 function selectOriginAirport(airport) {
+  if (!isSearchAccessReady() || !searchAccess.policy.canSelectOrigin) {
+    return;
+  }
   if (selectedDestinations.includes(airport.value)) return;
   if (!destinationsData.some((item) => item.value === airport.value)) return;
   document.getElementById("origin").value = airport.value;
@@ -378,6 +566,7 @@ function selectOriginAirport(airport) {
 }
 
 function selectDestination(dest) {
+  if (!isSearchAccessReady()) return;
   if (selectedDestinations.length >= maxDestinations) return;
   if (selectedDestinations.includes(dest.value)) return;
   if (dest.value === document.getElementById("origin").value) return;
@@ -407,9 +596,7 @@ function renderSelected() {
     container.appendChild(badge);
   });
 
-  document.getElementById("destination-input").disabled =
-    destinationsData.length === 0 ||
-    selectedDestinations.length >= maxDestinations;
+  updateSearchControls();
 
   originAutocomplete?.refresh();
   showSearchValidationError();
@@ -613,12 +800,20 @@ function restoreSearchSetup() {
 }
 
 async function search() {
-  if (isSearching) return;
+  if (isSearching || !isSearchAccessReady() || destinationsData.length === 0) {
+    return;
+  }
 
   const origin = document.getElementById("origin").value;
   const weekday = Number(document.getElementById("weekday").value);
   const nights = Number(document.getElementById("nights").value);
   const startDateInput = document.getElementById("start-date");
+
+  // The locked start date will still be today, even if the page is left open overnight
+  if (!searchAccess.policy.canSelectStartDate) {
+    startDateInput.value = getTodayDate();
+  }
+
   const startDate = startDateInput.value;
   const today = getTodayDate();
 
@@ -631,6 +826,15 @@ async function search() {
 
   if (selectedDestinations.length === 0) {
     showSearchValidationError("⚠️ Please select destination airport(s)");
+    return;
+  }
+
+  if (selectedDestinations.length > maxDestinations) {
+    const noun = maxDestinations === 1 ? "destination" : "destinations";
+
+    showSearchValidationError(
+      `Your plan allows up to ${maxDestinations} ${noun}.`,
+    );
     return;
   }
 
@@ -777,7 +981,7 @@ async function search() {
     }
 
     isSearching = false;
-    searchButton.disabled = false;
+    updateSearchControls();
   }
 }
 
@@ -819,6 +1023,9 @@ function loadTheme() {
 }
 
 function changeNights(delta) {
+  if (!isSearchAccessReady() || !searchAccess.policy.canSelectNights) {
+    return;
+  }
   const input = document.getElementById("nights");
 
   let value = Number(input.value) || 1;

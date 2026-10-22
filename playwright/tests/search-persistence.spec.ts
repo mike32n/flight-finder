@@ -1,4 +1,4 @@
-import { test } from "@playwright/test";
+import { test } from "../fixtures/search-ui.fixture";
 
 import Env from "../utils/env";
 import CommonPage from "../pages/common.page";

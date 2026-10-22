@@ -30,6 +30,10 @@
 
       <p id="destinations-error" role="alert" hidden></p>
 
+      <p id="search-access-status" class="meta-info" role="status">
+        Loading search settings...
+      </p>
+
       <div class="form">
         <div class="form-field airport-field">
           <label for="origin-input" class="field-label">Departure</label>
@@ -72,7 +76,7 @@
         <div class="form-field weekday-field">
           <label for="weekday" class="field-label">Weekday</label>
 
-          <select id="weekday">
+          <select id="weekday" disabled>
             <option value="0">Sunday</option>
             <option value="1">Monday</option>
             <option value="2">Tuesday</option>
@@ -87,7 +91,7 @@
           <label for="nights" class="field-label">Nights</label>
 
           <div class="stepper">
-            <button onclick="changeNights(-1)">−</button>
+            <button onclick="changeNights(-1)" disabled>−</button>
             <input
               id="nights"
               type="number"
@@ -95,8 +99,9 @@
               min="1"
               max="30"
               step="1"
+              disabled
             />
-            <button onclick="changeNights(1)">+</button>
+            <button onclick="changeNights(1)" disabled>+</button>
           </div>
         </div>
 
@@ -105,7 +110,7 @@
 
       <div class="start-date-field">
         <label for="start-date" class="field-label">Search from</label>
-        <input id="start-date" type="date" required />
+        <input id="start-date" type="date" required disabled />
       </div>
 
       <div id="loading" class="hidden">Loading...</div>

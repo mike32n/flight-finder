@@ -186,6 +186,7 @@ document
       await loadCurrentUser();
 
       renderAuthUI();
+      window.dispatchEvent(new Event("auth-changed"));
 
       closeAuthModal();
     } catch {
@@ -315,4 +316,5 @@ function logout() {
   authUser = null;
 
   renderAuthUI();
+  window.dispatchEvent(new Event("auth-changed"));
 }

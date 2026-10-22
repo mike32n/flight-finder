@@ -861,3 +861,11 @@ body.dark #start-date {
     width: 100%;
   }
 }
+
+.form input:disabled,
+.form select:disabled,
+.stepper button:disabled,
+.start-date-field input:disabled {
+  cursor: not-allowed;
+  opacity: var(--disabled-opacity, 0.65);
+}
