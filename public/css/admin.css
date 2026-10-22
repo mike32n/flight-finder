@@ -2,15 +2,6 @@
   max-width: 1000px;
 }
 
-.admin-header {
-  padding-top: 24px;
-}
-
-.admin-header h1 {
-  margin: 0;
-  text-align: left;
-}
-
 .admin-description {
   color: var(--muted);
 }

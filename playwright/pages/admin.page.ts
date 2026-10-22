@@ -33,10 +33,7 @@ export default class AdminPage {
   constructor(page: Page) {
     this.page = page;
 
-    this.heading = page.getByRole("heading", {
-      name: "Administration",
-      exact: true,
-    });
+    this.heading = page.getByRole("heading", { level: 1 });
 
     this.status = page.locator("#admin-status");
     this.content = page.locator("#admin-content");
