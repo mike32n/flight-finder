@@ -9,6 +9,8 @@
 
   let canEdit = false;
   let isSaving = false;
+  let accessVersion = 0;
+  let pageActive = true;
 
   const weekdays = [
     "Sunday",
@@ -167,16 +169,42 @@
     document.getElementById("plan-policies-body").replaceChildren(fragment);
   }
 
-  function showError(message) {
+  function resetAdminView() {
     canEdit = false;
+    isSaving = false;
+
+    document.getElementById("admin-content").hidden = true;
     setControlsDisabled(true);
+    document.getElementById("plan-policies-body").replaceChildren();
+
+    document.querySelectorAll(".policy-save-status").forEach((status) => {
+      status.textContent = "";
+      delete status.dataset.state;
+    });
+  }
+
+  function redirectToSearch() {
+    resetAdminView();
+    localStorage.removeItem("authToken");
+    window.location.replace("/");
+  }
+
+  function isCurrentAccess(version, token) {
+    return (
+      pageActive &&
+      version === accessVersion &&
+      token === localStorage.getItem("authToken")
+    );
+  }
+
+  function showError(message) {
+    resetAdminView();
+
     const status = document.getElementById("admin-status");
 
     status.textContent = message;
     status.dataset.state = "error";
     status.hidden = false;
-
-    document.getElementById("admin-content").hidden = true;
   }
 
   function setControlsDisabled(disabled) {
@@ -222,11 +250,23 @@
   }
 
   async function loadPolicies() {
+    const version = ++accessVersion;
+
+    resetAdminView();
+
+    const status = document.getElementById("admin-status");
+
+    status.textContent = "Loading plan policies...";
+    status.dataset.state = "loading";
+    status.hidden = false;
+
+    let token;
+
     try {
-      const token = localStorage.getItem("authToken");
+      token = localStorage.getItem("authToken");
 
       if (!token) {
-        showError("Please sign in to access administration.");
+        redirectToSearch();
         return;
       }
 
@@ -237,8 +277,10 @@
         cache: "no-store",
       });
 
+      if (!isCurrentAccess(version, token)) return;
+
       if (response.status === 401) {
-        showError("Your session has expired. Please sign in again.");
+        redirectToSearch();
         return;
       }
 
@@ -253,17 +295,22 @@
 
       const data = await response.json();
 
+      if (!isCurrentAccess(version, token)) return;
+
       if (data?.success !== true || !hasValidPolicies(data.policies)) {
         throw new Error("Invalid plan policy response.");
       }
 
       renderPolicies(data.policies);
+
       canEdit = true;
       setControlsDisabled(false);
 
-      document.getElementById("admin-status").hidden = true;
+      status.hidden = true;
       document.getElementById("admin-content").hidden = false;
     } catch {
+      if (!isCurrentAccess(version, token)) return;
+
       showError(
         "Plan policies could not be loaded. Please reload to try again.",
       );
@@ -272,6 +319,9 @@
 
   async function savePolicy(plan) {
     if (!canEdit || isSaving) return;
+
+    const version = accessVersion;
+    let token;
 
     const form = document.getElementById(`policy-form-${plan}`);
 
@@ -284,10 +334,10 @@
     showSaveStatus(plan, "Saving...", "saving");
 
     try {
-      const token = localStorage.getItem("authToken");
+      token = localStorage.getItem("authToken");
 
       if (!token) {
-        showError("Please sign in to access administration.");
+        redirectToSearch();
         return;
       }
 
@@ -301,8 +351,10 @@
         cache: "no-store",
       });
 
+      if (!isCurrentAccess(version, token)) return;
+
       if (response.status === 401) {
-        showError("Your session has expired. Please sign in again.");
+        redirectToSearch();
         return;
       }
 
@@ -312,6 +364,8 @@
       }
 
       const data = await response.json().catch(() => null);
+
+      if (!isCurrentAccess(version, token)) return;
 
       if (!response.ok) {
         const message =
@@ -336,14 +390,18 @@
       applyPolicy(plan, data.policy);
       showSaveStatus(plan, "Saved.", "success");
     } catch {
+      if (!isCurrentAccess(version, token)) return;
+
       showSaveStatus(
         plan,
         "Changes could not be saved. Please try again.",
         "error",
       );
     } finally {
-      isSaving = false;
-      setControlsDisabled(!canEdit);
+      if (version === accessVersion && pageActive) {
+        isSaving = false;
+        setControlsDisabled(!canEdit);
+      }
     }
   }
 
@@ -356,7 +414,23 @@
           void savePolicy(plan);
         });
     }
+  });
 
+  window.addEventListener("pageshow", () => {
+    pageActive = true;
     void loadPolicies();
+  });
+
+  window.addEventListener("pagehide", () => {
+    pageActive = false;
+    accessVersion++;
+
+    resetAdminView();
+  });
+
+  window.addEventListener("storage", (event) => {
+    if ((event.key === "authToken" || event.key === null) && pageActive) {
+      void loadPolicies();
+    }
   });
 })();

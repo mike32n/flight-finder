@@ -37,6 +37,10 @@ export default class CommonPage {
     await this.page.reload();
   }
 
+  async goBack(): Promise<void> {
+    await this.page.goBack();
+  }
+
   async installClock(dateTime: string): Promise<void> {
     await this.page.clock.install({
       time: new Date(dateTime),

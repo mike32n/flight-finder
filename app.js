@@ -9,7 +9,15 @@ const searchAccessRoutes = require("./routes/searchAccessRoutes");
 const app = express();
 
 app.use(express.json());
-app.use(express.static("public"));
+app.use(
+  express.static("public", {
+    setHeaders(res, filePath) {
+      if (path.basename(filePath) === "admin.html") {
+        res.setHeader("Cache-Control", "no-store");
+      }
+    },
+  }),
+);
 
 app.get("/verify/:token", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "verify.html"));

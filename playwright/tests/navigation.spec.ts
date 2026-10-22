@@ -2,6 +2,7 @@ import { test } from "@playwright/test";
 
 import Env from "../utils/env";
 import CommonPage from "../pages/common.page";
+import AdminPage from "../pages/admin.page";
 import AuthPage from "../pages/auth.page";
 import FlightFinderPage from "../pages/flight-finder.page";
 import NavigationPage from "../pages/navigation.page";
@@ -13,12 +14,14 @@ import {
 
 test.describe("Admin navigation", () => {
   let common: CommonPage;
+  let admin: AdminPage;
   let auth: AuthPage;
   let flightFinder: FlightFinderPage;
   let navigation: NavigationPage;
 
   test.beforeEach(async ({ page }) => {
     common = new CommonPage(page);
+    admin = new AdminPage(page);
     auth = new AuthPage(page);
     flightFinder = new FlightFinderPage(page);
     navigation = new NavigationPage(page);
@@ -88,5 +91,36 @@ test.describe("Admin navigation", () => {
 
     await common.expectVisible(auth.loginButton);
     await common.expectHidden(navigation.adminLink);
+  });
+
+  test("TC-NAV-04 | should prevent restoring administration after logout", async () => {
+    const user = await createVerifiedAdminTestUser();
+
+    await auth.login(user.email, user.password);
+    await common.expectVisible(navigation.adminLink);
+
+    await common.click(navigation.adminLink);
+    await common.expectVisible(admin.content);
+
+    await common.click(navigation.backToFlightFinderLink);
+    await common.expectVisible(flightFinder.logoutButton);
+
+    await common.click(flightFinder.logoutButton);
+    await common.expectVisible(auth.loginButton);
+    await auth.expectAuthTokenRemoved();
+
+    // The previous history entry is the administration page.
+    await common.goBack();
+
+    await common.expectURL(Env.test);
+    await common.expectVisible(auth.loginButton);
+    await common.expectHidden(admin.content);
+
+    // Direct navigation must also be rejected.
+    await common.openPage(`${Env.test}admin.html`);
+
+    await common.expectURL(Env.test);
+    await common.expectVisible(auth.loginButton);
+    await common.expectHidden(admin.content);
   });
 });

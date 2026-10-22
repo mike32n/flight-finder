@@ -2,28 +2,29 @@ import { test } from "@playwright/test";
 
 import Env from "../utils/env";
 import CommonPage from "../pages/common.page";
+import AuthPage from "../pages/auth.page";
 import AdminPage from "../pages/admin.page";
 
 const planDefaults = require("../../config/planDefaults");
 
 test.describe("Administration", () => {
   let common: CommonPage;
+  let auth: AuthPage;
   let admin: AdminPage;
 
   test.beforeEach(async ({ page }) => {
     common = new CommonPage(page);
+    auth = new AuthPage(page);
     admin = new AdminPage(page);
   });
 
-  test("TC-ADMIN-01 | should request sign-in without calling the admin API", async () => {
+  test("TC-ADMIN-01 | should redirect to search without calling the admin API when signed out", async () => {
     await admin.mockPoliciesResponse(200, {});
 
     await common.openPage(`${Env.test}admin.html`);
 
-    await common.expectText(
-      admin.status,
-      "Please sign in to access administration.",
-    );
+    await common.expectURL(Env.test);
+    await common.expectVisible(auth.loginButton);
     await common.expectHidden(admin.content);
 
     await admin.expectRequestCount(0);
@@ -72,25 +73,37 @@ test.describe("Administration", () => {
     await admin.expectAuthorizationHeader("Bearer admin-ui-test-token");
   });
 
-  for (const [status, message] of [
-    [401, "Your session has expired. Please sign in again."],
-    [403, "Admin access required."],
-  ] as const) {
-    test(`TC-ADMIN-03-${status} | should handle denied access`, async () => {
-      await admin.setAuthToken();
-
-      await admin.mockPoliciesResponse(status, {
-        success: false,
-      });
-
-      await common.openPage(`${Env.test}admin.html`);
-
-      await common.expectText(admin.status, message);
-      await common.expectHidden(admin.content);
-
-      await admin.expectRequestCount(1);
+  test("TC-ADMIN-03-401 | should clear the rejected token and redirect to search", async () => {
+    await admin.setAuthToken();
+    await admin.mockPoliciesResponse(401, {
+      success: false,
     });
-  }
+
+    await common.openPage(`${Env.test}admin.html`);
+
+    await common.expectURL(Env.test);
+    await common.expectVisible(auth.loginButton);
+    await auth.expectAuthTokenRemoved();
+    await common.expectHidden(admin.content);
+
+    await admin.expectRequestCount(1);
+  });
+
+  test("TC-ADMIN-03-403 | should deny administration without ending the session", async () => {
+    await admin.setAuthToken();
+    await admin.mockPoliciesResponse(403, {
+      success: false,
+    });
+
+    await common.openPage(`${Env.test}admin.html`);
+
+    await common.expectURL(`${Env.test}admin.html`);
+    await common.expectText(admin.status, "Admin access required.");
+    await common.expectHidden(admin.content);
+    await auth.expectAuthTokenPresent();
+
+    await admin.expectRequestCount(1);
+  });
 
   test("TC-ADMIN-04 | should show a loading error when the server fails", async () => {
     await admin.setAuthToken();
@@ -240,5 +253,29 @@ test.describe("Administration", () => {
 
     await common.expectText(admin.getSaveStatus("premium"), "Saved.");
     await admin.expectSaveRequestCount(2);
+  });
+
+  test("TC-ADMIN-10 | should redirect when the session expires before saving", async () => {
+    await admin.setAuthToken();
+    await admin.mockPoliciesResponse(200, {
+      success: true,
+      policies: planDefaults,
+    });
+
+    await admin.mockSaveResponse(401, {
+      success: false,
+      message: "Invalid or expired authentication token.",
+    });
+
+    await common.openPage(`${Env.test}admin.html`);
+    await common.expectVisible(admin.content);
+
+    await common.click(admin.getSaveButton("registered"));
+
+    await common.expectURL(Env.test);
+    await common.expectVisible(auth.loginButton);
+    await auth.expectAuthTokenRemoved();
+
+    await admin.expectSaveRequestCount(1);
   });
 });
