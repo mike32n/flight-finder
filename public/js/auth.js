@@ -2,6 +2,7 @@ let authUser = null;
 
 function saveToken(token) {
   localStorage.setItem("authToken", token);
+  document.getElementById("session-message").hidden = true;
 }
 
 function getToken() {
@@ -12,33 +13,64 @@ function removeToken() {
   localStorage.removeItem("authToken");
 }
 
+function endSession({ expired = false } = {}) {
+  if (expired) {
+    clearPrivateSearchResults();
+  } else {
+    clearSearchResults();
+  }
+
+  removeToken();
+  authUser = null;
+  renderAuthUI();
+
+  const message = document.getElementById("session-message");
+
+  message.textContent = expired
+    ? "Your session has expired. Please sign in again."
+    : "";
+
+  message.hidden = !expired;
+}
+
 async function loadCurrentUser() {
   const token = getToken();
 
   if (!token) {
     authUser = null;
-    return;
+    return "anonymous";
   }
 
   try {
     const response = await fetch("/api/auth/me", {
+      cache: "no-store",
       headers: {
         Authorization: `Bearer ${token}`,
       },
     });
 
+    if (response.status === 401) {
+      endSession({ expired: true });
+      return "anonymous";
+    }
+
     if (!response.ok) {
-      removeToken();
-      authUser = null;
-      return;
+      throw new Error(`Session verification failed: ${response.status}`);
     }
 
     const data = await response.json();
 
+    if (!Number.isSafeInteger(data?.user?.id) || data.user.id < 1) {
+      throw new Error("Invalid current user response");
+    }
+
     authUser = data.user;
-  } catch {
-    removeToken();
-    authUser = null;
+
+    return "authenticated";
+  } catch (error) {
+    console.error("Could not verify the current session:", error);
+
+    return "unavailable";
   }
 }
 
@@ -188,7 +220,19 @@ document
 
       saveToken(data.token);
 
-      await loadCurrentUser();
+      const authState = await loadCurrentUser();
+
+      if (authState !== "authenticated") {
+        const message = "Your session could not be verified. Please try again.";
+
+        showAuthMessage("login-message", message);
+
+        if (authState === "unavailable") {
+          setSearchAccessUnavailable(message);
+        }
+
+        return;
+      }
 
       renderAuthUI();
       window.dispatchEvent(new Event("auth-changed"));
@@ -315,11 +359,6 @@ document.getElementById("auth-modal").addEventListener("click", (event) => {
 });
 
 function logout() {
-  clearSearchResults();
-  removeToken();
-
-  authUser = null;
-
-  renderAuthUI();
+  endSession();
   window.dispatchEvent(new Event("auth-changed"));
 }

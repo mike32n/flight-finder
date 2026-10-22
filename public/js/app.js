@@ -23,6 +23,7 @@ let searchAbortController = null;
 let searchAccess = null;
 let searchAccessLoading = true;
 let searchAccessRequestId = 0;
+let searchOwnerUserId = null;
 let configuredMaxDestinations = 3;
 
 window.emailVerificationRequired = true;
@@ -42,7 +43,22 @@ function getTodayDate() {
 }
 
 function isSearchAccessReady() {
-  return searchAccess !== null && !searchAccessLoading;
+  const identityKnown = !getToken() || authUser !== null;
+
+  return searchAccess !== null && !searchAccessLoading && identityKnown;
+}
+
+function setSearchAccessUnavailable(message) {
+  searchAccessRequestId++;
+  searchAccess = null;
+  searchAccessLoading = false;
+
+  originAutocomplete?.close();
+  destinationAutocomplete?.close();
+
+  document.getElementById("search-access-status").textContent = message;
+
+  updateSearchControls();
 }
 
 function updateSearchControls() {
@@ -315,7 +331,14 @@ window.onload = async function () {
 
   startDateInput.addEventListener("change", saveSearchSetup);
 
-  await loadCurrentUser();
+  const authState = await loadCurrentUser();
+
+  if (authState === "unavailable") {
+    setSearchAccessUnavailable(
+      "Your session could not be verified. Please reload the page to try again.",
+    );
+    return;
+  }
   renderAuthUI();
 
   restoreSearchSetup();
@@ -614,6 +637,7 @@ function saveSearchState(status) {
     sessionStorage.setItem(
       SEARCH_STATE_KEY,
       JSON.stringify({
+        ownerUserId: searchOwnerUserId,
         parameters: lastSearchParameters,
         results: currentResults,
         failedCount,
@@ -632,6 +656,7 @@ function clearSearchResults() {
   resultNodes = [];
   failedCount = 0;
   lastSearchParameters = null;
+  searchOwnerUserId = null;
 
   document.getElementById("results").innerHTML = "";
 
@@ -639,6 +664,20 @@ function clearSearchResults() {
     sessionStorage.removeItem(SEARCH_STATE_KEY);
   } catch (error) {
     console.warn("Could not clear saved search results:", error);
+  }
+}
+
+function clearPrivateSearchResults() {
+  try {
+    const saved = JSON.parse(
+      sessionStorage.getItem(SEARCH_STATE_KEY) || "null",
+    );
+
+    if (searchOwnerUserId !== null || (saved && saved.ownerUserId !== null)) {
+      clearSearchResults();
+    }
+  } catch {
+    clearSearchResults();
   }
 }
 
@@ -659,6 +698,20 @@ function restoreSearchState() {
       clearSearchResults();
       return;
     }
+
+    const ownerUserId = saved.ownerUserId;
+
+    if (
+      ownerUserId !== null &&
+      (!Number.isSafeInteger(ownerUserId) ||
+        ownerUserId < 1 ||
+        ownerUserId !== authUser?.id)
+    ) {
+      clearSearchResults();
+      return;
+    }
+
+    searchOwnerUserId = ownerUserId;
 
     lastSearchParameters = saved.parameters;
     failedCount = saved.failedCount;
@@ -859,6 +912,8 @@ async function search() {
 
   saveSearchSetup();
   clearSearchResults();
+
+  searchOwnerUserId = authUser?.id ?? null;
 
   lastSearchParameters = {
     origin,

@@ -9,6 +9,7 @@ export default class MainPage {
   readonly page: Page;
   readonly heading: Locator;
   readonly searchAccessStatus: Locator;
+  readonly sessionMessage: Locator;
 
   readonly authContainer: Locator;
   readonly logoutButton: Locator;
@@ -48,6 +49,7 @@ export default class MainPage {
     this.page = page;
     this.heading = page.getByRole("heading", { level: 1 });
     this.searchAccessStatus = page.locator("#search-access-status");
+    this.sessionMessage = page.locator("#session-message");
 
     this.authContainer = page.locator("#auth-container");
     this.logoutButton = page.getByRole("button", {

@@ -77,6 +77,31 @@ export default class AuthPage {
     await this.loginPasswordInput.fill(password);
   }
 
+  async login(email: string, password: string): Promise<void> {
+    await this.loginButton.click();
+    await this.fillLoginForm(email, password);
+    await this.loginSubmitButton.click();
+
+    await expect(this.authModal).toBeHidden();
+  }
+
+  async loginViaApi(email: string, password: string): Promise<void> {
+    const response = await this.page.request.post(
+      new URL("/api/auth/login", this.page.url()).href,
+      {
+        data: { email, password },
+      },
+    );
+
+    await expect(response).toBeOK();
+
+    const data = await response.json();
+
+    await this.page.evaluate((token: string) => {
+      localStorage.setItem("authToken", token);
+    }, data.token);
+  }
+
   async fillRegisterForm(email: string, password: string): Promise<void> {
     await this.registerEmailInput.fill(email);
     await this.registerPasswordInput.fill(password);
@@ -86,6 +111,36 @@ export default class AuthPage {
     await this.page.evaluate(() => {
       localStorage.setItem("authToken", "invalid-token");
     });
+  }
+
+  async mockCurrentUserFailure(failure: 401 | 500 | "network"): Promise<void> {
+    await this.page.route("**/api/auth/me", async (route) => {
+      if (failure === "network") {
+        await route.abort("failed");
+        return;
+      }
+
+      await route.fulfill({
+        status: failure,
+        json: {
+          success: false,
+          message:
+            failure === 401
+              ? "Invalid or expired authentication token."
+              : "Internal server error.",
+        },
+      });
+    });
+  }
+
+  async clearCurrentUserMock(): Promise<void> {
+    await this.page.unroute("**/api/auth/me");
+  }
+
+  async expectAuthTokenPresent(): Promise<void> {
+    await expect
+      .poll(() => this.page.evaluate(() => localStorage.getItem("authToken")))
+      .toBeTruthy();
   }
 
   async expectAuthTokenRemoved(): Promise<void> {
