@@ -7,10 +7,13 @@ A lightweight web application for finding cheap short round-trip flights, with m
 - Multi-destination flight search
 - One departure airport and up to three destinations per search
 - Trip generation by weekday + number of nights
+- Search from today or a selected future date
+- Search settings and results preserved across page reloads
 - Smart Flex with controlled nearby-date search
 - Live, price-sorted results via Server-Sent Events (SSE)
 - Top 5 cheapest results (by default) with Google Flights booking links
 - User registration, email verification, login and password recovery
+- Plan-based search permissions configurable through an admin dashboard
 - Light/dark theme
 
 ## Under the Hood
@@ -21,14 +24,14 @@ Individual provider failures do not stop the remaining searches.
 - Redis provides caching and rate limiting.
 - Search limits and date flexibility are configurable.
 - A provider abstraction separates flight access from the application:
-    - SerpApi / Google Flights powers real searches
-    - Mock provider for development and testing
+  - SerpApi / Google Flights powers real searches
+  - Mock provider for development and testing
 
 ## Smart Flex
 
 When enabled, Smart Flex checks controlled nearby date variants and shows them when they are cheaper than the original dates.
-
 If disabled, nearby dates are searched only as a fallback when no flights are found for the original dates.
+Smart Flex and fallback searches are available according to the active plan’s permissions.
 
 Current variants:
 
@@ -69,7 +72,7 @@ FLIGHT_PROVIDER=serpapi
 
 - Playwright + TypeScript E2E tests
 - Page Object Model (POM) with reusable page objects and helpers
-- Authentication, flight search, persistence, UI and booking-link coverage
+- Authentication, flight search, persistence, plan permissions, admin workflows and UI coverage
 - Jest/Supertest unit and integration tests cover backend behavior
 - Automated Jest and Playwright execution in GitHub Actions
 - Playwright HTML reports available as CI artifacts
