@@ -75,6 +75,8 @@ test.describe("Administration", () => {
 
   test("TC-ADMIN-03-401 | should clear the rejected token and redirect to search", async () => {
     await admin.setAuthToken();
+    // A subsequent /me request must not hide a token-reseeding regression.
+    await auth.mockCurrentUserFailure(500);
     await admin.mockPoliciesResponse(401, {
       success: false,
     });

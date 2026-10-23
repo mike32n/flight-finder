@@ -1,4 +1,5 @@
 import { Locator, Page, expect } from "@playwright/test";
+import Env from "../utils/env";
 
 type PlanName = "anonymous" | "registered" | "premium";
 
@@ -45,9 +46,24 @@ export default class AdminPage {
   }
 
   async setAuthToken(token = "admin-ui-test-token"): Promise<void> {
-    await this.page.addInitScript((value) => {
-      localStorage.setItem("authToken", value);
-    }, token);
+    const setupUrl = new URL("/__playwright__/auth-setup", Env.test).href;
+
+    await this.page.route(setupUrl, async (route) => {
+      await route.fulfill({
+        contentType: "text/html",
+        body: "<!doctype html><title>Test setup</title>",
+      });
+    });
+
+    try {
+      await this.page.goto(setupUrl);
+
+      await this.page.evaluate((value: string) => {
+        localStorage.setItem("authToken", value);
+      }, token);
+    } finally {
+      await this.page.unroute(setupUrl);
+    }
   }
 
   async mockPoliciesResponse(status: number, body: unknown): Promise<void> {

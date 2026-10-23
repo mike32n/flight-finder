@@ -47,13 +47,23 @@ describe("generateMockPrice", () => {
 
 describe("MockProvider", () => {
   let provider;
+  let originalE2EMode;
 
   beforeEach(() => {
+    originalE2EMode = process.env.E2E_TEST;
+    delete process.env.E2E_TEST;
+
     provider = new MockProvider();
   });
 
   afterEach(() => {
     jest.restoreAllMocks();
+
+    if (originalE2EMode === undefined) {
+      delete process.env.E2E_TEST;
+    } else {
+      process.env.E2E_TEST = originalE2EMode;
+    }
   });
 
   test("returns successful flight result", async () => {
@@ -98,7 +108,10 @@ describe("MockProvider", () => {
     jest.spyOn(Math, "random").mockReturnValue(0.5);
 
     const result = await provider.searchFlights(
-      "AMS", "2026-10-16", "2026-10-18", "VIE",
+      "AMS",
+      "2026-10-16",
+      "2026-10-18",
+      "VIE",
     );
 
     expect(result.success).toBe(true);
@@ -110,4 +123,22 @@ describe("MockProvider", () => {
     );
   });
 
+  test("disables random provider failures in E2E mode", async () => {
+    process.env.E2E_TEST = "true";
+
+    const random = jest.spyOn(Math, "random").mockReturnValue(0);
+
+    const result = await provider.searchFlights(
+      "AMS",
+      "2026-11-01",
+      "2026-11-03",
+    );
+
+    expect(result.success).toBe(true);
+    expect(result.data.price).toBe(
+      generateMockPrice("AMS", "2026-11-01", "2026-11-03"),
+    );
+
+    expect(random).not.toHaveBeenCalled();
+  });
 });

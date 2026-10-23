@@ -22,8 +22,8 @@ function generateMockPrice(
 }
 
 async function searchMockFlights(destination, departure, returnDate, origin) {
-  // 15% chance of error to simulate API issues
-  if (Math.random() < 0.15) {
+  // Keep E2E searches deterministic; simulate random failures in development.
+  if (process.env.E2E_TEST !== "true" && Math.random() < 0.15) {
     throw new Error("Mock API error");
   }
 

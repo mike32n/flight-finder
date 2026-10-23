@@ -1,4 +1,25 @@
 import { defineConfig, devices } from "@playwright/test";
+import { randomBytes } from "node:crypto";
+import { tmpdir } from "node:os";
+import { basename, join } from "node:path";
+
+const e2eDirectory =
+  process.env.FLIGHT_FINDER_E2E_DIRECTORY ??
+  join(tmpdir(), `flight-finder-e2e-${randomBytes(12).toString("hex")}`);
+
+process.env.FLIGHT_FINDER_E2E_DIRECTORY = e2eDirectory;
+
+const e2eEnvironment = {
+  E2E_TEST: "true",
+  EMAIL_VERIFICATION_REQUIRED: "true",
+  FLIGHT_PROVIDER: "mock",
+  DB_PATH: join(e2eDirectory, "database.sqlite"),
+  REDIS_PREFIX: `ff:e2e:${basename(e2eDirectory)}:`,
+  JWT_SECRET: "flight-finder-e2e-only-secret",
+  JWT_EXPIRES_IN: "1h",
+};
+
+Object.assign(process.env, e2eEnvironment);
 
 /**
  * Read environment variables from file.
@@ -22,7 +43,15 @@ export default defineConfig({
   /* Opt out of parallel tests on CI. */
   workers: process.env.CI ? 1 : undefined,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
-  reporter: "html",
+  reporter: [
+    [
+      "./playwright/reporters/cleanup.reporter.js",
+      {
+        directory: e2eDirectory,
+      },
+    ],
+    ["html"],
+  ],
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('')`. */
@@ -77,14 +106,15 @@ export default defineConfig({
   //   reuseExistingServer: !process.env.CI,
   // },
   webServer: {
-    command: "npm start",
+    command: "node playwright/start-server.js",
     url: "http://localhost:3000",
     reuseExistingServer: false,
     timeout: 120_000,
+    stdout: "pipe",
+    stderr: "pipe",
     env: {
       ...process.env,
-      E2E_TEST: "true",
-      EMAIL_VERIFICATION_REQUIRED: "true",
+      ...e2eEnvironment,
     },
   },
 });
