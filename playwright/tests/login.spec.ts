@@ -9,8 +9,6 @@ import {
   createUniqueTestEmail,
 } from "../helpers/user.helper";
 
-const { verifyUser } = require("../../models/userModel");
-
 test.describe("Authentication - Login", () => {
   let common: CommonPage;
   let flightFinder: FlightFinderPage;
@@ -96,8 +94,7 @@ test.describe("Authentication - Login", () => {
   });
 
   test("TC-LOGIN-05 | should logout successfully", async () => {
-    const user = await createTestUser();
-    await verifyUser(user.userId);
+    const user = await createVerifiedTestUser();
 
     await common.click(auth.loginButton);
 
@@ -119,9 +116,7 @@ test.describe("Authentication - Login", () => {
   });
 
   test("TC-LOGIN-06 | should restore authenticated session after page reload", async () => {
-    const user = await createTestUser();
-
-    await verifyUser(user.userId);
+    const user = await createVerifiedTestUser();
 
     await common.click(auth.loginButton);
 

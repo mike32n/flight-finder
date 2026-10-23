@@ -14,10 +14,9 @@ export function createUniqueTestEmail(prefix = "e2e"): string {
   return `${prefix}-${crypto.randomUUID()}@example.com`;
 }
 
-export async function createTestUser() {
-  const email = createUniqueTestEmail("e2e-test");
+export async function createTestUser(prefix = "e2e-test") {
+  const email = createUniqueTestEmail(prefix);
   const password = "TestPassword1";
-
   const passwordHash = await bcrypt.hash(password, auth.bcryptSaltRounds);
   const verificationToken = crypto.randomUUID();
 
@@ -35,31 +34,20 @@ export async function createTestUser() {
   };
 }
 
-export async function createVerifiedTestUser() {
-  const email = createUniqueTestEmail("e2e-verified");
-  const password = "TestPassword1";
+export async function createVerifiedTestUser(prefix = "e2e-verified") {
+  const user = await createTestUser(prefix);
 
-  const passwordHash = await bcrypt.hash(password, auth.bcryptSaltRounds);
-  const verificationToken = crypto.randomUUID();
-
-  const user = await createUser({
-    email,
-    passwordHash,
-    verificationToken,
-  });
-
-  await verifyUser(user.id);
+  await verifyUser(user.userId);
 
   return {
-    email,
-    password,
-    userId: user.id,
+    email: user.email,
+    password: user.password,
+    userId: user.userId,
   };
 }
 
 export async function createVerifiedAdminTestUser() {
   const user = await createVerifiedTestUser();
-
   const updated = await grantAdminByEmail(user.email);
 
   if (!updated) {
@@ -69,54 +57,28 @@ export async function createVerifiedAdminTestUser() {
   return user;
 }
 
-export async function createTestUserWithResetToken() {
-  const email = createUniqueTestEmail("e2e-reset");
-  const password = "TestPassword1";
-
-  const passwordHash = await bcrypt.hash(password, auth.bcryptSaltRounds);
-  const verificationToken = crypto.randomUUID();
+async function attachResetToken(user: {
+  email: string;
+  password: string;
+  userId: number;
+}) {
   const resetToken = crypto.randomUUID();
   const resetExpires = new Date(Date.now() + auth.passwordResetTokenLifetimeMs);
 
-  const user = await createUser({
-    email,
-    passwordHash,
-    verificationToken,
-  });
-
-  await savePasswordResetToken(user.id, resetToken, resetExpires);
+  await savePasswordResetToken(user.userId, resetToken, resetExpires);
 
   return {
-    email,
-    password,
+    email: user.email,
+    password: user.password,
     resetToken,
-    userId: user.id,
+    userId: user.userId,
   };
 }
 
+export async function createTestUserWithResetToken() {
+  return attachResetToken(await createTestUser("e2e-reset"));
+}
+
 export async function createVerifiedTestUserWithResetToken() {
-  const email = createUniqueTestEmail("e2e-verified-reset");
-  const password = "TestPassword1";
-
-  const passwordHash = await bcrypt.hash(password, auth.bcryptSaltRounds);
-  const verificationToken = crypto.randomUUID();
-  const resetToken = crypto.randomUUID();
-  const resetExpires = new Date(Date.now() + auth.passwordResetTokenLifetimeMs);
-
-  const user = await createUser({
-    email,
-    passwordHash,
-    verificationToken,
-  });
-
-  await verifyUser(user.id);
-
-  await savePasswordResetToken(user.id, resetToken, resetExpires);
-
-  return {
-    email,
-    password,
-    resetToken,
-    userId: user.id,
-  };
+  return attachResetToken(await createVerifiedTestUser("e2e-verified-reset"));
 }
