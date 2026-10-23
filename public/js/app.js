@@ -711,6 +711,94 @@ function renderSelected() {
 /* SEARCH */
 /* ========================= */
 
+function isSearchRecord(value) {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function isSearchDate(value) {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return false;
+  }
+
+  const date = new Date(`${value}T00:00:00.000Z`);
+
+  return (
+    Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value
+  );
+}
+
+function isSearchAirportCode(value) {
+  return (
+    typeof value === "string" && value.length === 3 && /^[A-Z]{3}$/.test(value)
+  );
+}
+
+function isValidSearchResult(item) {
+  if (!isSearchRecord(item) || !isSearchRecord(item.destination)) {
+    return false;
+  }
+
+  const validAirport = (airport) =>
+    isSearchRecord(airport) &&
+    isSearchAirportCode(airport.code) &&
+    (airport.city === undefined || typeof airport.city === "string");
+
+  const insight = item.priceInsight;
+
+  return (
+    validAirport(item.destination) &&
+    (item.origin === undefined || validAirport(item.origin)) &&
+    isSearchDate(item.departure) &&
+    isSearchDate(item.return) &&
+    item.return > item.departure &&
+    Number.isFinite(item.price) &&
+    item.price > 0 &&
+    typeof item.currency === "string" &&
+    /^[A-Z]{3}$/.test(item.currency) &&
+    item.currency.length === 3 &&
+    ["base", "flex", "fallback-flex"].includes(item.resultType) &&
+    (item.bookingUrl === undefined ||
+      getSafeBookingUrl(item.bookingUrl) !== null) &&
+    (insight === undefined ||
+      (isSearchRecord(insight) &&
+        Number.isInteger(insight.percent) &&
+        insight.percent >= 0 &&
+        insight.percent <= 100 &&
+        Number.isFinite(insight.basePrice) &&
+        insight.basePrice > 0))
+  );
+}
+
+function isValidSavedSearch(saved) {
+  if (!isSearchRecord(saved) || !isSearchRecord(saved.parameters)) {
+    return false;
+  }
+
+  const parameters = saved.parameters;
+
+  return (
+    Array.isArray(saved.results) &&
+    saved.results.every(isValidSearchResult) &&
+    Number.isSafeInteger(saved.failedCount) &&
+    saved.failedCount >= 0 &&
+    ["searching", "completed", "interrupted"].includes(saved.status) &&
+    isSearchAirportCode(parameters.origin) &&
+    Array.isArray(parameters.destinations) &&
+    parameters.destinations.length > 0 &&
+    parameters.destinations.every(isSearchAirportCode) &&
+    !parameters.destinations.includes(parameters.origin) &&
+    new Set(parameters.destinations).size === parameters.destinations.length &&
+    Number.isInteger(parameters.weekday) &&
+    parameters.weekday >= 0 &&
+    parameters.weekday <= 6 &&
+    Number.isSafeInteger(parameters.nights) &&
+    parameters.nights > 0 &&
+    isSearchDate(parameters.startDate) &&
+    typeof parameters.startedAt === "string" &&
+    Number.isFinite(Date.parse(parameters.startedAt))
+  );
+}
+
 function saveSearchState(status) {
   if (!lastSearchParameters) return;
 
@@ -769,13 +857,7 @@ function restoreSearchState() {
 
     const saved = JSON.parse(stored);
 
-    if (
-      !Array.isArray(saved.results) ||
-      !Array.isArray(saved.parameters?.destinations) ||
-      !Number.isInteger(saved.failedCount) ||
-      saved.failedCount < 0 ||
-      !["searching", "completed", "interrupted"].includes(saved.status)
-    ) {
+    if (!isValidSavedSearch(saved)) {
       clearSearchResults();
       return;
     }
@@ -1102,7 +1184,11 @@ async function search() {
 
           const item = JSON.parse(jsonStr);
 
-          insertSortedWithDOM(item, resultsDiv);
+          if (!insertSortedWithDOM(item, resultsDiv)) {
+            failedCount++;
+            updateFooter(resultsDiv, false);
+          }
+
           saveSearchState("searching");
         }
       }
@@ -1181,6 +1267,8 @@ function changeNights(delta) {
 }
 
 function insertSortedWithDOM(item, container) {
+  if (!isValidSearchResult(item)) return false;
+
   let index = 0;
 
   while (
@@ -1191,7 +1279,7 @@ function insertSortedWithDOM(item, container) {
   }
 
   // max results limit
-  if (index >= maxResults) return;
+  if (index >= maxResults) return true;
 
   currentResults.splice(index, 0, item);
 
@@ -1215,6 +1303,7 @@ function insertSortedWithDOM(item, container) {
     const removed = resultNodes.pop();
     removed.remove();
   }
+  return true;
 }
 
 function createCard(r) {
