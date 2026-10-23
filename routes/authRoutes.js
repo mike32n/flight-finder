@@ -12,20 +12,21 @@ const {
 const { loadUserAccess } = require("../middlewares/loadUserAccess");
 
 const { authenticateToken } = require("../middlewares/authMiddleware");
+const { validateAuthBody } = require("../middlewares/validateAuthBody");
 
 const router = express.Router();
 
-router.post("/register", register);
+router.post("/register", validateAuthBody, register);
 
 router.get("/verify/:token", verifyEmail);
 
-router.post("/login", login);
+router.post("/login", validateAuthBody, login);
 
-router.post("/forgot-password", forgotPassword);
+router.post("/forgot-password", validateAuthBody, forgotPassword);
 
 router.get("/reset-password/:token", validateResetToken);
 
-router.post("/reset-password/:token", resetPassword);
+router.post("/reset-password/:token", validateAuthBody, resetPassword);
 
 router.get("/me", authenticateToken, loadUserAccess, getCurrentUser);
 

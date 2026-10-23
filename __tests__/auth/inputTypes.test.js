@@ -95,4 +95,78 @@ describe("Authentication input types", () => {
       },
     );
   }
+
+  for (const endpoint of [
+    "register",
+    "login",
+    "forgot-password",
+    "reset-password/test-token",
+  ]) {
+    test.each([
+      {
+        name: "missing body",
+        prepare: (pendingRequest) => pendingRequest,
+      },
+      {
+        name: "empty array body",
+        prepare: (pendingRequest) => pendingRequest.send([]),
+      },
+      {
+        name: "non-empty array body",
+        prepare: (pendingRequest) =>
+          pendingRequest.send([
+            {
+              email: "test@example.com",
+              password: "Password123",
+            },
+          ]),
+      },
+      {
+        name: "text body",
+        prepare: (pendingRequest) =>
+          pendingRequest.type("text").send(
+            JSON.stringify({
+              email: "test@example.com",
+              password: "Password123",
+            }),
+          ),
+      },
+    ])(
+      `${endpoint} rejects $name before processing credentials`,
+      async ({ prepare }) => {
+        const response = await prepare(
+          request(app).post(`/api/auth/${endpoint}`),
+        );
+
+        expect(response.statusCode).toBe(400);
+        expect(response.body).toEqual({
+          success: false,
+          message: "Invalid request body.",
+        });
+
+        expectNoDatabaseOrBcryptCalls();
+      },
+    );
+  }
+
+  test.each([
+    ["register", "Email is required."],
+    ["login", "Email is required."],
+    ["reset-password/test-token", "Password is required."],
+  ])(
+    "%s applies field validation to an empty object body",
+    async (endpoint, message) => {
+      const response = await request(app)
+        .post(`/api/auth/${endpoint}`)
+        .send({});
+
+      expect(response.statusCode).toBe(400);
+      expect(response.body).toEqual({
+        success: false,
+        message,
+      });
+
+      expectNoDatabaseOrBcryptCalls();
+    },
+  );
 });
