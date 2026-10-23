@@ -16,6 +16,11 @@ function getToken() {
   return localStorage.getItem("authToken");
 }
 
+function invalidateCurrentUserVerification() {
+  currentUserRequestId++;
+  verifiedAuthToken = null;
+}
+
 function getSessionContext() {
   return {
     token: getToken(),

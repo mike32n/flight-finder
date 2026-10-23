@@ -113,6 +113,24 @@ export default class AuthPage {
     });
   }
 
+  async setAuthTokenFromAnotherTab(token: string | null): Promise<void> {
+    const otherPage = await this.page.context().newPage();
+
+    try {
+      await otherPage.goto(this.page.url());
+
+      await otherPage.evaluate((value: string | null) => {
+        if (value === null) {
+          localStorage.removeItem("authToken");
+        } else {
+          localStorage.setItem("authToken", value);
+        }
+      }, token);
+    } finally {
+      await otherPage.close();
+    }
+  }
+
   async mockCurrentUserFailure(failure: 401 | 500 | "network"): Promise<void> {
     await this.page.route("**/api/auth/me", async (route) => {
       if (failure === "network") {

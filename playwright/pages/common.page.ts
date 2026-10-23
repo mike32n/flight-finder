@@ -41,6 +41,18 @@ export default class CommonPage {
     await this.page.goBack();
   }
 
+  async simulateCachedPageRestore(): Promise<void> {
+    await this.page.evaluate(() => {
+      window.dispatchEvent(
+        new PageTransitionEvent("pagehide", { persisted: true }),
+      );
+
+      window.dispatchEvent(
+        new PageTransitionEvent("pageshow", { persisted: true }),
+      );
+    });
+  }
+
   async installClock(dateTime: string): Promise<void> {
     await this.page.clock.install({
       time: new Date(dateTime),

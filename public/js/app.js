@@ -24,6 +24,9 @@ let searchAccess = null;
 let searchAccessLoading = true;
 let searchAccessRequestId = 0;
 let searchOwnerUserId = null;
+let searchPageInitialized = false;
+let searchPageActive = true;
+let searchSessionRequestId = 0;
 let configuredMaxDestinations = 3;
 
 window.emailVerificationRequired = true;
@@ -241,8 +244,89 @@ async function refreshSearchAccess() {
   }
 }
 
-window.addEventListener("auth-changed", () => {
-  void refreshSearchAccess();
+function pauseSearchPage() {
+  invalidateCurrentUserVerification();
+
+  if (searchAbortController) {
+    searchAbortController.abort();
+    searchAbortController = null;
+    isSearching = false;
+    saveSearchState("interrupted");
+  }
+
+  document.getElementById("results").hidden = true;
+  document.getElementById("auth-container").hidden = true;
+  document.getElementById("admin-link").hidden = true;
+
+  setSearchAccessUnavailable("Verifying your session...");
+}
+
+async function refreshSearchSession() {
+  if (!searchPageInitialized || !searchPageActive) return;
+
+  const requestId = ++searchSessionRequestId;
+
+  const isCurrent = () =>
+    requestId === searchSessionRequestId && searchPageActive;
+
+  pauseSearchPage();
+
+  const authState = await loadCurrentUser();
+
+  if (!isCurrent() || authState === "stale") return;
+
+  if (authState === "unavailable") {
+    setSearchAccessUnavailable(
+      "Your session could not be verified. Please reload the page to try again.",
+    );
+    return;
+  }
+
+  const context = getSessionContext();
+
+  if (searchOwnerUserId !== null && searchOwnerUserId !== authUser?.id) {
+    clearPrivateSearchResults();
+  }
+
+  restoreSearchState();
+  await refreshSearchAccess();
+
+  if (!isCurrent() || !isSessionContextCurrent(context)) return;
+
+  if (authState === "authenticated") {
+    document.getElementById("session-message").hidden = true;
+  }
+
+  renderAuthUI();
+  document.getElementById("auth-container").hidden = false;
+  document.getElementById("results").hidden = false;
+}
+
+window.addEventListener("auth-changed", async () => {
+  await refreshSearchSession();
+});
+
+window.addEventListener("pagehide", () => {
+  searchPageActive = false;
+  searchSessionRequestId++;
+  pauseSearchPage();
+});
+
+window.addEventListener("pageshow", async (event) => {
+  searchPageActive = true;
+
+  if (event.persisted) {
+    await refreshSearchSession();
+  }
+});
+
+window.addEventListener("storage", async (event) => {
+  if (
+    event.storageArea === localStorage &&
+    (event.key === "authToken" || event.key === null)
+  ) {
+    await refreshSearchSession();
+  }
 });
 
 window.onload = async function () {
@@ -338,22 +422,10 @@ window.onload = async function () {
 
   startDateInput.addEventListener("change", saveSearchSetup);
 
-  const authState = await loadCurrentUser();
-
-  if (authState === "stale") return;
-
-  if (authState === "unavailable") {
-    setSearchAccessUnavailable(
-      "Your session could not be verified. Please reload the page to try again.",
-    );
-    return;
-  }
-  renderAuthUI();
-
   restoreSearchSetup();
-  restoreSearchState();
+  searchPageInitialized = true;
 
-  await refreshSearchAccess();
+  await refreshSearchSession();
 };
 
 /* ========================= */

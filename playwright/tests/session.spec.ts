@@ -26,6 +26,19 @@ test.describe("Session lifecycle", () => {
     await common.expectVisible(auth.loginButton);
   });
 
+  async function runPrivateSearch() {
+    const user = await createVerifiedTestUser();
+
+    await auth.login(user.email, user.password);
+    await flightFinder.mockSearchSequence([amsterdam]);
+
+    await flightFinder.selectAirportByEnter("ams");
+    await common.click(flightFinder.searchButton);
+    await flightFinder.expectResultsFooterText("Finished");
+
+    return user;
+  }
+
   test("TC-SESSION-01 | should clear private results when session verification returns 401", async () => {
     const user = await createVerifiedTestUser();
 
@@ -123,6 +136,70 @@ test.describe("Session lifecycle", () => {
 
     await common.expectEnabled(flightFinder.searchButton);
     await auth.expectAuthTokenPresent();
+    await flightFinder.expectResultsEmpty();
+  });
+
+  test("TC-SESSION-05 | should restore private results after cached-page session verification", async () => {
+    const user = await runPrivateSearch();
+
+    await common.simulateCachedPageRestore();
+
+    await common.expectContainsText(flightFinder.authContainer, user.email);
+    await common.expectEnabled(flightFinder.searchButton);
+    await common.expectVisible(flightFinder.firstResult);
+    await auth.expectAuthTokenPresent();
+  });
+
+  test("TC-SESSION-06 | should clear private results when a cached page restores an expired session", async () => {
+    await runPrivateSearch();
+
+    await auth.mockCurrentUserFailure(401);
+    await common.simulateCachedPageRestore();
+
+    await common.expectVisible(auth.loginButton);
+    await auth.expectAuthTokenRemoved();
+
+    await common.expectText(
+      flightFinder.sessionMessage,
+      "Your session has expired. Please sign in again.",
+    );
+
+    await common.expectEnabled(flightFinder.searchButton);
+    await flightFinder.expectResultsEmpty();
+  });
+
+  test("TC-SESSION-07 | should hide private results during a verification failure and restore them after recovery", async () => {
+    const user = await runPrivateSearch();
+
+    await auth.mockCurrentUserFailure(500);
+    await common.simulateCachedPageRestore();
+
+    await common.expectContainsText(
+      flightFinder.searchAccessStatus,
+      "Your session could not be verified.",
+    );
+
+    await auth.expectAuthTokenPresent();
+    await common.expectDisabled(flightFinder.searchButton);
+    await common.expectHidden(flightFinder.results);
+    await common.expectHidden(flightFinder.authContainer);
+
+    await auth.clearCurrentUserMock();
+    await common.simulateCachedPageRestore();
+
+    await common.expectContainsText(flightFinder.authContainer, user.email);
+    await common.expectEnabled(flightFinder.searchButton);
+    await common.expectVisible(flightFinder.firstResult);
+  });
+
+  test("TC-SESSION-08 | should clear private results when another tab removes the token", async () => {
+    await runPrivateSearch();
+
+    await auth.setAuthTokenFromAnotherTab(null);
+
+    await common.expectVisible(auth.loginButton);
+    await auth.expectAuthTokenRemoved();
+    await common.expectEnabled(flightFinder.searchButton);
     await flightFinder.expectResultsEmpty();
   });
 });
