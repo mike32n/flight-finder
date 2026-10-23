@@ -80,6 +80,7 @@ describe("flightSearchService", () => {
             departure: "2026-10-09",
             return: "2026-10-11",
             price: 30000,
+            currency: "HUF",
           },
         },
       ])
@@ -124,6 +125,7 @@ describe("flightSearchService", () => {
             departure: "2026-10-09",
             return: "2026-10-11",
             price: 34316,
+            currency: "HUF",
           },
         },
       ])
@@ -135,6 +137,7 @@ describe("flightSearchService", () => {
             departure: "2026-10-09",
             return: "2026-10-12",
             price: 22966,
+            currency: "HUF",
           },
         },
       ]);
@@ -165,6 +168,7 @@ describe("flightSearchService", () => {
           departure: "2026-10-09",
           return: "2026-10-11",
           price: 34316,
+          currency: "HUF",
         },
       },
     ]);
@@ -306,6 +310,7 @@ describe("flightSearchService", () => {
             departure: "2026-10-09",
             return: "2026-10-11",
             price: 34316,
+            currency: "HUF",
           },
         },
       ])
@@ -317,6 +322,7 @@ describe("flightSearchService", () => {
             departure: "2026-10-08",
             return: "2026-10-11",
             price: 40000,
+            currency: "HUF",
           },
         },
         {
@@ -326,6 +332,7 @@ describe("flightSearchService", () => {
             departure: "2026-10-09",
             return: "2026-10-12",
             price: 22966,
+            currency: "HUF",
           },
         },
       ]);
@@ -624,6 +631,7 @@ describe("flightSearchService", () => {
               departure: "2026-10-09",
               return: "2026-10-11",
               price: 30000,
+              currency: "HUF",
             },
           },
         ];
@@ -643,6 +651,7 @@ describe("flightSearchService", () => {
               price: 35000,
               baseDeparture: "2026-10-09",
               baseReturn: "2026-10-11",
+              currency: "HUF",
             },
           },
         ];
@@ -748,8 +757,11 @@ describe("flightSearchService", () => {
         async (destination, departure, returnDate) => ({
           success: true,
           data: {
-            destination, departure, return: returnDate,
-            price: 30000, currency: "HUF",
+            destination,
+            departure,
+            return: returnDate,
+            price: 30000,
+            currency: "HUF",
           },
         }),
       );
@@ -765,7 +777,10 @@ describe("flightSearchService", () => {
         .mockImplementationOnce(executeTasks);
 
       const options = {
-        origin: "VIE", destinations: ["AMS"], weekday: 5, nights: 2,
+        origin: "VIE",
+        destinations: ["AMS"],
+        weekday: 5,
+        nights: 2,
         enrichAirport: (code) => ({ code }),
       };
 
@@ -783,9 +798,10 @@ describe("flightSearchService", () => {
 
       expect(searchFlightsMock).toHaveBeenCalledTimes(3);
       expect(searchFlightsMock.mock.calls.map((args) => args[3])).toEqual([
-        "VIE", "VIE", "VIE",
+        "VIE",
+        "VIE",
+        "VIE",
       ]);
     },
   );
-
 });

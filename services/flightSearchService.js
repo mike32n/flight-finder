@@ -8,6 +8,7 @@ const {
   shouldRunFallbackFlex,
   analyzeFlexResult,
 } = require("./smartFlexService");
+const { normalizeProviderResult } = require("../utils/providerResultValidator");
 
 const flightProvider = getProvider();
 
@@ -137,9 +138,10 @@ async function executeSearch(
   async function runStage(tasks, resultType, baseResults = []) {
     signal?.throwIfAborted();
 
-    const handle = (result) => handleResult(result, resultType, baseResults);
+    const handle = (result) =>
+      handleResult(normalizeProviderResult(result), resultType, baseResults);
 
-    const results = await runWithConcurrencyLimit(
+    const rawResults = await runWithConcurrencyLimit(
       tasks,
       provider.concurrency,
       onResult ? handle : undefined,
@@ -148,8 +150,12 @@ async function executeSearch(
 
     signal?.throwIfAborted();
 
+    const results = rawResults.map(normalizeProviderResult);
+
     if (!onResult) {
-      results.forEach(handle);
+      results.forEach((result) =>
+        handleResult(result, resultType, baseResults),
+      );
     }
 
     return results;

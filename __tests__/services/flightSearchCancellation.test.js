@@ -49,6 +49,7 @@ function flight(destination, departure, returnDate, price = 30000) {
       departure,
       return: returnDate,
       price,
+      currency: "HUF",
     },
   };
 }
@@ -208,5 +209,94 @@ describe("search execution cancellation", () => {
     expect(summary.failedRequests).toBe(3);
 
     expect(events.filter((event) => event.type === "fail")).toHaveLength(3);
+  });
+
+  test.each(["json", "stream"])(
+    "%s skips invalid results while preserving valid results",
+    async (mode) => {
+      searchMock.mockImplementation(
+        async (destination, departure, returnDate) =>
+          flight(
+            destination,
+            departure,
+            returnDate,
+            destination === "AMS" ? -1 : 30000,
+          ),
+      );
+
+      const onResult = jest.fn();
+
+      const result = await execute(
+        mode,
+        {
+          destinations: ["AMS", "BCN"],
+          allowFlexSearch: false,
+        },
+        onResult,
+      );
+
+      expect(searchMock).toHaveBeenCalledTimes(2);
+
+      if (mode === "json") {
+        expect(result.failedRequests).toBe(1);
+        expect(result.results.map((item) => item.destination.code)).toEqual([
+          "BCN",
+        ]);
+      } else {
+        expect(onResult).toHaveBeenCalledTimes(2);
+        expect(onResult).toHaveBeenCalledWith({ type: "fail" });
+
+        expect(onResult).toHaveBeenCalledWith({
+          type: "data",
+          data: expect.objectContaining({
+            destination: { code: "BCN" },
+          }),
+        });
+      }
+    },
+  );
+
+  test.each(["json", "stream"])(
+    "%s excludes invalid base prices from Flex comparisons",
+    async (mode) => {
+      searchMock.mockImplementation(
+        async (destination, departure, returnDate) => {
+          const isBase =
+            departure === baseTrip.departure && returnDate === baseTrip.return;
+
+          return flight(
+            destination,
+            departure,
+            returnDate,
+            isBase ? NaN : 20000,
+          );
+        },
+      );
+
+      const onResult = jest.fn();
+      const result = await execute(mode, {}, onResult);
+
+      expect(searchMock).toHaveBeenCalledTimes(3);
+
+      if (mode === "json") {
+        expect(result.results).toEqual([]);
+        expect(result.failedRequests).toBe(1);
+      } else {
+        expect(onResult).toHaveBeenCalledTimes(1);
+        expect(onResult).toHaveBeenCalledWith({ type: "fail" });
+      }
+    },
+  );
+
+  test("does not trigger fallback Flex for a malformed provider response", async () => {
+    appConfig.smartFlex.enabled = false;
+    searchMock.mockResolvedValue(null);
+
+    const result = await searchFlights(options);
+
+    expect(result.results).toEqual([]);
+    expect(result.failedRequests).toBe(1);
+    expect(searchMock).toHaveBeenCalledTimes(1);
+    expect(expandControlledFlexibility).not.toHaveBeenCalled();
   });
 });
