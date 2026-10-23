@@ -34,23 +34,26 @@ class AmadeusProvider extends BaseProvider {
     return getOrSet(
       "amadeus",
       payload,
-      async () => {
-        // Distributed rate limit
-        const allowed = await acquireToken(
-          "amadeus",
-          this.rateLimit,
-          this.rateWindow,
-        );
-
-        if (!allowed) {
-          return {
-            success: false,
-            reason: "provider_error",
-            error: "Rate limit exceeded",
-          };
-        }
-
+      async (signal) => {
         try {
+          signal.throwIfAborted();
+
+          const allowed = await acquireToken(
+            "amadeus",
+            this.rateLimit,
+            this.rateWindow,
+          );
+
+          signal.throwIfAborted();
+
+          if (!allowed) {
+            return {
+              success: false,
+              reason: "provider_error",
+              error: "Rate limit exceeded",
+            };
+          }
+
           const response = await this.amadeus.shopping.flightOffersSearch.get({
             originLocationCode: origin,
             destinationLocationCode: destination,

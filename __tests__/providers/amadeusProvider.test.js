@@ -1,4 +1,6 @@
 const AmadeusProvider = require("../../providers/amadeusProvider");
+const { acquireToken } = require("../../services/rateLimiter");
+const { getOrSet } = require("../../services/cacheService");
 
 // Prevent real rate limiter / timers
 jest.mock("../../services/rateLimiter", () => ({
@@ -18,6 +20,10 @@ describe("AmadeusProvider", () => {
   let mockAmadeus;
 
   beforeEach(() => {
+    jest.clearAllMocks();
+    acquireToken.mockReset();
+    acquireToken.mockResolvedValue(true);
+
     mockAmadeus = {
       shopping: {
         flightOffersSearch: {
@@ -162,4 +168,89 @@ describe("AmadeusProvider", () => {
       error: "Invalid provider response",
     });
   });
+
+  test.each([
+    ["rate limit is reached", false, "Rate limit exceeded"],
+    ["rate limiter fails", new Error("Redis unavailable"), "Redis unavailable"],
+  ])("returns provider_error when the %s", async (_, outcome, message) => {
+    if (outcome instanceof Error) {
+      acquireToken.mockRejectedValueOnce(outcome);
+    } else {
+      acquireToken.mockResolvedValueOnce(outcome);
+    }
+
+    const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+
+    try {
+      const result = await provider.searchFlights(
+        "BCN",
+        "2027-03-06",
+        "2027-03-08",
+      );
+
+      expect(result).toEqual({
+        success: false,
+        reason: "provider_error",
+        error: message,
+      });
+
+      expect(acquireToken).toHaveBeenCalledTimes(1);
+
+      expect(
+        mockAmadeus.shopping.flightOffersSearch.get,
+      ).not.toHaveBeenCalled();
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
+  test.each([
+    ["before rate limiting", 0],
+    ["while rate limiting", 1],
+  ])(
+    "does not call the SDK when aborted %s",
+    async (phase, expectedTokenCalls) => {
+      const controller = new AbortController();
+      const reason = new Error("Search deadline exceeded");
+
+      if (phase === "before rate limiting") {
+        controller.abort(reason);
+      } else {
+        acquireToken.mockImplementationOnce(async () => {
+          controller.abort(reason);
+          return true;
+        });
+      }
+
+      getOrSet.mockImplementationOnce(async (_, __, fetcher, { normalize }) => {
+        return normalize(await fetcher(controller.signal));
+      });
+
+      const errorSpy = jest
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
+
+      try {
+        const result = await provider.searchFlights(
+          "BCN",
+          "2027-03-06",
+          "2027-03-08",
+        );
+
+        expect(result).toEqual({
+          success: false,
+          reason: "provider_error",
+          error: reason.message,
+        });
+
+        expect(acquireToken).toHaveBeenCalledTimes(expectedTokenCalls);
+
+        expect(
+          mockAmadeus.shopping.flightOffersSearch.get,
+        ).not.toHaveBeenCalled();
+      } finally {
+        errorSpy.mockRestore();
+      }
+    },
+  );
 });
