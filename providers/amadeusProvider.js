@@ -63,7 +63,7 @@ class AmadeusProvider extends BaseProvider {
           const offers =
             response?.data || response?.result?.data || response?.body?.data;
 
-          if (!offers || !Array.isArray(offers) || offers.length === 0) {
+          if (!Array.isArray(offers) || offers.length === 0) {
             return {
               success: false,
               reason: "no_results",
@@ -83,8 +83,6 @@ class AmadeusProvider extends BaseProvider {
             },
           };
         } catch (error) {
-          const status = error.response?.statusCode || error.response?.status;
-
           const fullError =
             error.response?.result ||
             error.response?.data ||

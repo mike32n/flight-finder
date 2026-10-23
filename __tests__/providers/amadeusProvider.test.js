@@ -36,25 +36,40 @@ describe("AmadeusProvider", () => {
     );
   });
 
-  test("returns success when API returns data", async () => {
-    mockAmadeus.shopping.flightOffersSearch.get.mockResolvedValue({
-      data: [
-        {
-          price: { total: "123.45", currency: "EUR" },
+  test.each(["data", "result", "body"])(
+    "returns normalized flights from response.%s",
+    async (location) => {
+      const offers = [{ price: { total: "123.45", currency: "EUR" } }];
+
+      const response =
+        location === "data"
+          ? { data: offers }
+          : { [location]: { data: offers } };
+
+      mockAmadeus.shopping.flightOffersSearch.get.mockResolvedValue(response);
+
+      const result = await provider.searchFlights(
+        "BCN",
+        "2027-03-06",
+        "2027-03-08",
+      );
+
+      expect(result).toEqual({
+        success: true,
+        data: {
+          destination: "BCN",
+          departure: "2027-03-06",
+          return: "2027-03-08",
+          price: 123.45,
+          currency: "EUR",
         },
-      ],
-    });
+      });
 
-    const result = await provider.searchFlights(
-      "BCN",
-      "2026-06-01",
-      "2026-06-04",
-    );
-
-    expect(result.success).toBe(true);
-    expect(result.data.price).toBe(123.45);
-    expect(result.data.currency).toBe("EUR");
-  });
+      expect(mockAmadeus.shopping.flightOffersSearch.get).toHaveBeenCalledTimes(
+        1,
+      );
+    },
+  );
 
   test("returns failure when no offers", async () => {
     mockAmadeus.shopping.flightOffersSearch.get.mockResolvedValue({
@@ -70,46 +85,46 @@ describe("AmadeusProvider", () => {
     expect(result.success).toBe(false);
   });
 
-  test("retries on 429", async () => {
-    let callCount = 0;
+  test.each([
+    [429, "Rate limit"],
+    [503, "Service unavailable"],
+    [null, "Network unavailable"],
+  ])(
+    "returns provider_error after one request (%s)",
+    async (status, message) => {
+      const error = new Error(message);
 
-    mockAmadeus.shopping.flightOffersSearch.get.mockImplementation(() => {
-      callCount++;
-
-      if (callCount === 1) {
-        const error = new Error("Rate limit");
-        error.response = { statusCode: 429 };
-        return Promise.reject(error);
+      if (status !== null) {
+        error.response = { statusCode: status };
       }
 
-      return Promise.resolve({
-        data: [{ price: { total: "100", currency: "EUR" } }],
-      });
-    });
+      mockAmadeus.shopping.flightOffersSearch.get.mockRejectedValue(error);
 
-    const result = await provider.searchFlights(
-      "BCN",
-      "2026-06-01",
-      "2026-06-04",
-    );
+      const errorSpy = jest
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
 
-    expect(callCount).toBe(1);
-    expect(result.success).toBe(false);
-  });
+      try {
+        const result = await provider.searchFlights(
+          "BCN",
+          "2027-03-06",
+          "2027-03-08",
+        );
 
-  test("returns failure on unexpected error", async () => {
-    mockAmadeus.shopping.flightOffersSearch.get.mockRejectedValue(
-      new Error("API down"),
-    );
+        expect(result).toEqual({
+          success: false,
+          reason: "provider_error",
+          error: message,
+        });
 
-    const result = await provider.searchFlights(
-      "BCN",
-      "2026-06-01",
-      "2026-06-04",
-    );
-
-    expect(result.success).toBe(false);
-  });
+        expect(
+          mockAmadeus.shopping.flightOffersSearch.get,
+        ).toHaveBeenCalledTimes(1);
+      } finally {
+        errorSpy.mockRestore();
+      }
+    },
+  );
 
   test("passes selected origin to Amadeus", async () => {
     mockAmadeus.shopping.flightOffersSearch.get.mockResolvedValue({
