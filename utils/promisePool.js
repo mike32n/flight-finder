@@ -1,11 +1,22 @@
-async function runWithConcurrencyLimit(tasks, limit, onResult) {
+async function runWithConcurrencyLimit(
+  tasks,
+  limit,
+  onResult,
+  { signal } = {},
+) {
+  signal?.throwIfAborted();
+
   const results = [];
   let nextTaskIndex = 0;
   let callbackFailed = false;
   let callbackError;
 
   async function worker() {
-    while (!callbackFailed && nextTaskIndex < tasks.length) {
+    while (
+      !callbackFailed &&
+      !signal?.aborted &&
+      nextTaskIndex < tasks.length
+    ) {
       const task = tasks[nextTaskIndex++];
       let result;
 
@@ -19,7 +30,7 @@ async function runWithConcurrencyLimit(tasks, limit, onResult) {
         };
       }
 
-      if (callbackFailed) return;
+      if (callbackFailed || signal?.aborted) return;
 
       results.push(result);
 
@@ -39,6 +50,8 @@ async function runWithConcurrencyLimit(tasks, limit, onResult) {
   await Promise.all(workers);
 
   if (callbackFailed) throw callbackError;
+
+  signal?.throwIfAborted();
 
   return results;
 }

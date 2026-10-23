@@ -174,4 +174,145 @@ describe("promisePool", () => {
     expect(onResult).toHaveBeenCalledTimes(1);
     expect(onResult).toHaveBeenCalledWith(firstResult);
   });
+
+  test("does not start tasks when the signal is already aborted", async () => {
+    const controller = new AbortController();
+    const abortError = new Error("Client disconnected");
+
+    controller.abort(abortError);
+
+    const task = jest.fn();
+    const onResult = jest.fn();
+
+    await expect(
+      runWithConcurrencyLimit([task], 2, onResult, {
+        signal: controller.signal,
+      }),
+    ).rejects.toBe(abortError);
+
+    expect(task).not.toHaveBeenCalled();
+    expect(onResult).not.toHaveBeenCalled();
+  });
+
+  test("stops queued tasks and drains running tasks after cancellation", async () => {
+    const controller = new AbortController();
+    const abortError = new Error("Client disconnected");
+
+    let finishFirstTask;
+    let finishSecondTask;
+
+    const firstResult = new Promise((resolve) => {
+      finishFirstTask = resolve;
+    });
+
+    const secondResult = new Promise((resolve) => {
+      finishSecondTask = resolve;
+    });
+
+    const firstTask = jest.fn(() => firstResult);
+    const secondTask = jest.fn(() => secondResult);
+    const queuedTask = jest.fn().mockResolvedValue({
+      success: true,
+      id: 3,
+    });
+    const onResult = jest.fn();
+
+    let poolSettled = false;
+
+    const poolPromise = runWithConcurrencyLimit(
+      [firstTask, secondTask, queuedTask],
+      2,
+      onResult,
+      { signal: controller.signal },
+    );
+
+    const observedOutcome = poolPromise.then(
+      (results) => {
+        poolSettled = true;
+        return { results };
+      },
+      (error) => {
+        poolSettled = true;
+        return { error };
+      },
+    );
+
+    controller.abort(abortError);
+    finishFirstTask({ success: true, id: 1 });
+
+    await new Promise((resolve) => setImmediate(resolve));
+
+    const settledBeforeSecondTaskFinished = poolSettled;
+    const queuedCallsBeforeFinish = queuedTask.mock.calls.length;
+
+    finishSecondTask({ success: true, id: 2 });
+
+    const outcome = await observedOutcome;
+
+    expect(settledBeforeSecondTaskFinished).toBe(false);
+    expect(queuedCallsBeforeFinish).toBe(0);
+    expect(outcome.error).toBe(abortError);
+
+    expect(firstTask).toHaveBeenCalledTimes(1);
+    expect(secondTask).toHaveBeenCalledTimes(1);
+    expect(queuedTask).not.toHaveBeenCalled();
+    expect(onResult).not.toHaveBeenCalled();
+  });
+
+  test("keeps another pool running when both await a shared operation", async () => {
+    const controller = new AbortController();
+    const abortError = new Error("Client disconnected");
+
+    let finishSharedOperation;
+
+    const sharedOperation = new Promise((resolve) => {
+      finishSharedOperation = resolve;
+    });
+
+    const cancelledQueuedTask = jest.fn();
+    const activeQueuedTask = jest.fn().mockResolvedValue({
+      success: true,
+      id: 2,
+    });
+
+    const cancelledCallback = jest.fn();
+    const activeCallback = jest.fn();
+
+    const cancelledSearch = runWithConcurrencyLimit(
+      [() => sharedOperation, cancelledQueuedTask],
+      1,
+      cancelledCallback,
+      { signal: controller.signal },
+    );
+
+    const activeSearch = runWithConcurrencyLimit(
+      [() => sharedOperation, activeQueuedTask],
+      1,
+      activeCallback,
+    );
+
+    const outcomes = Promise.allSettled([cancelledSearch, activeSearch]);
+
+    controller.abort(abortError);
+
+    const sharedResult = { success: true, id: 1 };
+    finishSharedOperation(sharedResult);
+
+    const [cancelledOutcome, activeOutcome] = await outcomes;
+
+    expect(cancelledOutcome.status).toBe("rejected");
+    expect(cancelledOutcome.reason).toBe(abortError);
+
+    expect(cancelledQueuedTask).not.toHaveBeenCalled();
+    expect(cancelledCallback).not.toHaveBeenCalled();
+
+    expect(activeOutcome.status).toBe("fulfilled");
+    expect(activeOutcome.value).toEqual([
+      sharedResult,
+      { success: true, id: 2 },
+    ]);
+
+    expect(activeQueuedTask).toHaveBeenCalledTimes(1);
+    expect(activeCallback).toHaveBeenCalledTimes(2);
+  });
 });
