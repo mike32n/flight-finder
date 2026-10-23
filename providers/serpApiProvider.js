@@ -27,13 +27,17 @@ class SerpApiProvider extends BaseProvider {
       returnDate,
     };
 
-    return getOrSet("serpapi", payload, async () => {
+    return getOrSet("serpapi", payload, async (signal) => {
       try {
+        signal.throwIfAborted();
+
         const allowed = await acquireToken(
           "serpapi",
           this.rateLimit,
           this.rateLimitWindowSeconds,
         );
+
+        signal.throwIfAborted();
 
         if (!allowed) {
           return {
@@ -44,6 +48,8 @@ class SerpApiProvider extends BaseProvider {
         }
 
         const response = await axios.get("https://serpapi.com/search.json", {
+          signal,
+          timeout: appConfig.api.timeoutMs || 10000,
           params: {
             engine: "google_flights",
 

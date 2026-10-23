@@ -1,4 +1,5 @@
 const axios = require("axios");
+const appConfig = require("../../config/appConfig");
 const SerpApiProvider = require("../../providers/serpApiProvider");
 const { acquireToken } = require("../../services/rateLimiter");
 const { getOrSet } = require("../../services/cacheService");
@@ -6,7 +7,7 @@ const { getOrSet } = require("../../services/cacheService");
 jest.mock("axios");
 
 jest.mock("../../services/cacheService", () => ({
-  getOrSet: jest.fn((_, __, fetcher) => fetcher()),
+  getOrSet: jest.fn((_, __, fetcher) => fetcher(new AbortController().signal)),
 }));
 
 jest.mock("../../services/rateLimiter", () => ({
@@ -190,6 +191,8 @@ describe("SerpApiProvider", () => {
     expect(axios.get).toHaveBeenCalledWith(
       "https://serpapi.com/search.json",
       expect.objectContaining({
+        signal: expect.any(AbortSignal),
+        timeout: appConfig.api.timeoutMs || 10000,
         params: expect.objectContaining({
           engine: "google_flights",
           departure_id: "BUD",
@@ -274,10 +277,49 @@ describe("SerpApiProvider", () => {
     await provider.searchFlights("AMS", "2026-10-16", "2026-10-18", "VIE");
 
     expect(getOrSet.mock.calls.map(([, payload]) => payload.origin)).toEqual([
-      "BUD", "VIE",
+      "BUD",
+      "VIE",
     ]);
-    expect(axios.get.mock.calls.map(([, options]) => options.params.departure_id))
-      .toEqual(["BUD", "VIE"]);
+    expect(
+      axios.get.mock.calls.map(([, options]) => options.params.departure_id),
+    ).toEqual(["BUD", "VIE"]);
   });
 
+  test("does not start HTTP after the deadline expires during rate limiting", async () => {
+    const controller = new AbortController();
+
+    let finishRateLimit;
+
+    const rateLimitDecision = new Promise((resolve) => {
+      finishRateLimit = resolve;
+    });
+
+    acquireToken.mockReturnValueOnce(rateLimitDecision);
+
+    getOrSet.mockImplementationOnce((_, __, fetcher) =>
+      fetcher(controller.signal),
+    );
+
+    const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+
+    try {
+      const request = provider.searchFlights("BCN", "2026-11-01", "2026-11-03");
+
+      controller.abort(new Error("timeout"));
+      finishRateLimit(true);
+
+      const result = await request;
+
+      expect(result).toEqual({
+        success: false,
+        reason: "provider_error",
+        error: "timeout",
+      });
+
+      expect(acquireToken).toHaveBeenCalledTimes(1);
+      expect(axios.get).not.toHaveBeenCalled();
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
 });

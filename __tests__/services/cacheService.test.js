@@ -276,5 +276,63 @@ describe("cacheService", () => {
         }
       },
     );
+
+    test("aborts the shared fetch on timeout and allows a fresh retry", async () => {
+      jest.useFakeTimers();
+
+      try {
+        redis.get.mockResolvedValue(null);
+
+        let operationSignal;
+
+        const fetcher = jest.fn((signal) => {
+          operationSignal = signal;
+
+          return new Promise((_, reject) => {
+            signal.addEventListener("abort", () => reject(signal.reason), {
+              once: true,
+            });
+          });
+        });
+
+        const firstRequest = cache.getOrSet(provider, payload, fetcher);
+        const concurrentRequest = cache.getOrSet(provider, payload, fetcher);
+
+        // Attach rejection handlers before advancing the timeout.
+        const outcomes = Promise.allSettled([firstRequest, concurrentRequest]);
+
+        await jest.advanceTimersByTimeAsync(appConfig.api.timeoutMs || 10000);
+
+        const results = await outcomes;
+
+        expect(fetcher).toHaveBeenCalledTimes(1);
+        expect(operationSignal.aborted).toBe(true);
+
+        for (const result of results) {
+          expect(result.status).toBe("rejected");
+          expect(result.reason.message).toBe("timeout");
+        }
+
+        expect(results[0].reason).toBe(results[1].reason);
+        expect(redis.set).not.toHaveBeenCalled();
+
+        const fresh = {
+          success: true,
+          data: { price: 25000 },
+        };
+
+        fetcher.mockResolvedValueOnce(fresh);
+
+        const retryResult = await cache.getOrSet(provider, payload, fetcher);
+
+        expect(retryResult).toEqual(fresh);
+        expect(fetcher).toHaveBeenCalledTimes(2);
+        expect(fetcher.mock.calls[1][0].aborted).toBe(false);
+        expect(redis.set).toHaveBeenCalledTimes(1);
+        expect(jest.getTimerCount()).toBe(0);
+      } finally {
+        jest.useRealTimers();
+      }
+    });
   });
 });

@@ -29,12 +29,15 @@ function generateKey(providerName, payload) {
   return `${PREFIX}:flight:${providerName}:${hash}`;
 }
 
-function withTimeout(promise, ms = FETCH_TIMEOUT) {
+function withTimeout(promise, ms = FETCH_TIMEOUT, abortController) {
   let timer;
 
   const timeoutPromise = new Promise((_, reject) => {
     timer = setTimeout(() => {
-      reject(new Error("timeout"));
+      const error = new Error("timeout");
+
+      reject(error);
+      abortController?.abort(error);
     }, ms);
 
     timer.unref?.();
@@ -83,14 +86,14 @@ async function getOrSet(providerName, payload, fetcher) {
 
     if (cached) return cached;
 
-    // Fresh fetch (timeout protected)
-    let fresh;
-    try {
-      fresh = await withTimeout(fetcher());
-    } catch (err) {
-      // timeout vagy fetch error - no cache
-      throw err;
-    }
+    // The shared provider operation owns its deadline and cancellation signal.
+    const controller = new AbortController();
+
+    const fresh = await withTimeout(
+      Promise.resolve().then(() => fetcher(controller.signal)),
+      FETCH_TIMEOUT,
+      controller,
+    );
 
     // only cache successful responses
     if (fresh?.success) {
