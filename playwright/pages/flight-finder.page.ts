@@ -38,6 +38,7 @@ export default class MainPage {
   readonly firstResult: Locator;
   readonly results: Locator;
   readonly resultCards: Locator;
+  readonly resultImages: Locator;
   readonly resultsFooter: Locator;
 
   readonly flexCard: Locator;
@@ -114,6 +115,7 @@ export default class MainPage {
     );
 
     this.results = page.locator("#results");
+    this.resultImages = this.results.locator("img");
     this.resultCards = this.results.locator(".card");
     this.firstResult = this.resultCards.first();
 
@@ -336,6 +338,17 @@ export default class MainPage {
         json: getSearchAccess(currentPlan),
       });
     });
+  }
+
+  async mockBookingPage(): Promise<void> {
+    await this.page
+      .context()
+      .route("https://www.google.com/travel/flights**", async (route) => {
+        await route.fulfill({
+          contentType: "text/html",
+          body: "<!doctype html><title>Booking page</title>",
+        });
+      });
   }
 
   async mockSearchSequence(
@@ -707,7 +720,7 @@ export default class MainPage {
   }
 
   async clickFirstResultAndGetBookingPage(): Promise<Page> {
-    const popupPromise = this.page.waitForEvent("popup");
+    const popupPromise = this.page.context().waitForEvent("page");
 
     await this.firstResult.click();
 
@@ -716,6 +729,8 @@ export default class MainPage {
 
   async expectBookingPageOpened(popup: Page): Promise<void> {
     await expect(popup).toHaveURL(/google\.com\/travel\/flights/);
+
+    expect(await popup.evaluate(() => window.opener === null)).toBe(true);
   }
 
   async expectSearchUnavailable(): Promise<void> {

@@ -12,6 +12,8 @@ test.describe("Booking links", () => {
     common = new CommonPage(page);
     flightFinder = new FlightFinderPage(page);
 
+    await flightFinder.mockBookingPage();
+
     await common.openPage(Env.test);
   });
 

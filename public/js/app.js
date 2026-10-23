@@ -1228,39 +1228,43 @@ function createCard(r) {
 
   div.className = isFlex || isFallbackFlex ? "card flex-card" : "card";
 
-  let badge = "";
+  const title = document.createElement("strong");
+  title.textContent =
+    `${originCode} → ${r.destination.city ?? r.destination.code}` +
+    ` (${r.destination.code})`;
 
-  if (isFlex) {
-    badge = '<span class="flex-badge">Flexible dates</span>';
-  } else if (isFallbackFlex) {
-    badge = '<span class="flex-badge">Alternative dates</span>';
+  div.append(title, " ");
+
+  if (isFlex || isFallbackFlex) {
+    const badge = document.createElement("span");
+    badge.className = "flex-badge";
+    badge.textContent = isFlex ? "Flexible dates" : "Alternative dates";
+
+    div.append(badge, " ");
   }
 
-  let priceInsight = "";
+  const dates = document.createElement("span");
+  dates.className = "meta-info";
+  dates.textContent = `${r.departure} → ${r.return}`;
+
+  div.append(
+    document.createElement("br"),
+    dates,
+    document.createElement("br"),
+    ` 💶 ${r.currency} ${r.price.toLocaleString()}`,
+  );
 
   if (isFlex && r.priceInsight) {
-    priceInsight = `
-    <br/>
-    <span class="price-insight">
-      💡 ${r.priceInsight.percent}% cheaper than the original dates
-      (${r.currency} ${r.priceInsight.basePrice.toLocaleString()})
-    </span>
-  `;
+    const insight = document.createElement("span");
+    insight.className = "price-insight";
+    insight.textContent =
+      `💡 ${r.priceInsight.percent}% cheaper than the original dates ` +
+      `(${r.currency} ${r.priceInsight.basePrice.toLocaleString()})`;
+
+    div.append(" ", document.createElement("br"), insight);
   }
 
-  div.innerHTML = `
-    <strong>${originCode} → ${r.destination.city} (${r.destination.code})</strong>
-    ${badge}<br/>
-    <span class="meta-info">
-      ${r.departure} → ${r.return}
-    </span><br/>
-    💶 ${r.currency} ${r.price.toLocaleString()}
-    ${priceInsight}
-  `;
-
-  div.addEventListener("click", () => {
-    openFlight(r);
-  });
+  div.addEventListener("click", () => openFlight(r));
 
   return div;
 }
@@ -1327,7 +1331,9 @@ function showSearchUnavailable(container) {
 }
 
 function openFlight(r) {
-  const url = r.bookingUrl;
+  const url = getSafeBookingUrl(r.bookingUrl);
 
-  window.open(url, "_blank");
+  if (!url) return;
+
+  window.open(url, "_blank", "noopener,noreferrer");
 }

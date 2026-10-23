@@ -153,12 +153,14 @@ function renderAuthUI() {
 
         <div class="auth-user-info">
           <div class="auth-user-label">Signed in as</div>
-          <div class="auth-user-email">${authUser.email}</div>
+          <div id="auth-user-email" class="auth-user-email"></div>
         </div>
 
         <button id="logout-btn">Logout</button>
       </div>
     `;
+
+    document.getElementById("auth-user-email").textContent = authUser.email;
 
     document.getElementById("logout-btn").addEventListener("click", logout);
   } else {

@@ -18,6 +18,7 @@ function createBrowser() {
   const context = vm.createContext({
     AbortController,
     Event,
+    URL,
     console: {
       error: jest.fn(),
       warn: jest.fn(),
@@ -59,7 +60,7 @@ function createBrowser() {
     },
   });
 
-  for (const file of ["auth.js", "app.js"]) {
+  for (const file of ["booking-url.js", "auth.js", "app.js"]) {
     const source = fs.readFileSync(
       path.join(__dirname, "../../public/js", file),
       "utf8",
