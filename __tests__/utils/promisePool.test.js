@@ -81,4 +81,97 @@ describe("promisePool", () => {
 
     expect(onResult).toHaveBeenCalledTimes(1);
   });
+
+  test("propagates callback error when concurrent tasks complete together", async () => {
+    const firstResult = { success: true, id: 1 };
+    const secondResult = { success: true, id: 2 };
+    const callbackError = new Error("Callback failed");
+
+    const onResult = jest.fn((result) => {
+      if (result.id === 2) {
+        throw callbackError;
+      }
+    });
+
+    await expect(
+      runWithConcurrencyLimit(
+        [
+          () => Promise.resolve(firstResult),
+          () => Promise.resolve(secondResult),
+        ],
+        2,
+        onResult,
+      ),
+    ).rejects.toBe(callbackError);
+
+    expect(onResult).toHaveBeenCalledTimes(2);
+    expect(onResult).toHaveBeenNthCalledWith(1, firstResult);
+    expect(onResult).toHaveBeenNthCalledWith(2, secondResult);
+  });
+
+  test("stops queued tasks and waits for running tasks after callback failure", async () => {
+    const firstResult = { success: true, id: 1 };
+    const secondResult = { success: true, id: 2 };
+    const callbackError = new Error("Callback failed");
+
+    let finishRunningTask;
+    const runningTaskResult = new Promise((resolve) => {
+      finishRunningTask = resolve;
+    });
+
+    let notifyCallbackFailed;
+    const callbackFailed = new Promise((resolve) => {
+      notifyCallbackFailed = resolve;
+    });
+
+    const runningTask = jest.fn(() => runningTaskResult);
+    const queuedTask = jest.fn().mockResolvedValue({
+      success: true,
+      id: 3,
+    });
+
+    const onResult = jest.fn(() => {
+      notifyCallbackFailed();
+      throw callbackError;
+    });
+
+    let poolSettled = false;
+
+    const poolPromise = runWithConcurrencyLimit(
+      [() => Promise.resolve(firstResult), runningTask, queuedTask],
+      2,
+      onResult,
+    );
+
+    const observedOutcome = poolPromise.then(
+      (results) => {
+        poolSettled = true;
+        return { results };
+      },
+      (error) => {
+        poolSettled = true;
+        return { error };
+      },
+    );
+
+    await callbackFailed;
+
+    // Let an incorrectly early rejection reach observedOutcome.
+    await new Promise((resolve) => setImmediate(resolve));
+
+    const settledBeforeRunningTaskFinished = poolSettled;
+    const queuedTaskCallsBeforeFinish = queuedTask.mock.calls.length;
+
+    // Release the running task before assertions to avoid leaving it pending.
+    finishRunningTask(secondResult);
+    const outcome = await observedOutcome;
+
+    expect(settledBeforeRunningTaskFinished).toBe(false);
+    expect(queuedTaskCallsBeforeFinish).toBe(0);
+    expect(outcome.error).toBe(callbackError);
+    expect(runningTask).toHaveBeenCalledTimes(1);
+    expect(queuedTask).not.toHaveBeenCalled();
+    expect(onResult).toHaveBeenCalledTimes(1);
+    expect(onResult).toHaveBeenCalledWith(firstResult);
+  });
 });

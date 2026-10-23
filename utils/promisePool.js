@@ -1,32 +1,44 @@
 async function runWithConcurrencyLimit(tasks, limit, onResult) {
-  const executing = [];
   const results = [];
+  let nextTaskIndex = 0;
+  let callbackFailed = false;
+  let callbackError;
 
-  for (const task of tasks) {
-    const p = Promise.resolve()
-      .then(() => task())
-      .catch((error) => ({
-        success: false,
-        reason: "provider_error",
-        error: error.message,
-      }))
-      .then((result) => {
-        results.push(result);
+  async function worker() {
+    while (!callbackFailed && nextTaskIndex < tasks.length) {
+      const task = tasks[nextTaskIndex++];
+      let result;
+
+      try {
+        result = await task();
+      } catch (error) {
+        result = {
+          success: false,
+          reason: "provider_error",
+          error: error.message,
+        };
+      }
+
+      if (callbackFailed) return;
+
+      results.push(result);
+
+      try {
         if (onResult) onResult(result);
-        return result;
-      })
-      .finally(() => {
-        executing.splice(executing.indexOf(p), 1);
-      });
-
-    executing.push(p);
-
-    if (executing.length >= limit) {
-      await Promise.race(executing);
+      } catch (error) {
+        callbackFailed = true;
+        callbackError = error;
+      }
     }
   }
 
-  await Promise.all(executing);
+  const workers = Array.from({ length: Math.min(limit, tasks.length) }, () =>
+    worker(),
+  );
+
+  await Promise.all(workers);
+
+  if (callbackFailed) throw callbackError;
 
   return results;
 }
