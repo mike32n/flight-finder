@@ -1015,6 +1015,60 @@ function restoreSearchSetup() {
   }
 }
 
+function createSearchEventParser() {
+  let line = "";
+  let eventType = "";
+  let data = [];
+  let skipLF = false;
+
+  function processLine(events) {
+    if (line === "") {
+      if (data.length > 0) {
+        events.push({
+          type: eventType || "message",
+          data: data.join("\n"),
+        });
+      }
+
+      eventType = "";
+      data = [];
+      return;
+    }
+
+    if (line.startsWith(":")) return;
+
+    const colon = line.indexOf(":");
+    const field = colon === -1 ? line : line.slice(0, colon);
+    let value = colon === -1 ? "" : line.slice(colon + 1);
+
+    if (value.startsWith(" ")) value = value.slice(1);
+
+    if (field === "event") eventType = value;
+    if (field === "data") data.push(value);
+  }
+
+  return (chunk) => {
+    const events = [];
+
+    for (const character of chunk) {
+      if (skipLF) {
+        skipLF = false;
+        if (character === "\n") continue;
+      }
+
+      if (character === "\r" || character === "\n") {
+        processLine(events);
+        line = "";
+        skipLF = character === "\r";
+      } else {
+        line += character;
+      }
+    }
+
+    return events;
+  };
+}
+
 async function search() {
   if (isSearching || !isSearchAccessReady() || destinationsData.length === 0) {
     return;
@@ -1138,7 +1192,7 @@ async function search() {
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
 
-    let buffer = "";
+    const parseEvents = createSearchEventParser();
 
     while (true) {
       const { done, value } = await reader.read();
@@ -1147,13 +1201,10 @@ async function search() {
         throw new Error("Search stream ended unexpectedly.");
       }
 
-      buffer += decoder.decode(value, { stream: true });
+      const events = parseEvents(decoder.decode(value, { stream: true }));
 
-      const parts = buffer.split("\n\n");
-      buffer = parts.pop();
-
-      for (const part of parts) {
-        if (part.includes("event: end")) {
+      for (const event of events) {
+        if (event.type === "end") {
           if (currentResults.length === 0) {
             if (failedCount > 0) {
               showSearchUnavailable(resultsDiv);
@@ -1167,22 +1218,19 @@ async function search() {
           return;
         }
 
-        if (part.includes("event: error")) {
+        if (event.type === "error") {
           throw new Error("Search stream failed");
         }
 
-        if (part.includes("event: fail")) {
+        if (event.type === "fail") {
           failedCount++;
           updateFooter(resultsDiv, false);
           saveSearchState("searching");
           continue;
         }
 
-        if (part.includes("data:")) {
-          const jsonStr = part.split("data: ")[1];
-          if (!jsonStr) continue;
-
-          const item = JSON.parse(jsonStr);
+        if (event.type === "message" && event.data !== "") {
+          const item = JSON.parse(event.data);
 
           if (!insertSortedWithDOM(item, resultsDiv)) {
             failedCount++;
