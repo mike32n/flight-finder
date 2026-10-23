@@ -2,6 +2,10 @@ const validateSearch = require("../../middlewares/validateSearch");
 const appConfig = require("../../config/appConfig");
 const airports = require("../../data/airports");
 
+const destinationCodes = airports
+  .map(({ iata }) => iata)
+  .filter((code) => code !== appConfig.departureAirports.default);
+
 describe("validateSearch", () => {
   let req;
   let res;
@@ -45,6 +49,8 @@ describe("validateSearch", () => {
     { destinations: ["LCA\n"] },
     { destinations: ["BCN", null] },
     { destinations: ["LCA", "LCA"] },
+    { destinations: ["XXX"] },
+    { destinations: ["BCN", "XXX"] },
   ])("rejects invalid destinations: %p", ({ destinations }) => {
     req.body.destinations = destinations;
 
@@ -74,14 +80,9 @@ describe("validateSearch", () => {
   });
 
   test("rejects too many destinations", () => {
-    req.body.destinations = Array.from(
-      { length: appConfig.destinations.maxSelected + 1 },
-      (_, i) =>
-        String.fromCharCode(
-          65 + Math.floor(i / 676),
-          65 + (Math.floor(i / 26) % 26),
-          65 + (i % 26),
-        ),
+    req.body.destinations = destinationCodes.slice(
+      0,
+      appConfig.destinations.maxSelected + 1,
     );
 
     validateSearch(req, res, next);
@@ -94,19 +95,15 @@ describe("validateSearch", () => {
   });
 
   test("accepts maximum allowed destinations", () => {
-    req.body.destinations = Array.from(
-      { length: appConfig.destinations.maxSelected },
-      (_, i) =>
-        String.fromCharCode(
-          65 + Math.floor(i / 676),
-          65 + (Math.floor(i / 26) % 26),
-          65 + (i % 26),
-        ),
+    req.body.destinations = destinationCodes.slice(
+      0,
+      appConfig.destinations.maxSelected,
     );
 
     validateSearch(req, res, next);
 
-    expect(next).toHaveBeenCalled();
+    expect(next).toHaveBeenCalledTimes(1);
+    expect(res.status).not.toHaveBeenCalled();
   });
 
   test("rejects nights above configured maximum", () => {
@@ -223,6 +220,20 @@ describe("validateSearch", () => {
 
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith({ error });
+      expect(next).not.toHaveBeenCalled();
+    });
+
+    test.each(
+      [undefined, null, [], "invalid", 123, true].map((body) => [body]),
+    )("rejects malformed request body: %p", (body) => {
+      req.body = body;
+
+      validateSearch(req, res, next);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        error: "Invalid search payload",
+      });
       expect(next).not.toHaveBeenCalled();
     });
   });

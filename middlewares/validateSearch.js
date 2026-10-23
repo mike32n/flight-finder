@@ -1,17 +1,26 @@
 const appConfig = require("../config/appConfig");
-const airports = require("../data/airports");
+const { isKnownAirportCode } = require("../utils/airportCatalog");
 const getStartDateError = require("../utils/startDateValidator");
 
-const airportCodes = new Set(airports.map(({ iata }) => iata));
-
 function validateSearch(req, res, next) {
+  if (
+    req.body === null ||
+    typeof req.body !== "object" ||
+    Array.isArray(req.body)
+  ) {
+    return res.status(400).json({
+      error: "Invalid search payload",
+    });
+  }
+
   const { destinations, weekday, nights } = req.body;
+
   const origin =
     req.body.origin === undefined
       ? appConfig.departureAirports.default
       : req.body.origin;
 
-  if (typeof origin !== "string" || !airportCodes.has(origin)) {
+  if (!isKnownAirportCode(origin)) {
     return res.status(400).json({ error: "Invalid origin" });
   }
 
@@ -19,9 +28,7 @@ function validateSearch(req, res, next) {
     !Array.isArray(destinations) ||
     destinations.length === 0 ||
     destinations.length > appConfig.destinations.maxSelected ||
-    destinations.some(
-      (code) => typeof code !== "string" || !/^[A-Z]{3}$/.test(code),
-    ) ||
+    destinations.some((code) => !isKnownAirportCode(code)) ||
     new Set(destinations).size !== destinations.length
   ) {
     return res.status(400).json({

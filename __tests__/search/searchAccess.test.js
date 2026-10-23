@@ -244,4 +244,22 @@ describe.each(["/search", "/search-stream"])("%s search access", (endpoint) => {
 
     expect(findPlanPolicyByName).toHaveBeenCalledTimes(2);
   });
+
+  test.each([{ destinations: ["XXX"] }, { destinations: ["AMS", "XXX"] }])(
+    "rejects unsupported destination codes: %p",
+    async ({ destinations }) => {
+      parameters.destinations = destinations;
+
+      const response = await submit(createToken());
+
+      expect(response.statusCode).toBe(400);
+      expect(response.body).toEqual({
+        error: "Invalid destinations",
+      });
+
+      expect(response.headers["content-type"]).toMatch(/application\/json/);
+
+      expectNoSearch();
+    },
+  );
 });
