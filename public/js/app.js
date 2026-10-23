@@ -43,9 +43,9 @@ function getTodayDate() {
 }
 
 function isSearchAccessReady() {
-  const identityKnown = !getToken() || authUser !== null;
-
-  return searchAccess !== null && !searchAccessLoading && identityKnown;
+  return (
+    searchAccess !== null && !searchAccessLoading && isCurrentUserVerified()
+  );
 }
 
 function setSearchAccessUnavailable(message) {
@@ -183,7 +183,11 @@ function applySearchAccessToForm() {
 
 async function refreshSearchAccess() {
   const requestId = ++searchAccessRequestId;
-  const token = getToken();
+  const context = getSessionContext();
+  const token = context.token;
+
+  const isCurrent = () =>
+    requestId === searchAccessRequestId && isSessionContextCurrent(context);
 
   searchAccess = null;
   searchAccessLoading = true;
@@ -201,13 +205,16 @@ async function refreshSearchAccess() {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     });
 
+    if (!isCurrent()) return;
+    if (expireSessionIfUnauthorized(response, context)) return;
+
     if (!response.ok) {
       throw new Error(`Search access request failed: ${response.status}`);
     }
 
     const data = await response.json();
 
-    if (requestId !== searchAccessRequestId) return;
+    if (!isCurrent()) return;
 
     if (!isValidSearchAccess(data)) {
       throw new Error("Invalid search access response");
@@ -218,7 +225,7 @@ async function refreshSearchAccess() {
 
     applySearchAccessToForm();
   } catch (error) {
-    if (requestId !== searchAccessRequestId) return;
+    if (!isCurrent()) return;
 
     searchAccess = null;
     searchAccessLoading = false;
@@ -228,7 +235,7 @@ async function refreshSearchAccess() {
 
     console.error("Failed to load search access:", error);
   } finally {
-    if (requestId === searchAccessRequestId) {
+    if (isCurrent()) {
       updateSearchControls();
     }
   }
@@ -332,6 +339,8 @@ window.onload = async function () {
   startDateInput.addEventListener("change", saveSearchSetup);
 
   const authState = await loadCurrentUser();
+
+  if (authState === "stale") return;
 
   if (authState === "unavailable") {
     setSearchAccessUnavailable(
@@ -924,6 +933,7 @@ async function search() {
     startedAt: new Date().toISOString(),
   };
 
+  const context = getSessionContext();
   const controller = new AbortController();
   searchAbortController = controller;
 
@@ -943,7 +953,7 @@ async function search() {
     failedCount = 0;
     resultNodes = [];
 
-    const token = getToken();
+    const token = context.token;
 
     const response = await fetch("/search-stream", {
       method: "POST",
@@ -960,6 +970,12 @@ async function search() {
         startDate: lastSearchParameters.startDate,
       }),
     });
+
+    if (controller.signal.aborted || !isSessionContextCurrent(context)) {
+      return;
+    }
+
+    if (expireSessionIfUnauthorized(response, context)) return;
 
     if (!response.ok) {
       throw new Error(`Search request failed with status ${response.status}`);
@@ -1033,10 +1049,9 @@ async function search() {
   } finally {
     if (searchAbortController === controller) {
       searchAbortController = null;
+      isSearching = false;
+      updateSearchControls();
     }
-
-    isSearching = false;
-    updateSearchControls();
   }
 }
 

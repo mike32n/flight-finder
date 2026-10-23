@@ -1,6 +1,13 @@
 let authUser = null;
+let verifiedAuthToken = null;
+let sessionVersion = 0;
+let currentUserRequestId = 0;
 
 function saveToken(token) {
+  sessionVersion++;
+  authUser = null;
+  verifiedAuthToken = null;
+
   localStorage.setItem("authToken", token);
   document.getElementById("session-message").hidden = true;
 }
@@ -9,7 +16,44 @@ function getToken() {
   return localStorage.getItem("authToken");
 }
 
+function getSessionContext() {
+  return {
+    token: getToken(),
+    version: sessionVersion,
+  };
+}
+
+function isSessionContextCurrent(context) {
+  return context.token === getToken() && context.version === sessionVersion;
+}
+
+function isCurrentUserVerified() {
+  const token = getToken();
+
+  return token
+    ? authUser !== null && verifiedAuthToken === token
+    : authUser === null;
+}
+
+function expireSessionIfUnauthorized(response, context) {
+  if (
+    response.status !== 401 ||
+    !context.token ||
+    !isSessionContextCurrent(context)
+  ) {
+    return false;
+  }
+
+  endSession({ expired: true });
+  window.dispatchEvent(new Event("auth-changed"));
+
+  return true;
+}
+
 function removeToken() {
+  sessionVersion++;
+  verifiedAuthToken = null;
+
   localStorage.removeItem("authToken");
 }
 
@@ -34,9 +78,15 @@ function endSession({ expired = false } = {}) {
 }
 
 async function loadCurrentUser() {
-  const token = getToken();
+  const requestId = ++currentUserRequestId;
+  const context = getSessionContext();
 
-  if (!token) {
+  const isCurrent = () =>
+    requestId === currentUserRequestId && isSessionContextCurrent(context);
+
+  verifiedAuthToken = null;
+
+  if (!context.token) {
     authUser = null;
     return "anonymous";
   }
@@ -45,9 +95,11 @@ async function loadCurrentUser() {
     const response = await fetch("/api/auth/me", {
       cache: "no-store",
       headers: {
-        Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${context.token}`,
       },
     });
+
+    if (!isCurrent()) return "stale";
 
     if (response.status === 401) {
       endSession({ expired: true });
@@ -60,14 +112,19 @@ async function loadCurrentUser() {
 
     const data = await response.json();
 
+    if (!isCurrent()) return "stale";
+
     if (!Number.isSafeInteger(data?.user?.id) || data.user.id < 1) {
       throw new Error("Invalid current user response");
     }
 
     authUser = data.user;
+    verifiedAuthToken = context.token;
 
     return "authenticated";
   } catch (error) {
+    if (!isCurrent()) return "stale";
+
     console.error("Could not verify the current session:", error);
 
     return "unavailable";
@@ -221,6 +278,8 @@ document
       saveToken(data.token);
 
       const authState = await loadCurrentUser();
+
+      if (authState === "stale") return; //"stale" means that the session changed during the request or a new validation process was initiated (in such cases, the original call cannot modify the interface)
 
       if (authState !== "authenticated") {
         const message = "Your session could not be verified. Please try again.";
