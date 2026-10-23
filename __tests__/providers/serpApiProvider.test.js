@@ -7,7 +7,11 @@ const { getOrSet } = require("../../services/cacheService");
 jest.mock("axios");
 
 jest.mock("../../services/cacheService", () => ({
-  getOrSet: jest.fn((_, __, fetcher) => fetcher(new AbortController().signal)),
+  getOrSet: jest.fn(async (_, __, fetcher, { normalize } = {}) => {
+    const result = await fetcher(new AbortController().signal);
+
+    return normalize ? normalize(result) : result;
+  }),
 }));
 
 jest.mock("../../services/rateLimiter", () => ({
@@ -321,5 +325,28 @@ describe("SerpApiProvider", () => {
     } finally {
       errorSpy.mockRestore();
     }
+  });
+
+  test("rejects a provider result with an unsafe booking URL", async () => {
+    axios.get.mockResolvedValue({
+      data: {
+        best_flights: [{ price: 30000 }],
+        search_metadata: {
+          google_flights_url: "javascript:alert(1)",
+        },
+      },
+    });
+
+    const result = await provider.searchFlights(
+      "BCN",
+      "2027-03-06",
+      "2027-03-08",
+    );
+
+    expect(result).toEqual({
+      success: false,
+      reason: "provider_error",
+      error: "Invalid provider response",
+    });
   });
 });

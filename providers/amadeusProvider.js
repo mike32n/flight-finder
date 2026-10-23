@@ -3,6 +3,7 @@ const BaseProvider = require("./baseProvider");
 const appConfig = require("../config/appConfig");
 const { getOrSet } = require("../services/cacheService");
 const { acquireToken } = require("../services/rateLimiter");
+const { normalizeProviderResult } = require("../utils/providerResultValidator");
 
 class AmadeusProvider extends BaseProvider {
   constructor(config, amadeusClient = null) {
@@ -30,75 +31,80 @@ class AmadeusProvider extends BaseProvider {
   ) {
     const payload = { origin, destination, departure, returnDate };
 
-    return getOrSet("amadeus", payload, async () => {
-      // Distributed rate limit
-      const allowed = await acquireToken(
-        "amadeus",
-        this.rateLimit,
-        this.rateWindow,
-      );
+    return getOrSet(
+      "amadeus",
+      payload,
+      async () => {
+        // Distributed rate limit
+        const allowed = await acquireToken(
+          "amadeus",
+          this.rateLimit,
+          this.rateWindow,
+        );
 
-      if (!allowed) {
-        return {
-          success: false,
-          reason: "provider_error",
-          error: "Rate limit exceeded",
-        };
-      }
-
-      try {
-        const response = await this.amadeus.shopping.flightOffersSearch.get({
-          originLocationCode: origin,
-          destinationLocationCode: destination,
-          departureDate: departure,
-          returnDate: returnDate,
-          adults: 1,
-          max: 1,
-        });
-
-        const offers =
-          response?.data || response?.result?.data || response?.body?.data;
-
-        if (!offers || !Array.isArray(offers) || offers.length === 0) {
+        if (!allowed) {
           return {
             success: false,
-            reason: "no_results",
+            reason: "provider_error",
+            error: "Rate limit exceeded",
           };
         }
 
-        const cheapest = offers[0];
+        try {
+          const response = await this.amadeus.shopping.flightOffersSearch.get({
+            originLocationCode: origin,
+            destinationLocationCode: destination,
+            departureDate: departure,
+            returnDate: returnDate,
+            adults: 1,
+            max: 1,
+          });
 
-        return {
-          success: true,
-          data: {
-            destination,
-            departure,
-            return: returnDate,
-            price: Number(cheapest?.price?.total),
-            currency: cheapest?.price?.currency,
-          },
-        };
-      } catch (error) {
-        const status = error.response?.statusCode || error.response?.status;
+          const offers =
+            response?.data || response?.result?.data || response?.body?.data;
 
-        const fullError =
-          error.response?.result ||
-          error.response?.data ||
-          error.response?.body ||
-          error;
+          if (!offers || !Array.isArray(offers) || offers.length === 0) {
+            return {
+              success: false,
+              reason: "no_results",
+            };
+          }
 
-        console.error(
-          "FULL Amadeus error:",
-          JSON.stringify(fullError, null, 2),
-        );
+          const cheapest = offers[0];
 
-        return {
-          success: false,
-          reason: "provider_error",
-          error: error.message,
-        };
-      }
-    });
+          return {
+            success: true,
+            data: {
+              destination,
+              departure,
+              return: returnDate,
+              price: Number(cheapest?.price?.total),
+              currency: cheapest?.price?.currency,
+            },
+          };
+        } catch (error) {
+          const status = error.response?.statusCode || error.response?.status;
+
+          const fullError =
+            error.response?.result ||
+            error.response?.data ||
+            error.response?.body ||
+            error;
+
+          console.error(
+            "FULL Amadeus error:",
+            JSON.stringify(fullError, null, 2),
+          );
+
+          return {
+            success: false,
+            reason: "provider_error",
+            error: error.message,
+          };
+        }
+      },
+      { normalize: normalizeProviderResult },
+    );
   }
 }
 

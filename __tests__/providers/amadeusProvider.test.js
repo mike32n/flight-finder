@@ -6,7 +6,11 @@ jest.mock("../../services/rateLimiter", () => ({
 }));
 
 jest.mock("../../services/cacheService", () => ({
-  getOrSet: jest.fn((_, __, fetcher) => fetcher()),
+  getOrSet: jest.fn(async (_, __, fetcher, { normalize } = {}) => {
+    const result = await fetcher(new AbortController().signal);
+
+    return normalize ? normalize(result) : result;
+  }),
 }));
 
 describe("AmadeusProvider", () => {
@@ -119,4 +123,28 @@ describe("AmadeusProvider", () => {
     );
   });
 
+  test("rejects a provider result with an invalid currency", async () => {
+    mockAmadeus.shopping.flightOffersSearch.get.mockResolvedValue({
+      data: [
+        {
+          price: {
+            total: "123.45",
+            currency: "INVALID",
+          },
+        },
+      ],
+    });
+
+    const result = await provider.searchFlights(
+      "BCN",
+      "2027-03-06",
+      "2027-03-08",
+    );
+
+    expect(result).toEqual({
+      success: false,
+      reason: "provider_error",
+      error: "Invalid provider response",
+    });
+  });
 });

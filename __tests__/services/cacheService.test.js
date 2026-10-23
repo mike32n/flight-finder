@@ -3,24 +3,35 @@ const redis = require("../../services/redisClient");
 jest.mock("../../services/redisClient", () => {
   let store = {};
 
-  return {
-    get: jest.fn((key) => Promise.resolve(store[key] || null)),
+  const getValue = (key) => Promise.resolve(store[key] ?? null);
 
-    set: jest.fn((key, value) => {
-      store[key] = value;
-      return Promise.resolve("OK");
-    }),
+  const setValue = (key, value) => {
+    store[key] = value;
+    return Promise.resolve("OK");
+  };
+
+  const client = {
+    get: jest.fn(getValue),
+    set: jest.fn(setValue),
+
+    __store: () => store,
 
     __reset: () => {
       store = {};
-    },
 
-    __store: () => store,
+      client.get.mockReset().mockImplementation(getValue);
+      client.set.mockReset().mockImplementation(setValue);
+    },
   };
+
+  return client;
 });
 
 const cache = require("../../services/cacheService");
 const appConfig = require("../../config/appConfig");
+const {
+  normalizeProviderResult,
+} = require("../../utils/providerResultValidator");
 
 describe("cacheService", () => {
   beforeEach(() => {
@@ -333,6 +344,112 @@ describe("cacheService", () => {
       } finally {
         jest.useRealTimers();
       }
+    });
+  });
+
+  describe("provider result normalization", () => {
+    const provider = "serpapi";
+
+    const payload = {
+      origin: "BUD",
+      destination: "AMS",
+      departure: "2027-03-06",
+      returnDate: "2027-03-08",
+    };
+
+    const options = { normalize: normalizeProviderResult };
+
+    function createResult(price = 30000) {
+      return {
+        success: true,
+        data: {
+          destination: payload.destination,
+          departure: payload.departure,
+          return: payload.returnDate,
+          price,
+          currency: "HUF",
+          bookingUrl: "https://www.google.com/travel/flights?test",
+        },
+      };
+    }
+
+    test("returns a valid cached result without fetching again", async () => {
+      const fresh = createResult();
+      const fetcher = jest.fn().mockResolvedValue(fresh);
+
+      await cache.getOrSet(provider, payload, fetcher, options);
+      fetcher.mockClear();
+
+      const result = await cache.getOrSet(provider, payload, fetcher, options);
+
+      expect(result).toEqual(fresh);
+      expect(fetcher).not.toHaveBeenCalled();
+      expect(redis.set).toHaveBeenCalledTimes(1);
+    });
+
+    test("replaces an invalid cached result with one shared fresh fetch", async () => {
+      await cache.getOrSet(
+        provider,
+        payload,
+        jest.fn().mockResolvedValue(createResult()),
+        options,
+      );
+
+      const key = redis.set.mock.calls[0][0];
+
+      redis.__store()[key] = JSON.stringify(createResult(-1));
+      redis.set.mockClear();
+
+      const fresh = createResult(25000);
+      const fetcher = jest.fn().mockResolvedValue(fresh);
+
+      const results = await Promise.all([
+        cache.getOrSet(provider, payload, fetcher, options),
+        cache.getOrSet(provider, payload, fetcher, options),
+      ]);
+
+      expect(results).toEqual([fresh, fresh]);
+      expect(fetcher).toHaveBeenCalledTimes(1);
+      expect(redis.set).toHaveBeenCalledTimes(1);
+      expect(JSON.parse(redis.__store()[key])).toEqual(fresh);
+
+      const cached = await cache.getOrSet(provider, payload, fetcher, options);
+
+      expect(cached).toEqual(fresh);
+      expect(fetcher).toHaveBeenCalledTimes(1);
+    });
+
+    test("does not cache malformed fresh results and allows a shared retry", async () => {
+      const fresh = createResult();
+
+      const fetcher = jest
+        .fn()
+        .mockResolvedValueOnce(createResult(-1))
+        .mockResolvedValueOnce(fresh);
+
+      const outcomes = await Promise.all([
+        cache.getOrSet(provider, payload, fetcher, options),
+        cache.getOrSet(provider, payload, fetcher, options),
+      ]);
+
+      const failure = {
+        success: false,
+        reason: "provider_error",
+        error: "Invalid provider response",
+      };
+
+      expect(outcomes).toEqual([failure, failure]);
+      expect(fetcher).toHaveBeenCalledTimes(1);
+      expect(redis.set).not.toHaveBeenCalled();
+
+      const retries = await Promise.all([
+        cache.getOrSet(provider, payload, fetcher, options),
+        cache.getOrSet(provider, payload, fetcher, options),
+      ]);
+
+      expect(retries).toEqual([fresh, fresh]);
+      expect(fetcher).toHaveBeenCalledTimes(2);
+      expect(redis.set).toHaveBeenCalledTimes(1);
     });
   });
 });

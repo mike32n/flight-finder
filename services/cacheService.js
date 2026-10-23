@@ -66,16 +66,19 @@ async function get(key) {
   }
 }
 
-async function getOrSet(providerName, payload, fetcher) {
+async function getOrSet(
+  providerName,
+  payload,
+  fetcher,
+  { normalize = (value) => value } = {},
+) {
   const key = generateKey(providerName, payload);
 
-  // In-flight dedupe
   if (inFlight.has(key)) {
     return inFlight.get(key);
   }
 
   const promise = (async () => {
-    // Cache check
     let cached = null;
 
     try {
@@ -84,19 +87,25 @@ async function getOrSet(providerName, payload, fetcher) {
       console.warn("Flight cache read failed:", error.message);
     }
 
-    if (cached) return cached;
+    if (cached) {
+      const normalized = normalize(cached);
 
-    // The shared provider operation owns its deadline and cancellation signal.
+      if (normalized?.success === true) {
+        return normalized;
+      }
+    }
+
     const controller = new AbortController();
 
-    const fresh = await withTimeout(
+    const fetched = await withTimeout(
       Promise.resolve().then(() => fetcher(controller.signal)),
       FETCH_TIMEOUT,
       controller,
     );
 
-    // only cache successful responses
-    if (fresh?.success) {
+    const fresh = normalize(fetched);
+
+    if (fresh?.success === true) {
       try {
         await set(key, fresh);
       } catch (error) {
@@ -112,7 +121,6 @@ async function getOrSet(providerName, payload, fetcher) {
   try {
     return await promise;
   } finally {
-    // cleanup guaranteed even if timeout or fetch error occurs
     inFlight.delete(key);
   }
 }
