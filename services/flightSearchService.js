@@ -77,138 +77,38 @@ function enrichFlightResult(item, enrichAirport, origin) {
   };
 }
 
-async function searchFlights({
-  origin = appConfig.departureAirports.default,
-  destinations,
-  weekday,
-  nights,
-  startDate,
-  allowFlexSearch = true,
-  enrichAirport,
-}) {
+async function executeSearch(
+  {
+    origin = appConfig.departureAirports.default,
+    destinations,
+    weekday,
+    nights,
+    startDate,
+    allowFlexSearch = true,
+    enrichAirport,
+    signal,
+  },
+  onResult,
+) {
+  signal?.throwIfAborted();
+
   const trips = generateTrips(
     weekday,
     nights,
     appConfig.search.weeksToGenerate,
     startDate,
   );
-
-  const baseTasks = createBaseTasks(destinations, trips, origin);
-
-  // RUN BASE
-  const baseResults = await runWithConcurrencyLimit(
-    baseTasks,
-    provider.concurrency,
-  );
-
-  // SMART FLEX / FALLBACK FLEX
-  let flexResults = [];
-
-  const isFallbackFlex =
-    allowFlexSearch &&
-    !appConfig.smartFlex.enabled &&
-    shouldRunFallbackFlex(baseResults);
-
-  const shouldSearchFlex =
-    allowFlexSearch && (appConfig.smartFlex.enabled || isFallbackFlex);
-
-  if (shouldSearchFlex) {
-    const flexTasks = createFlexTasks(destinations, trips, origin, startDate);
-
-    flexResults = await runWithConcurrencyLimit(
-      flexTasks,
-      provider.concurrency,
-    );
-  }
-
-  // MERGE
-  const filteredFlexResults = isFallbackFlex
-    ? flexResults
-    : flexResults
-        .map((result) => {
-          const priceInsight = analyzeFlexResult(baseResults, result);
-
-          if (!priceInsight) return null;
-
-          return {
-            ...result,
-            data: {
-              ...result.data,
-              priceInsight,
-            },
-          };
-        })
-        .filter((result) => result !== null);
-
-  const results = [
-    ...baseResults.map((result) => ({
-      ...result,
-      resultType: "base",
-    })),
-    ...filteredFlexResults.map((result) => ({
-      ...result,
-      resultType: isFallbackFlex ? "fallback-flex" : "flex",
-    })),
-  ];
-
-  const successful = results
-    .filter((r) => r.success)
-    .map((r) => ({
-      ...r.data,
-      resultType: r.resultType,
-    }));
 
   const unique = new Map();
+  let failedRequests = 0;
 
-  for (const item of successful) {
-    const key = `${origin}-${item.destination}-${item.departure}-${item.return}`;
+  function handleResult(result, resultType, baseResults) {
+    signal?.throwIfAborted();
 
-    if (!unique.has(key)) {
-      unique.set(key, item);
-    }
-  }
-
-  const deduped = Array.from(unique.values());
-
-  const enriched = deduped.map((item) =>
-    enrichFlightResult(item, enrichAirport, origin),
-  );
-
-  enriched.sort((a, b) => a.price - b.price);
-
-  return {
-    results: enriched.slice(0, appConfig.search.maxResults),
-    failedRequests: [...baseResults, ...flexResults].filter(
-      (r) => !r.success && r.reason === "provider_error",
-    ).length,
-  };
-}
-
-async function searchFlightsStream({
-  origin = appConfig.departureAirports.default,
-  destinations,
-  weekday,
-  nights,
-  startDate,
-  allowFlexSearch = true,
-  enrichAirport,
-  onResult,
-}) {
-  const trips = generateTrips(
-    weekday,
-    nights,
-    appConfig.search.weeksToGenerate,
-    startDate,
-  );
-
-  const sentKeys = new Set();
-
-  function handleResult(result, resultType, baseResults = []) {
     if (!result.success) {
       if (result.reason === "provider_error") {
-        onResult({
-          type: "fail",
-        });
+        failedRequests++;
+        onResult?.({ type: "fail" });
       }
 
       return;
@@ -217,39 +117,49 @@ async function searchFlightsStream({
     const item = result.data;
     const key = `${origin}-${item.destination}-${item.departure}-${item.return}`;
 
-    if (sentKeys.has(key)) return;
+    if (unique.has(key)) return;
+
+    const priceInsight =
+      resultType === "flex" ? analyzeFlexResult(baseResults, result) : null;
+
+    if (resultType === "flex" && !priceInsight) return;
 
     const enriched = {
       ...enrichFlightResult(item, enrichAirport, origin),
       resultType,
+      ...(priceInsight ? { priceInsight } : {}),
     };
 
-    if (resultType === "flex") {
-      const priceInsight = analyzeFlexResult(baseResults, result);
-
-      if (!priceInsight) return;
-
-      enriched.priceInsight = priceInsight;
-    }
-
-    sentKeys.add(key);
-
-    onResult({
-      type: "data",
-      data: enriched,
-    });
+    unique.set(key, enriched);
+    onResult?.({ type: "data", data: enriched });
   }
 
-  // BASE SEARCH
-  const baseTasks = createBaseTasks(destinations, trips, origin);
+  async function runStage(tasks, resultType, baseResults = []) {
+    signal?.throwIfAborted();
 
-  const baseResults = await runWithConcurrencyLimit(
-    baseTasks,
-    provider.concurrency,
-    (result) => handleResult(result, "base"),
+    const handle = (result) => handleResult(result, resultType, baseResults);
+
+    const results = await runWithConcurrencyLimit(
+      tasks,
+      provider.concurrency,
+      onResult ? handle : undefined,
+      { signal },
+    );
+
+    signal?.throwIfAborted();
+
+    if (!onResult) {
+      results.forEach(handle);
+    }
+
+    return results;
+  }
+
+  const baseResults = await runStage(
+    createBaseTasks(destinations, trips, origin),
+    "base",
   );
 
-  // SMART FLEX / FALLBACK FLEX
   const isFallbackFlex =
     allowFlexSearch &&
     !appConfig.smartFlex.enabled &&
@@ -259,14 +169,34 @@ async function searchFlightsStream({
     allowFlexSearch && (appConfig.smartFlex.enabled || isFallbackFlex);
 
   if (shouldSearchFlex) {
-    const flexTasks = createFlexTasks(destinations, trips, origin, startDate);
-
-    const flexResultType = isFallbackFlex ? "fallback-flex" : "flex";
-
-    await runWithConcurrencyLimit(flexTasks, provider.concurrency, (result) =>
-      handleResult(result, flexResultType, baseResults),
+    await runStage(
+      createFlexTasks(destinations, trips, origin, startDate),
+      isFallbackFlex ? "fallback-flex" : "flex",
+      baseResults,
     );
   }
+
+  signal?.throwIfAborted();
+
+  return {
+    results: Array.from(unique.values()),
+    failedRequests,
+  };
+}
+
+async function searchFlights(options) {
+  const result = await executeSearch(options);
+
+  return {
+    ...result,
+    results: result.results
+      .sort((a, b) => a.price - b.price)
+      .slice(0, appConfig.search.maxResults),
+  };
+}
+
+async function searchFlightsStream(options) {
+  await executeSearch(options, options.onResult);
 }
 
 module.exports = {

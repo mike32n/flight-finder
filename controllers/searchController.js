@@ -48,60 +48,75 @@ async function getDestinations(req, res) {
   }
 }
 
+function watchSearchConnection(res) {
+  const controller = new AbortController();
+
+  const handleClose = () => {
+    if (!res.writableEnded) {
+      controller.abort();
+    }
+  };
+
+  res.once("close", handleClose);
+
+  if (res.destroyed || res.writableEnded) {
+    controller.abort();
+  }
+
+  return {
+    signal: controller.signal,
+
+    canRespond: () =>
+      !controller.signal.aborted && !res.destroyed && !res.writableEnded,
+
+    dispose: () => res.off("close", handleClose),
+  };
+}
+
 async function search(req, res) {
+  const connection = watchSearchConnection(res);
+
   try {
-    const {
-      origin,
-      destinations,
-      weekday,
-      nights,
-      startDate,
-      allowFlexSearch,
-    } = req.searchParameters;
+    if (!connection.canRespond()) return;
 
     const result = await searchFlights({
-      origin,
-      destinations,
-      weekday,
-      nights,
-      startDate,
-      allowFlexSearch,
+      ...req.searchParameters,
       enrichAirport,
+      signal: connection.signal,
     });
 
-    return res.json(result);
+    if (connection.canRespond()) {
+      return res.json(result);
+    }
   } catch (err) {
-    return res.status(500).json({ error: "Internal error" });
+    if (connection.canRespond()) {
+      return res.status(500).json({ error: "Internal error" });
+    }
+  } finally {
+    connection.dispose();
   }
 }
 
 async function searchStream(req, res) {
+  const connection = watchSearchConnection(res);
+
   try {
-    const {
-      origin,
-      destinations,
-      weekday,
-      nights,
-      startDate,
-      allowFlexSearch,
-    } = req.searchParameters;
+    if (!connection.canRespond()) return;
 
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
 
     await searchFlightsStream({
-      origin,
-      destinations,
-      weekday,
-      nights,
-      startDate,
-      allowFlexSearch,
+      ...req.searchParameters,
       enrichAirport,
+      signal: connection.signal,
 
       onResult(result) {
+        if (!connection.canRespond()) return;
+
         if (result.type === "fail") {
-          res.write(`event: fail\ndata: fail\n\n`);
+          res.write("event: fail\ndata: fail\n\n");
           return;
         }
 
@@ -109,11 +124,15 @@ async function searchStream(req, res) {
       },
     });
 
-    res.write(`event: end\ndata: done\n\n`);
-    res.end();
+    if (connection.canRespond()) {
+      res.end("event: end\ndata: done\n\n");
+    }
   } catch (err) {
-    res.write(`event: error\ndata: error\n\n`);
-    res.end();
+    if (connection.canRespond()) {
+      res.end("event: error\ndata: error\n\n");
+    }
+  } finally {
+    connection.dispose();
   }
 }
 
