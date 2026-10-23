@@ -93,6 +93,16 @@ Open:
 http://localhost:3000
 ```
 
+## Admin Access
+
+Grant admin access to an existing, verified user:
+
+```bash
+npm run admin:grant -- user@example.com
+```
+
+Admin access is independent of the user's plan and does not change it.
+
 ## Testing
 
 Unit/integration tests:
