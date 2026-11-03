@@ -1406,7 +1406,7 @@ function createCard(r) {
   return div;
 }
 
-function updateFooter(container, isDone = false) {
+function getOrCreateFooter(container) {
   let el = document.getElementById("results-footer");
 
   if (!el) {
@@ -1415,6 +1415,12 @@ function updateFooter(container, isDone = false) {
     el.className = "meta-info";
     container.appendChild(el);
   }
+
+  return el;
+}
+
+function updateFooter(container, isDone = false) {
+  const el = getOrCreateFooter(container);
 
   if (isDone) {
     el.textContent = `Finished...(failed: ${failedCount})`;
@@ -1424,15 +1430,7 @@ function updateFooter(container, isDone = false) {
 }
 
 function initFooter(container) {
-  let el = document.getElementById("results-footer");
-
-  if (!el) {
-    el = document.createElement("div");
-    el.id = "results-footer";
-    el.className = "meta-info";
-    container.appendChild(el);
-  }
-
+  const el = getOrCreateFooter(container);
   el.textContent = "Loading...";
 }
 
