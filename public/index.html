@@ -49,82 +49,89 @@
       </p>
 
       <div class="form">
-        <div class="form-field airport-field">
-          <label for="origin-input" class="field-label">Departure</label>
+        <div class="airport-fields">
+          <div class="form-field airport-field">
+            <label for="origin-input" class="field-label">Departure</label>
 
-          <input id="origin" type="hidden" value="BUD" />
-          <div class="autocomplete-wrapper origin-autocomplete-wrapper">
-            <input
-              id="origin-input"
-              disabled
-              type="text"
-              aria-label="Departure airport"
-              placeholder="Type city or IATA code..."
-              autocomplete="off"
-            />
-            <div
-              id="origin-autocomplete-list"
-              class="autocomplete-list hidden"
-            ></div>
+            <input id="origin" type="hidden" value="BUD" />
+            <div class="autocomplete-wrapper origin-autocomplete-wrapper">
+              <input
+                id="origin-input"
+                disabled
+                type="text"
+                aria-label="Departure airport"
+                placeholder="Type city or IATA code..."
+                autocomplete="off"
+              />
+              <div
+                id="origin-autocomplete-list"
+                class="autocomplete-list hidden"
+              ></div>
+            </div>
+          </div>
+
+          <div class="form-field airport-field">
+            <label for="destination-input" class="field-label">
+              Destination
+            </label>
+
+            <div class="autocomplete-wrapper">
+              <input
+                id="destination-input"
+                disabled
+                type="text"
+                aria-label="Destination"
+                placeholder="Type city or IATA code..."
+                autocomplete="off"
+              />
+              <div
+                id="autocomplete-list"
+                class="autocomplete-list hidden"
+              ></div>
+            </div>
           </div>
         </div>
 
-        <div class="form-field airport-field">
-          <label for="destination-input" class="field-label">
-            Destination
-          </label>
+        <div class="search-options">
+          <div class="form-field weekday-field">
+            <label for="weekday" class="field-label">Weekday</label>
 
-          <div class="autocomplete-wrapper">
-            <input
-              id="destination-input"
-              disabled
-              type="text"
-              aria-label="Destination"
-              placeholder="Type city or IATA code..."
-              autocomplete="off"
-            />
-            <div id="autocomplete-list" class="autocomplete-list hidden"></div>
+            <select id="weekday" disabled>
+              <option value="0">Sunday</option>
+              <option value="1">Monday</option>
+              <option value="2">Tuesday</option>
+              <option value="3">Wednesday</option>
+              <option value="4">Thursday</option>
+              <option value="5">Friday</option>
+              <option value="6">Saturday</option>
+            </select>
           </div>
-        </div>
 
-        <div class="form-field weekday-field">
-          <label for="weekday" class="field-label">Weekday</label>
+          <div class="form-field nights-field">
+            <label for="nights" class="field-label">Nights</label>
 
-          <select id="weekday" disabled>
-            <option value="0">Sunday</option>
-            <option value="1">Monday</option>
-            <option value="2">Tuesday</option>
-            <option value="3">Wednesday</option>
-            <option value="4">Thursday</option>
-            <option value="5">Friday</option>
-            <option value="6">Saturday</option>
-          </select>
-        </div>
+            <div class="stepper">
+              <button onclick="changeNights(-1)" disabled>−</button>
+              <input
+                id="nights"
+                type="number"
+                value="1"
+                min="1"
+                max="30"
+                step="1"
+                disabled
+              />
+              <button onclick="changeNights(1)" disabled>+</button>
+            </div>
+          </div>
 
-        <div class="form-field nights-field">
-          <label for="nights" class="field-label">Nights</label>
-
-          <div class="stepper">
-            <button onclick="changeNights(-1)" disabled>−</button>
-            <input
-              id="nights"
-              type="number"
-              value="1"
-              min="1"
-              max="30"
-              step="1"
-              disabled
-            />
-            <button onclick="changeNights(1)" disabled>+</button>
+          <div class="start-date-field">
+            <label for="start-date" class="field-label">Search from</label>
+            <input id="start-date" type="date" required disabled />
           </div>
         </div>
 
         <button id="search-button" onclick="search()" disabled>Search</button>
-      </div>
-
-      <div class="start-date-field">
-        <label for="start-date" class="field-label">Search from</label>
-        <input id="start-date" type="date" required disabled />
       </div>
 
       <div id="loading" class="hidden">Loading...</div>
