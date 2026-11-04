@@ -51,6 +51,7 @@ function createBrowser() {
             validity: { badInput: false },
             addEventListener: jest.fn(),
             querySelector: () => null,
+            querySelectorAll: () => [],
           });
         }
 
