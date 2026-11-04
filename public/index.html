@@ -12,27 +12,33 @@
   </head>
   <body>
     <div class="container">
-      <a
-        id="admin-link"
-        class="corner-icon corner-icon--left"
-        href="/admin.html"
-        aria-label="Administration"
-        title="Administration"
-        hidden
-      >
-        <span aria-hidden="true">⚙</span>
-      </a>
+      <div class="main-page-header">
+        <a
+          id="admin-link"
+          class="corner-icon corner-icon--left"
+          href="/admin.html"
+          aria-label="Administration"
+          title="Administration"
+          hidden
+        >
+          <span aria-hidden="true">⚙</span>
+        </a>
 
-      <button
-        type="button"
-        id="theme-button"
-        class="corner-icon corner-icon--right"
-        onclick="toggleTheme()"
-        aria-label="Switch to dark theme"
-        title="Switch to dark theme"
-      >
-        🌙
-      </button>
+        <p id="search-access-status" class="meta-info" role="status">
+          Loading search settings...
+        </p>
+
+        <button
+          type="button"
+          id="theme-button"
+          class="corner-icon corner-icon--right"
+          onclick="toggleTheme()"
+          aria-label="Switch to dark theme"
+          title="Switch to dark theme"
+        >
+          🌙
+        </button>
+      </div>
       <h1>✈️ Flight Finder</h1>
 
       <div id="auth-container"></div>
@@ -43,10 +49,6 @@
       <div id="selected-container" class="selected-container"></div>
 
       <p id="destinations-error" role="alert" hidden></p>
-
-      <p id="search-access-status" class="meta-info" role="status">
-        Loading search settings...
-      </p>
 
       <div class="form">
         <div class="airport-fields">

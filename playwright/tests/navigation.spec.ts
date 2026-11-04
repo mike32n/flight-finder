@@ -58,6 +58,7 @@ test.describe("Admin navigation", () => {
 
     await common.expectHidden(auth.authModal);
     await common.expectVisible(navigation.adminLink);
+    await flightFinder.expectHeaderLayoutAtWidth(390);
 
     await common.click(navigation.adminLink);
 

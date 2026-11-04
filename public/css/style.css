@@ -229,6 +229,34 @@ h1 {
   outline-offset: 2px;
 }
 
+.main-page-header {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) 40px;
+  align-items: start;
+  gap: 12px;
+}
+
+.main-page-header .corner-icon {
+  position: static;
+  flex: 0 0 40px;
+}
+
+.main-page-header #admin-link {
+  grid-column: 1;
+}
+
+.main-page-header #search-access-status {
+  grid-column: 2;
+  min-width: 0;
+  margin: 0;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.main-page-header #theme-button {
+  grid-column: 3;
+}
+
 /* =====================================================
    4. SHARED FORM CONTROLS
    ===================================================== */
@@ -428,6 +456,19 @@ body.dark #start-date {
   height: 56px;
   min-height: 56px;
   margin-bottom: 20px;
+}
+
+.selected-container.has-search-access-warning {
+  height: auto;
+  flex-wrap: wrap;
+}
+
+.selected-container.has-search-access-warning #search-validation-error {
+  flex: 0 1 auto;
+  width: fit-content;
+  max-width: 100%;
+  margin-inline: auto;
+  text-align: center;
 }
 
 .selected-container .iata-badge {

@@ -31,6 +31,7 @@ test.describe("Search access", () => {
             : "Premium";
 
       await common.expectContainsText(flightFinder.searchAccessStatus, label);
+      await common.expectNotPresent(flightFinder.searchValidationError);
 
       if (plan === "anonymous") {
         await common.expectDisabled(flightFinder.originInput);
@@ -64,6 +65,7 @@ test.describe("Search access", () => {
       }
 
       await flightFinder.expectSelectedDestinationCount(destinations.length);
+      await common.expectNotPresent(flightFinder.searchValidationError);
       await common.expectDisabled(flightFinder.airportInput);
 
       await common.expectContainsText(
@@ -97,7 +99,7 @@ test.describe("Search access", () => {
 
     await common.expectContainsText(
       flightFinder.searchAccessStatus,
-      "Premium · Up to 2 destinations · Smart Flex: off.",
+      "Premium · Up to 2 destinations · Smart Flex: off",
     );
 
     await common.expectDisabled(flightFinder.originInput);
@@ -153,14 +155,23 @@ test.describe("Search access", () => {
     await flightFinder.mockSearchAccess("anonymous");
     await common.reloadPage();
 
-    await common.expectContainsText(
+    await common.expectText(
       flightFinder.searchAccessStatus,
-      "Some destinations were removed",
+      "Guest · Up to 1 destination · Smart Flex: off",
     );
+    await flightFinder.expectClearedDestinationWarning();
 
     await flightFinder.expectOriginSelected("BUD");
-    await flightFinder.expectSelectedDestinationCount(1);
-    await flightFinder.expectAirportSelected("AMS");
+    await flightFinder.expectSelectedDestinationCount(0);
+    await flightFinder.expectClearedDestinationWarningLayoutAtWidth(320);
+    await flightFinder.expectClearedDestinationWarningLayoutAtWidth(360);
+    await common.click(flightFinder.searchValidationError);
+    await common.expectNotPresent(flightFinder.searchValidationError);
+    await common.expectText(
+      flightFinder.searchAccessStatus,
+      "Guest · Up to 1 destination · Smart Flex: off",
+    );
+    await flightFinder.expectSelectedDestinationCount(0);
 
     await common.expectValue(flightFinder.weekdaySelect, "6");
     await common.expectValue(flightFinder.nightsInput, "1");
@@ -169,8 +180,8 @@ test.describe("Search access", () => {
     await common.reloadPage();
 
     await common.expectContainsText(flightFinder.searchAccessStatus, "Guest");
-    await flightFinder.expectSelectedDestinationCount(1);
-    await flightFinder.expectAirportSelected("AMS");
+    await common.expectNotPresent(flightFinder.searchValidationError);
+    await flightFinder.expectSelectedDestinationCount(0);
   });
 
   test("TC-SEARCH-ACCESS-05 | should refresh permissions after login and logout", async () => {
@@ -178,6 +189,7 @@ test.describe("Search access", () => {
     await common.openPage(Env.test);
 
     await common.expectContainsText(flightFinder.searchAccessStatus, "Guest");
+    await flightFinder.expectHeaderLayoutAtWidth(390);
 
     await flightFinder.selectAirportByEnter("ams");
     await common.expectDisabled(flightFinder.airportInput);
@@ -187,6 +199,10 @@ test.describe("Search access", () => {
     await common.click(auth.loginSubmitButton);
 
     await common.expectContainsText(flightFinder.searchAccessStatus, "Premium");
+    await common.expectText(
+      flightFinder.searchAccessStatus,
+      "Premium · Up to 3 destinations · Smart Flex: on",
+    );
 
     await common.expectEnabled(flightFinder.originInput);
     await common.expectEnabled(flightFinder.weekdaySelect);
@@ -200,13 +216,38 @@ test.describe("Search access", () => {
 
     await common.click(flightFinder.logoutButton);
 
-    await common.expectContainsText(flightFinder.searchAccessStatus, "Guest");
+    await common.expectText(
+      flightFinder.searchAccessStatus,
+      "Guest · Up to 1 destination · Smart Flex: off",
+    );
+    await flightFinder.expectClearedDestinationWarning();
 
-    await flightFinder.expectSelectedDestinationCount(1);
+    await flightFinder.expectSelectedDestinationCount(0);
+    await common.click(flightFinder.searchValidationError);
+    await common.expectNotPresent(flightFinder.searchValidationError);
+    await common.expectText(
+      flightFinder.searchAccessStatus,
+      "Guest · Up to 1 destination · Smart Flex: off",
+    );
+    await flightFinder.expectSelectedDestinationCount(0);
     await common.expectDisabled(flightFinder.originInput);
     await common.expectDisabled(flightFinder.weekdaySelect);
     await common.expectDisabled(flightFinder.nightsInput);
     await common.expectDisabled(flightFinder.startDateInput);
-    await common.expectDisabled(flightFinder.airportInput);
+    await common.expectEnabled(flightFinder.airportInput);
+  });
+
+  test("TC-SEARCH-ACCESS-06 | should keep header status centered and within narrow viewports", async () => {
+    await flightFinder.mockSearchAccess("premium");
+    await common.openPage(Env.test);
+
+    for (const width of [320, 360, 390, 768, 1280]) {
+      await flightFinder.expectHeaderLayoutAtWidth(width);
+    }
+
+    await flightFinder.expectHeaderLayoutAtWidth(
+      320,
+      "Search settings could not be loaded. Please reload the page to try again.",
+    );
   });
 });

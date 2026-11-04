@@ -8,6 +8,7 @@ import {
 export default class MainPage {
   readonly page: Page;
   readonly heading: Locator;
+  readonly mainPageHeader: Locator;
   readonly searchAccessStatus: Locator;
   readonly sessionMessage: Locator;
 
@@ -33,6 +34,7 @@ export default class MainPage {
   readonly selectedDestinationBadges: Locator;
   readonly noAirportsSelectedWarning: Locator;
   readonly searchValidationError: Locator;
+  readonly oldDestinationLimitWarning: Locator;
   readonly autocompleteItem: Locator;
   readonly activeAutocompleteItem: Locator;
   readonly firstResult: Locator;
@@ -49,6 +51,7 @@ export default class MainPage {
   constructor(page: Page) {
     this.page = page;
     this.heading = page.getByRole("heading", { level: 1 });
+    this.mainPageHeader = page.locator(".main-page-header");
     this.searchAccessStatus = page.locator("#search-access-status");
     this.sessionMessage = page.locator("#session-message");
 
@@ -107,6 +110,10 @@ export default class MainPage {
       this.selectedContainer.locator(".error-card");
 
     this.searchValidationError = page.locator("#search-validation-error");
+    this.oldDestinationLimitWarning = page.getByText(
+      "Some destinations were removed to match your current search settings.",
+      { exact: true },
+    );
 
     this.autocompleteItem = this.autocompleteList.locator(".autocomplete-item");
 
@@ -154,8 +161,110 @@ export default class MainPage {
     }
   }
 
+  async expectHeaderLayoutAtWidth(
+    width: number,
+    statusText?: string,
+  ): Promise<void> {
+    await this.page.setViewportSize({ width, height: 900 });
+
+    if (statusText !== undefined) {
+      await this.searchAccessStatus.evaluate((element, text) => {
+        element.textContent = text;
+      }, statusText);
+    }
+
+    const layout = await this.mainPageHeader.evaluate((header) => {
+      const admin = header.querySelector("#admin-link");
+      const status = header.querySelector("#search-access-status");
+      const theme = header.querySelector("#theme-button");
+
+      if (!admin || !status || !theme) {
+        throw new Error("Main page header elements are missing");
+      }
+
+      const headerBox = header.getBoundingClientRect();
+      const adminBox = admin.getBoundingClientRect();
+      const statusBox = status.getBoundingClientRect();
+      const themeBox = theme.getBoundingClientRect();
+
+      return {
+        headerCenter: headerBox.left + headerBox.width / 2,
+        statusCenter: statusBox.left + statusBox.width / 2,
+        adminRight: adminBox.right,
+        statusLeft: statusBox.left,
+        statusRight: statusBox.right,
+        themeLeft: themeBox.left,
+        documentWidth: document.documentElement.scrollWidth,
+        viewportWidth: document.documentElement.clientWidth,
+      };
+    });
+
+    expect(
+      Math.abs(layout.statusCenter - layout.headerCenter),
+    ).toBeLessThanOrEqual(1);
+    expect(layout.statusLeft).toBeGreaterThanOrEqual(layout.adminRight);
+    expect(layout.statusRight).toBeLessThanOrEqual(layout.themeLeft);
+    expect(layout.documentWidth).toBeLessThanOrEqual(layout.viewportWidth);
+    await expect(this.searchAccessStatus).toBeVisible();
+  }
+
   async clickSelectedContainer(code: string): Promise<void> {
     await this.selectedContainer.getByText(code).click();
+  }
+
+  async expectClearedDestinationWarning(): Promise<void> {
+    await expect(this.searchValidationError).toHaveText(
+      "⚠️ Destinations have been cleared. Please select again.",
+    );
+    await expect(this.oldDestinationLimitWarning).toHaveCount(0);
+  }
+
+  async expectClearedDestinationWarningLayoutAtWidth(
+    width: number,
+  ): Promise<void> {
+    await this.page.setViewportSize({ width, height: 900 });
+
+    const layout = await this.searchValidationError.evaluate((warning) => {
+      const container = warning.parentElement;
+
+      if (!container) {
+        throw new Error("Destination warning container is missing");
+      }
+
+      const warningBox = warning.getBoundingClientRect();
+      const containerBox = container.getBoundingClientRect();
+      const style = getComputedStyle(warning);
+      const range = document.createRange();
+
+      range.selectNodeContents(warning);
+
+      return {
+        warningCenter: warningBox.left + warningBox.width / 2,
+        containerCenter: containerBox.left + containerBox.width / 2,
+        warningWidth: warningBox.width,
+        containerWidth: containerBox.width,
+        warningScrollWidth: warning.scrollWidth,
+        warningClientWidth: warning.clientWidth,
+        documentWidth: document.documentElement.scrollWidth,
+        viewportWidth: document.documentElement.clientWidth,
+        textLineCount: range.getClientRects().length,
+        textAlign: style.textAlign,
+        width: style.width,
+      };
+    });
+
+    expect(
+      Math.abs(layout.warningCenter - layout.containerCenter),
+    ).toBeLessThanOrEqual(1);
+    expect(layout.warningWidth).toBeLessThanOrEqual(layout.containerWidth);
+    expect(layout.warningScrollWidth).toBeLessThanOrEqual(
+      layout.warningClientWidth,
+    );
+    expect(layout.documentWidth).toBeLessThanOrEqual(layout.viewportWidth);
+    expect(layout.textLineCount).toBeGreaterThan(1);
+    expect(layout.textAlign).toBe("center");
+    expect(layout.width).not.toBe("100%");
+    await expect(this.searchValidationError).toBeVisible();
   }
 
   async openAutocomplete(searchText: string): Promise<void> {

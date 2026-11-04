@@ -151,12 +151,17 @@ function applySearchAccessToForm() {
     dateInput.value = today;
   }
 
-  const previousCount = selectedDestinations.length;
+  const destinationLimitExceeded =
+    selectedDestinations.length > maxDestinations;
   const origin = document.getElementById("origin").value;
 
-  selectedDestinations = selectedDestinations
-    .filter((code) => code !== origin)
-    .slice(0, maxDestinations);
+  if (destinationLimitExceeded) {
+    selectedDestinations = [];
+  } else {
+    selectedDestinations = selectedDestinations.filter(
+      (code) => code !== origin,
+    );
+  }
 
   originAutocomplete?.close();
   destinationAutocomplete?.close();
@@ -172,16 +177,18 @@ function applySearchAccessToForm() {
 
   const noun = maxDestinations === 1 ? "destination" : "destinations";
 
-  let message =
+  const message =
     `${labels[plan]} · Up to ${maxDestinations} ${noun}` +
-    ` · Smart Flex: ${policy.smartFlexEnabled ? "on" : "off"}.`;
-
-  if (previousCount !== selectedDestinations.length) {
-    message +=
-      " Some destinations were removed to match your current search settings.";
-  }
+    ` · Smart Flex: ${policy.smartFlexEnabled ? "on" : "off"}`;
 
   document.getElementById("search-access-status").textContent = message;
+
+  if (destinationLimitExceeded) {
+    showSearchValidationError(
+      "⚠️ Destinations have been cleared. Please select again.",
+      { preserveSelection: true },
+    );
+  }
 }
 
 async function refreshSearchAccess() {
@@ -615,7 +622,10 @@ function closeDropdown(list) {
 /* DESTINATIONS */
 /* ========================= */
 
-function showSearchValidationError(message = "") {
+function showSearchValidationError(
+  message = "",
+  { preserveSelection = false } = {},
+) {
   const container = document.getElementById("selected-container");
 
   if (!message) {
@@ -634,18 +644,32 @@ function showSearchValidationError(message = "") {
   error.setAttribute("role", "alert");
   error.title = "Click to dismiss";
 
+  const dismiss = () => {
+    if (preserveSelection) {
+      error.remove();
+      container.classList.remove("has-search-access-warning");
+    } else {
+      renderSelected();
+    }
+  };
+
   error.addEventListener("click", () => {
-    renderSelected();
+    dismiss();
   });
 
   error.addEventListener("keydown", (event) => {
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
-      renderSelected();
+      dismiss();
     }
   });
 
-  container.replaceChildren(error);
+  if (preserveSelection) {
+    container.classList.add("has-search-access-warning");
+    container.appendChild(error);
+  } else {
+    container.replaceChildren(error);
+  }
 }
 
 function renderOrigin() {
@@ -684,6 +708,7 @@ function selectDestination(dest) {
 
 function renderSelected() {
   const container = document.getElementById("selected-container");
+  container.classList.remove("has-search-access-warning");
   container.innerHTML = "";
 
   selectedDestinations.forEach((code) => {

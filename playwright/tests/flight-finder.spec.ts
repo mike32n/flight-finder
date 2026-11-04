@@ -17,6 +17,7 @@ test.describe("Flight Finder", () => {
 
   test("TC-FLIGHT-01 | should toggle theme icons and preserve theme after reload", async () => {
     await common.expectLightThemeIsActive();
+    await flightFinder.expectHeaderLayoutAtWidth(390);
     await common.expectText(flightFinder.toggleThemeButton, "🌙");
 
     await common.click(flightFinder.toggleThemeButton);
