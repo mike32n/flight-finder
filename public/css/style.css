@@ -760,6 +760,7 @@ body.dark #start-date {
 }
 
 .auth-user-info {
+  min-width: 0;
   text-align: left;
 }
 
@@ -772,6 +773,7 @@ body.dark #start-date {
   color: var(--auth-email-color);
   font-size: 0.9rem;
   font-weight: 600;
+  overflow-wrap: anywhere;
 }
 
 /* =====================================================
