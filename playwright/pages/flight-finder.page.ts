@@ -5,6 +5,23 @@ import {
   SearchPolicy,
 } from "../data/search-access";
 
+type MockSearchResult = {
+  city?: string;
+  originCity?: string;
+  code: string;
+  price: number;
+  resultType?: "base" | "flex" | "fallback-flex";
+  priceInsight?: {
+    percent: number;
+    basePrice: number;
+  };
+};
+
+type MockSearchResponse = MockSearchResult & {
+  completed?: boolean;
+  results?: MockSearchResult[];
+};
+
 export default class MainPage {
   readonly page: Page;
   readonly heading: Locator;
@@ -45,6 +62,11 @@ export default class MainPage {
 
   readonly flexCard: Locator;
   readonly fallbackFlexCard: Locator;
+  readonly resultRoute: Locator;
+  readonly resultRouteLabel: Locator;
+  readonly resultDates: Locator;
+  readonly resultPrice: Locator;
+  readonly resultPriceInsight: Locator;
 
   readonly noResultsCard: Locator;
 
@@ -129,12 +151,17 @@ export default class MainPage {
     this.resultsFooter = page.locator("#results-footer");
 
     this.flexCard = page.locator(".flex-card").filter({
-      has: page.getByText("Flexible dates", { exact: true }),
+      has: page.getByText("Flexible Dates", { exact: true }),
     });
 
     this.fallbackFlexCard = page.locator(".flex-card").filter({
-      has: page.getByText("Alternative dates", { exact: true }),
+      has: page.getByText("Alternative Dates", { exact: true }),
     });
+    this.resultRoute = this.firstResult.locator(".result-route");
+    this.resultRouteLabel = this.resultRoute.locator("strong");
+    this.resultDates = this.firstResult.locator(".result-dates");
+    this.resultPrice = this.firstResult.locator(".result-price");
+    this.resultPriceInsight = this.firstResult.locator(".price-insight");
 
     this.noResultsCard = page.locator(".no-results-card");
   }
@@ -210,6 +237,360 @@ export default class MainPage {
 
   async clickSelectedContainer(code: string): Promise<void> {
     await this.selectedContainer.getByText(code).click();
+  }
+
+  resultCardForDestination(city: string): Locator {
+    return this.resultCards.filter({ hasText: city });
+  }
+
+  async expectResultCardLayoutAtWidth(
+    width: number,
+    card: Locator = this.firstResult,
+  ): Promise<void> {
+    await this.page.setViewportSize({ width, height: 900 });
+    await expect
+      .poll(() =>
+        card.evaluate((element) => {
+          const style = getComputedStyle(element);
+          const contentWidth =
+            element.clientWidth -
+            parseFloat(style.paddingLeft) -
+            parseFloat(style.paddingRight);
+
+          return (
+            Math.abs(Number(element.dataset.layoutWidth) - contentWidth) < 0.5
+          );
+        }),
+      )
+      .toBe(true);
+
+    await this.expectResultCardGeometry(card);
+  }
+
+  async setResultCardWidth(
+    width: number,
+    card: Locator = this.firstResult,
+  ): Promise<void> {
+    await card.evaluate((element, requestedWidth) => {
+      element.style.boxSizing = "border-box";
+      element.style.width = `${requestedWidth}px`;
+    }, width);
+  }
+
+  async expectResultCardLayoutMode(
+    mode: "desktop" | "mobile",
+    card: Locator = this.firstResult,
+  ): Promise<void> {
+    await expect(card).toHaveAttribute("data-layout", mode);
+    await this.expectResultCardGeometry(card);
+  }
+
+  async expectResultRowsFit(
+    primaryFits: boolean,
+    secondaryFits: boolean,
+    card: Locator = this.firstResult,
+  ): Promise<void> {
+    const rowFits = await card.evaluate((element) => {
+      const style = getComputedStyle(element);
+      const availableWidth =
+        element.clientWidth -
+        parseFloat(style.paddingLeft) -
+        parseFloat(style.paddingRight);
+      const measureRow = (selector: string) => {
+        const row = element.querySelector(selector);
+        if (!row) throw new Error(`Missing result row: ${selector}`);
+        const units = [...row.querySelectorAll(":scope > .result-unit")];
+        const gap = parseFloat(getComputedStyle(row).columnGap) || 0;
+        const requiredWidth =
+          units.reduce(
+            (total, unit) => total + unit.getBoundingClientRect().width,
+            0,
+          ) +
+          Math.max(0, units.length - 1) * gap;
+
+        return requiredWidth <= availableWidth;
+      };
+
+      return {
+        primary: measureRow(".result-row-primary"),
+        secondary: measureRow(".result-row-secondary"),
+      };
+    });
+
+    expect(rowFits.primary).toBe(primaryFits);
+    expect(rowFits.secondary).toBe(secondaryFits);
+  }
+
+  private async expectResultCardGeometry(card: Locator): Promise<void> {
+    const layout = await card.evaluate((element) => {
+      const cardRect = element.getBoundingClientRect();
+      const cardStyle = getComputedStyle(element);
+      const innerLeft =
+        cardRect.left +
+        parseFloat(cardStyle.borderLeftWidth) +
+        parseFloat(cardStyle.paddingLeft);
+      const innerRight =
+        cardRect.right -
+        parseFloat(cardStyle.borderRightWidth) -
+        parseFloat(cardStyle.paddingRight);
+      const unit = (selector: string) => {
+        const node = element.querySelector(selector);
+        if (!(node instanceof HTMLElement)) {
+          throw new Error(`Missing result unit: ${selector}`);
+        }
+        const rect = node.getBoundingClientRect();
+        return {
+          top: rect.top,
+          left: rect.left,
+          right: rect.right,
+          width: rect.width,
+          height: rect.height,
+          fontSize: parseFloat(getComputedStyle(node).fontSize),
+          whiteSpace: getComputedStyle(node).whiteSpace,
+          scrollWidth: node.scrollWidth,
+          clientWidth: node.clientWidth,
+          textAlign: getComputedStyle(node).textAlign,
+          baseFontSize: Number(node.dataset.baseFontSize),
+          scaled: node.dataset.scaled === "true",
+        };
+      };
+      const row = (selector: string) => {
+        const node = element.querySelector(selector);
+        if (!(node instanceof HTMLElement)) {
+          throw new Error(`Missing result row: ${selector}`);
+        }
+        const rect = node.getBoundingClientRect();
+        return {
+          top: rect.top,
+          left: rect.left,
+          right: rect.right,
+          width: rect.width,
+        };
+      };
+
+      return {
+        mode: element.dataset.layout,
+        innerLeft,
+        innerRight,
+        documentWidth: document.documentElement.scrollWidth,
+        viewportWidth: document.documentElement.clientWidth,
+        primaryRow: row(".result-row-primary"),
+        secondaryRow: row(".result-row-secondary"),
+        route: unit(".result-route"),
+        dates: unit(".result-dates"),
+        price: unit(".result-price"),
+        insight: element.querySelector(".price-insight")
+          ? unit(".price-insight")
+          : null,
+      };
+    });
+
+    expect(layout.documentWidth).toBeLessThanOrEqual(layout.viewportWidth);
+
+    const units = [
+      layout.route,
+      layout.dates,
+      layout.price,
+      layout.insight,
+    ].filter((entry) => entry !== null);
+    units.forEach((entry) => {
+      expect(entry.whiteSpace).toBe("nowrap");
+      expect(entry.scrollWidth).toBeLessThanOrEqual(entry.clientWidth + 1);
+      expect(entry.height).toBeLessThanOrEqual(entry.fontSize * 1.8);
+      expect(entry.left).toBeGreaterThanOrEqual(layout.innerLeft - 1);
+      expect(entry.right).toBeLessThanOrEqual(layout.innerRight + 1);
+    });
+
+    if (layout.mode === "desktop") {
+      expect(layout.primaryRow).not.toBeNull();
+      expect(layout.secondaryRow).not.toBeNull();
+      expect(
+        Math.abs(
+          layout.route.top +
+            layout.route.height / 2 -
+            (layout.price.top + layout.price.height / 2),
+        ),
+      ).toBeLessThanOrEqual(2);
+      expect(layout.route.right).toBeLessThanOrEqual(layout.price.left);
+      expect(layout.price.textAlign).toBe("right");
+      expect(layout.price.right).toBeCloseTo(layout.primaryRow.right, 0);
+      if (layout.insight) {
+        expect(
+          Math.abs(
+            layout.dates.top +
+              layout.dates.height / 2 -
+              (layout.insight.top + layout.insight.height / 2),
+          ),
+        ).toBeLessThanOrEqual(2);
+        expect(layout.dates.right).toBeLessThanOrEqual(layout.insight.left);
+        expect(layout.insight.textAlign).toBe("right");
+        expect(layout.insight.right).toBeCloseTo(layout.secondaryRow.right, 0);
+      }
+    } else {
+      expect(layout.route.top).toBeLessThan(layout.dates.top);
+      expect(layout.dates.top).toBeLessThan(layout.price.top);
+      if (layout.insight) {
+        expect(layout.price.top).toBeLessThan(layout.insight.top);
+      }
+    }
+
+    await expect(card).toBeVisible();
+  }
+
+  async expectResultUnitScaling(
+    expected: Record<"route" | "dates" | "price" | "insight", boolean>,
+    card: Locator = this.firstResult,
+  ): Promise<void> {
+    const scaling = await card.evaluate((element) => {
+      const get = (selector: string) => {
+        const node = element.querySelector(selector);
+        if (!(node instanceof HTMLElement)) return null;
+        return {
+          scaled: node.dataset.scaled === "true",
+          fontSize: parseFloat(getComputedStyle(node).fontSize),
+          baseFontSize: Number(node.dataset.baseFontSize),
+        };
+      };
+
+      return {
+        route: get(".result-route"),
+        dates: get(".result-dates"),
+        price: get(".result-price"),
+        insight: get(".price-insight"),
+      };
+    });
+
+    for (const key of ["route", "dates", "price", "insight"] as const) {
+      const unit = scaling[key];
+      if (expected[key]) {
+        expect(unit).not.toBeNull();
+        expect(unit?.scaled).toBe(true);
+        expect(unit?.fontSize).toBeGreaterThanOrEqual(10);
+        expect(unit?.fontSize).toBeLessThan(unit?.baseFontSize ?? 0);
+      } else if (unit) {
+        expect(unit.scaled).toBe(false);
+        expect(unit.fontSize).toBe(unit.baseFontSize);
+      }
+    }
+  }
+
+  async expectResultBadgeBesideRoute(
+    label: string,
+    card: Locator = this.firstResult,
+  ): Promise<void> {
+    const layout = await card.evaluate((element, expectedLabel) => {
+      const route = element.querySelector(".result-route");
+      const title = route?.querySelector("strong");
+      const badge = route?.querySelector(".flex-badge");
+
+      if (!title || !badge) {
+        throw new Error("Result route badge is missing");
+      }
+
+      const range = document.createRange();
+      range.selectNodeContents(title);
+      const firstLine = range.getClientRects()[0];
+      const badgeBox = badge.getBoundingClientRect();
+
+      return {
+        badgeText: badge.textContent,
+        badgeCenter: badgeBox.top + badgeBox.height / 2,
+        routeLineCenter: firstLine
+          ? firstLine.top + firstLine.height / 2
+          : null,
+        routeRight: title.getBoundingClientRect().right,
+        badgeLeft: badgeBox.left,
+      };
+    }, label);
+
+    expect(layout.badgeText).toBe(label);
+    expect(layout.routeLineCenter).not.toBeNull();
+    expect(
+      Math.abs(layout.badgeCenter - (layout.routeLineCenter ?? 0)),
+    ).toBeLessThanOrEqual(8);
+    expect(layout.badgeLeft).toBeGreaterThanOrEqual(layout.routeRight);
+  }
+
+  async expectResultRouteLineCount(
+    expectedCount: number,
+    card: Locator = this.firstResult,
+  ): Promise<void> {
+    const layout = await card.evaluate((element) => {
+      const route = element.querySelector(".result-route");
+      const title = route?.querySelector("strong");
+
+      if (!route || !title) {
+        throw new Error("Result route is missing");
+      }
+
+      const range = document.createRange();
+      range.selectNodeContents(title);
+      const lineTops = new Set(
+        Array.from(range.getClientRects()).map((rect) => Math.round(rect.top)),
+      );
+      const routeBox = route.getBoundingClientRect();
+      const cardBox = element.getBoundingClientRect();
+
+      return {
+        lineCount: lineTops.size,
+        routeLeft: routeBox.left,
+        routeRight: routeBox.right,
+        cardLeft: cardBox.left,
+        cardRight: cardBox.right,
+      };
+    });
+
+    expect(layout.lineCount).toBe(expectedCount);
+    expect(layout.routeLeft).toBeGreaterThanOrEqual(layout.cardLeft);
+    expect(layout.routeRight).toBeLessThanOrEqual(layout.cardRight);
+  }
+
+  async expectResultRoute(
+    route: string,
+    card: Locator = this.firstResult,
+  ): Promise<void> {
+    const actualRoute = await card
+      .locator(".result-route strong")
+      .textContent();
+    expect(actualRoute?.replace(/\u00a0/g, " ")).toBe(route);
+  }
+
+  async expectRouteCityAndCodeTogether(
+    code: string,
+    card: Locator = this.firstResult,
+  ): Promise<void> {
+    const lineCount = await card
+      .locator(".route-city")
+      .evaluateAll((cities, expectedCode) => {
+        const city = cities.find((element) =>
+          element.textContent?.endsWith(`(${expectedCode})`),
+        );
+        const text = city?.firstChild;
+        if (!text || text.nodeType !== Node.TEXT_NODE) {
+          throw new Error(`Route city for ${expectedCode} is missing`);
+        }
+
+        const content = text.textContent ?? "";
+        const codeStart = content.lastIndexOf(`(${expectedCode})`);
+        const wordStart = content.lastIndexOf(" ", codeStart - 2) + 1;
+        const range = document.createRange();
+        range.setStart(text, wordStart);
+        range.setEnd(text, content.length);
+
+        return new Set(
+          Array.from(range.getClientRects()).map((rect) =>
+            Math.round(rect.top),
+          ),
+        ).size;
+      }, code);
+
+    expect(lineCount).toBe(1);
+  }
+
+  async expectNoResultPriceInsight(
+    card: Locator = this.firstResult,
+  ): Promise<void> {
+    await expect(card.locator(".price-insight")).toHaveCount(0);
   }
 
   async expectClearedDestinationWarning(): Promise<void> {
@@ -460,14 +841,7 @@ export default class MainPage {
       });
   }
 
-  async mockSearchSequence(
-    responses: Array<{
-      city: string;
-      code: string;
-      price: number;
-      completed?: boolean;
-    }>,
-  ): Promise<{
+  async mockSearchSequence(responses: MockSearchResponse[]): Promise<{
     expectRequestCount: (expected: number) => Promise<void>;
   }> {
     let requestCount = 0;
@@ -481,30 +855,39 @@ export default class MainPage {
         return;
       }
 
-      const flight = {
-        origin: {
-          code: route.request().postDataJSON().origin ?? "BUD",
-        },
-        destination: {
-          city: response.city,
-          code: response.code,
-        },
-        departure: "2026-10-09",
-        return: "2026-10-11",
-        price: response.price,
-        currency: "HUF",
-        bookingUrl: "https://example.com/booking",
-        resultType: "base",
-      };
+      const originCode = route.request().postDataJSON().origin ?? "BUD";
+      const resultEvents = [response, ...(response.results ?? [])]
+        .map((result) => {
+          const flight = {
+            origin: {
+              code: originCode,
+              ...(result.originCity ? { city: result.originCity } : {}),
+            },
+            destination: {
+              ...(result.city ? { city: result.city } : {}),
+              code: result.code,
+            },
+            departure: "2026-10-09",
+            return: "2026-10-11",
+            price: result.price,
+            currency: "HUF",
+            bookingUrl: "https://example.com/booking",
+            resultType: result.resultType ?? "base",
+            ...(result.priceInsight
+              ? { priceInsight: result.priceInsight }
+              : {}),
+          };
 
-      const resultEvent = `data: ${JSON.stringify(flight)}\n\n`;
+          return `data: ${JSON.stringify(flight)}\n\n`;
+        })
+        .join("");
       const endEvent =
         response.completed === false ? "" : "event: end\ndata: done\n\n";
 
       await route.fulfill({
         status: 200,
         contentType: "text/event-stream",
-        body: resultEvent + endEvent,
+        body: resultEvents + endEvent,
       });
     });
 
@@ -795,7 +1178,7 @@ export default class MainPage {
 
     await expect(card).toBeVisible();
     await expect(
-      card.getByText("Flexible dates", { exact: true }),
+      card.getByText("Flexible Dates", { exact: true }),
     ).toBeVisible();
 
     const priceInsight = card.locator(".price-insight");
@@ -812,7 +1195,7 @@ export default class MainPage {
 
     await expect(card).toBeVisible();
     await expect(
-      card.getByText("Alternative dates", { exact: true }),
+      card.getByText("Alternative Dates", { exact: true }),
     ).toBeVisible();
 
     await expect(card.locator(".price-insight")).toHaveCount(0);

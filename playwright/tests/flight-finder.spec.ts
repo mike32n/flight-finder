@@ -149,6 +149,10 @@ test.describe("Flight Finder", () => {
 
     await flightFinder.expectResultsFooterText("Finished");
     await flightFinder.expectFlexibleDateResult();
+    await flightFinder.expectResultCardLayoutAtWidth(
+      1280,
+      flightFinder.flexCard.first(),
+    );
   });
 
   test("TC-FLIGHT-14 | should show alternative dates for fallback flex results", async () => {
@@ -158,6 +162,10 @@ test.describe("Flight Finder", () => {
     await common.click(flightFinder.searchButton);
 
     await flightFinder.expectAlternativeDateResult();
+    await flightFinder.expectResultBadgeBesideRoute(
+      "Alternative Dates",
+      flightFinder.fallbackFlexCard.first(),
+    );
   });
 
   test("TC-FLIGHT-15 | should show no-results state when search returns no flights", async () => {
@@ -199,7 +207,7 @@ test.describe("Flight Finder", () => {
     ]);
 
     const resultText =
-      "BUD → Amsterdam (AMS) 2026-10-09 → 2026-10-11 💶 HUF 30,000";
+      "Budapest (BUD) → Amsterdam (AMS) 💶 HUF 30,000 2026-10-09 → 2026-10-11";
 
     const interruptedMessage =
       "Search interrupted. Run a new search to finish. (failed: 0)";

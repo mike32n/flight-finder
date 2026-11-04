@@ -604,12 +604,12 @@ body.dark #start-date {
 
 .flex-badge {
   display: inline-block;
-  margin-left: 8px;
+  margin-left: 0;
   padding: 2px 7px;
   background: var(--flex-badge-bg);
   color: var(--flex-badge-text);
   border-radius: 10px;
-  font-size: 0.72rem;
+  font-size: 0.72em;
   font-weight: 600;
   vertical-align: 1px;
 }
@@ -619,6 +619,90 @@ body.dark #start-date {
   margin-top: 6px;
   font-size: 0.85rem;
   font-weight: 500;
+}
+
+.result-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    "route"
+    "dates"
+    "price"
+    "insight";
+  gap: 6px;
+  min-width: 0;
+}
+
+.result-row {
+  display: contents;
+  gap: 6px 16px;
+}
+
+.result-unit {
+  width: max-content;
+  max-width: none;
+  min-width: max-content;
+  flex: 0 0 auto;
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.result-route {
+  grid-area: route;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.result-route strong {
+  white-space: nowrap;
+}
+
+.result-route .flex-badge {
+  padding-right: 3px;
+  padding-left: 3px;
+}
+
+.result-dates {
+  grid-area: dates;
+  margin-top: 0;
+}
+
+.result-price {
+  grid-area: price;
+}
+
+.result-card .price-insight {
+  grid-area: insight;
+  margin-top: 0;
+  font-size: 0.85rem;
+}
+
+.result-row-primary {
+  grid-area: primary;
+}
+
+.result-row-secondary {
+  grid-area: secondary;
+}
+
+.result-card[data-layout="desktop"] {
+  grid-template-areas:
+    "primary"
+    "secondary";
+}
+
+.result-card[data-layout="desktop"] .result-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+}
+
+.result-card[data-layout="desktop"] .result-unit--trailing {
+  margin-left: auto;
+  text-align: right;
 }
 
 /* =====================================================

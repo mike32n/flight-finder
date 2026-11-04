@@ -13,7 +13,7 @@ test.describe("Search stream parsing", () => {
 
     const city = "Amsterdam event: end event: error event: fail data: extra";
 
-    const resultText = `BUD → ${city} (AMS) 2026-10-09 → 2026-10-11 💶 HUF 30,000`;
+    const resultText = `Budapest (BUD) → ${city} (AMS) 💶 HUF 30,000 2026-10-09 → 2026-10-11`;
 
     await flightFinder.mockSearchSequence([
       { city, code: "AMS", price: 30000 },

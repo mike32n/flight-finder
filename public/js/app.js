@@ -29,6 +29,20 @@ let searchPageActive = true;
 let searchSessionRequestId = 0;
 let configuredMaxDestinations = 3;
 
+const resultCardResizeObserver =
+  typeof ResizeObserver === "undefined"
+    ? null
+    : new ResizeObserver((entries) => {
+        entries.forEach(({ target, contentRect }) => {
+          if (!target.isConnected) {
+            resultCardResizeObserver?.unobserve(target);
+            return;
+          }
+
+          updateResultCardLayout(target, contentRect.width);
+        });
+      });
+
 window.emailVerificationRequired = true;
 
 /* ========================= */
@@ -852,7 +866,11 @@ function clearSearchResults() {
   lastSearchParameters = null;
   searchOwnerUserId = null;
 
-  document.getElementById("results").innerHTML = "";
+  const results = document.getElementById("results");
+  results.querySelectorAll(".result-card").forEach((card) => {
+    resultCardResizeObserver?.unobserve(card);
+  });
+  results.innerHTML = "";
 
   try {
     sessionStorage.removeItem(SEARCH_STATE_KEY);
@@ -906,6 +924,9 @@ function restoreSearchState() {
 
     const resultsDiv = document.getElementById("results");
 
+    resultsDiv.querySelectorAll(".result-card").forEach((card) => {
+      resultCardResizeObserver?.unobserve(card);
+    });
     resultsDiv.innerHTML = "";
     currentResults = [];
     resultNodes = [];
@@ -1368,12 +1389,18 @@ function insertSortedWithDOM(item, container) {
     container.insertBefore(node, cards[index]);
   }
 
+  if (node.classList?.contains("result-card")) {
+    updateResultCardLayout(node);
+    resultCardResizeObserver?.observe(node);
+  }
+
   resultNodes.splice(index, 0, node);
 
   // cut off if more than maxResults
   if (currentResults.length > maxResults) {
     currentResults.pop();
     const removed = resultNodes.pop();
+    resultCardResizeObserver?.unobserve(removed);
     removed.remove();
   }
   return true;
@@ -1384,51 +1411,176 @@ function createCard(r) {
 
   const originCode =
     r.origin?.code ?? lastSearchParameters?.origin ?? defaultOrigin;
+  const getCity = (code, city) => {
+    if (typeof city === "string" && city.trim()) return city.trim();
+
+    return (
+      destinationsData.find((airport) => airport.value === code)?.label ?? code
+    );
+  };
 
   const isFlex = r.resultType === "flex";
   const isFallbackFlex = r.resultType === "fallback-flex";
 
   div.className = isFlex || isFallbackFlex ? "card flex-card" : "card";
 
-  const title = document.createElement("strong");
-  title.textContent =
-    `${originCode} → ${r.destination.city ?? r.destination.code}` +
-    ` (${r.destination.code})`;
+  const route = document.createElement("div");
+  route.className = "result-unit result-route";
 
-  div.append(title, " ");
+  const title = document.createElement("strong");
+  const origin = document.createElement("span");
+  origin.className = "route-city";
+  origin.textContent =
+    `${getCity(originCode, r.origin?.city)}\u00a0(${originCode})`;
+
+  const destination = document.createElement("span");
+  destination.className = "route-city";
+  destination.textContent =
+    `${getCity(r.destination.code, r.destination.city)}\u00a0(${r.destination.code})`;
+
+  title.append(origin, " → ", destination);
+
+  route.appendChild(title);
 
   if (isFlex || isFallbackFlex) {
     const badge = document.createElement("span");
     badge.className = "flex-badge";
-    badge.textContent = isFlex ? "Flexible dates" : "Alternative dates";
+    badge.textContent = isFlex ? "Flexible Dates" : "Alternative Dates";
 
-    div.append(badge, " ");
+    route.append(badge);
   }
 
+  const primaryRow = document.createElement("div");
+  primaryRow.className = "result-row result-row-primary";
+
+  const secondaryRow = document.createElement("div");
+  secondaryRow.className = "result-row result-row-secondary";
+
   const dates = document.createElement("span");
-  dates.className = "meta-info";
+  dates.className = "meta-info result-unit result-dates";
   dates.textContent = `${r.departure} → ${r.return}`;
 
-  div.append(
-    document.createElement("br"),
-    dates,
-    document.createElement("br"),
-    ` 💶 ${r.currency} ${r.price.toLocaleString()}`,
-  );
+  const price = document.createElement("strong");
+  price.className = "result-unit result-unit--trailing result-price";
+  price.textContent = `💶 ${r.currency} ${r.price.toLocaleString()}`;
+
+  primaryRow.append(route, " ", price);
+  secondaryRow.append(dates);
 
   if (isFlex && r.priceInsight) {
     const insight = document.createElement("span");
-    insight.className = "price-insight";
+    insight.className = "result-unit result-unit--trailing price-insight";
     insight.textContent =
       `💡 ${r.priceInsight.percent}% cheaper than the original dates ` +
       `(${r.currency} ${r.priceInsight.basePrice.toLocaleString()})`;
 
-    div.append(" ", document.createElement("br"), insight);
+    secondaryRow.append(" ", insight);
   }
+
+  div.append(primaryRow, " ", secondaryRow);
+  div.classList.add("result-card");
 
   div.addEventListener("click", () => openFlight(r));
 
   return div;
+}
+
+function updateResultCardLayout(card, observedWidth) {
+  const style = getComputedStyle(card);
+  const contentWidth =
+    observedWidth ??
+    card.clientWidth -
+      parseFloat(style.paddingLeft) -
+      parseFloat(style.paddingRight);
+
+  if (contentWidth <= 0) return;
+
+  if (
+    card.dataset.layoutWidth === String(contentWidth) &&
+    card.dataset.layout
+  ) {
+    return;
+  }
+
+  const units = [...card.querySelectorAll(".result-unit")];
+  const unitWidths = new Map();
+
+  units.forEach((unit) => {
+    unit.style.removeProperty("font-size");
+    unit.style.removeProperty("letter-spacing");
+    delete unit.dataset.scaled;
+    const baseFontSize =
+      Number(unit.dataset.baseFontSize) ||
+      parseFloat(getComputedStyle(unit).fontSize);
+    unit.dataset.baseFontSize = String(baseFontSize);
+    unitWidths.set(unit, unit.getBoundingClientRect().width);
+  });
+
+  const primaryRow = card.querySelector(".result-row-primary");
+  const secondaryRow = card.querySelector(".result-row-secondary");
+  const rowFits = (row) => {
+    const rowUnits = [...row.querySelectorAll(":scope > .result-unit")];
+    const gap = parseFloat(getComputedStyle(row).columnGap) || 0;
+    const requiredWidth =
+      rowUnits.reduce((total, unit) => total + unitWidths.get(unit), 0) +
+      Math.max(0, rowUnits.length - 1) * gap;
+
+    return requiredWidth <= contentWidth;
+  };
+  const useDesktopLayout = rowFits(primaryRow) && rowFits(secondaryRow);
+
+  card.dataset.layout = useDesktopLayout ? "desktop" : "mobile";
+  card.dataset.layoutWidth = String(contentWidth);
+
+  if (useDesktopLayout) return;
+
+  units.forEach((unit) => {
+    const naturalWidth = unitWidths.get(unit);
+    if (naturalWidth <= contentWidth) return;
+
+    const baseFontSize = Number(unit.dataset.baseFontSize);
+    const minimumFontSize = 10;
+    unit.style.fontSize = `${minimumFontSize}px`;
+
+    if (unit.getBoundingClientRect().width > contentWidth) {
+      let lowSpacing = -0.5;
+      let highSpacing = 0;
+      unit.style.letterSpacing = `${lowSpacing}px`;
+
+      if (unit.getBoundingClientRect().width <= contentWidth) {
+        for (let attempt = 0; attempt < 12; attempt++) {
+          const candidate = (lowSpacing + highSpacing) / 2;
+          unit.style.letterSpacing = `${candidate}px`;
+
+          if (unit.getBoundingClientRect().width <= contentWidth) {
+            lowSpacing = candidate;
+          } else {
+            highSpacing = candidate;
+          }
+        }
+        unit.style.letterSpacing = `${lowSpacing}px`;
+      }
+
+      unit.dataset.scaled = "true";
+      return;
+    }
+
+    let low = minimumFontSize;
+    let high = baseFontSize;
+    for (let attempt = 0; attempt < 12; attempt++) {
+      const candidate = (low + high) / 2;
+      unit.style.fontSize = `${candidate}px`;
+
+      if (unit.getBoundingClientRect().width <= contentWidth) {
+        low = candidate;
+      } else {
+        high = candidate;
+      }
+    }
+
+    unit.style.fontSize = `${low}px`;
+    unit.dataset.scaled = "true";
+  });
 }
 
 function getOrCreateFooter(container) {

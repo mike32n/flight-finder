@@ -19,9 +19,10 @@ const larnaca = {
 };
 
 const amsterdamText =
-  "BUD → Amsterdam (AMS) 2026-10-09 → 2026-10-11 💶 HUF 30,000";
+  "Budapest (BUD) → Amsterdam (AMS) 💶 HUF 30,000 2026-10-09 → 2026-10-11";
 
-const larnacaText = "BUD → Larnaca (LCA) 2026-10-09 → 2026-10-11 💶 HUF 25,000";
+const larnacaText =
+  "Budapest (BUD) → Larnaca (LCA) 💶 HUF 25,000 2026-10-09 → 2026-10-11";
 
 test.describe("Search persistence", () => {
   let common: CommonPage;
@@ -153,7 +154,7 @@ test.describe("Search persistence", () => {
     );
 
     const resultText =
-      "VIE → Amsterdam (AMS) 2026-10-09 → 2026-10-11 💶 HUF 30,000";
+      "Vienna (VIE) → Amsterdam (AMS) 💶 HUF 30,000 2026-10-09 → 2026-10-11";
 
     await flightFinder.expectResultsFooterText("Finished...(failed: 0)");
     await common.expectText(flightFinder.resultCards, [resultText]);
