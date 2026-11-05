@@ -60,6 +60,9 @@ test.describe("Admin navigation", () => {
     await common.expectVisible(navigation.adminLink);
     await flightFinder.expectHeaderLayoutAtWidth(390);
 
+    await navigation.expectCornerIconsAlignedAtWidth(1280);
+    await navigation.expectCornerIconsAlignedAtWidth(390);
+
     await common.click(navigation.adminLink);
 
     await common.expectURL(new URL("/admin.html", Env.test).href);

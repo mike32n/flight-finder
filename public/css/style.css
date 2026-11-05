@@ -237,7 +237,6 @@ h1 {
 }
 
 .main-page-header .corner-icon {
-  position: static;
   flex: 0 0 40px;
 }
 
