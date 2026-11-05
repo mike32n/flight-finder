@@ -183,9 +183,14 @@
     });
   }
 
-  function redirectToSearch() {
+  function redirectToSearch({ expired = false } = {}) {
     resetAdminView();
     localStorage.removeItem("authToken");
+
+    if (expired) {
+      sessionStorage.setItem("flightFinder.sessionExpired", "true");
+    }
+
     window.location.replace("/");
   }
 
@@ -280,7 +285,7 @@
       if (!isCurrentAccess(version, token)) return;
 
       if (response.status === 401) {
-        redirectToSearch();
+        redirectToSearch({ expired: true });
         return;
       }
 
@@ -354,7 +359,7 @@
       if (!isCurrentAccess(version, token)) return;
 
       if (response.status === 401) {
-        redirectToSearch();
+        redirectToSearch({ expired: true });
         return;
       }
 

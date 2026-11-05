@@ -4,6 +4,7 @@ import Env from "../utils/env";
 import CommonPage from "../pages/common.page";
 import AuthPage from "../pages/auth.page";
 import AdminPage from "../pages/admin.page";
+import FlightFinderPage from "../pages/flight-finder.page";
 
 const planDefaults = require("../../config/planDefaults");
 
@@ -11,11 +12,13 @@ test.describe("Administration", () => {
   let common: CommonPage;
   let auth: AuthPage;
   let admin: AdminPage;
+  let flightFinder: FlightFinderPage;
 
   test.beforeEach(async ({ page }) => {
     common = new CommonPage(page);
     auth = new AuthPage(page);
     admin = new AdminPage(page);
+    flightFinder = new FlightFinderPage(page);
   });
 
   test("TC-ADMIN-01 | should redirect to search without calling the admin API when signed out", async () => {
@@ -75,6 +78,7 @@ test.describe("Administration", () => {
 
   test("TC-ADMIN-03-401 | should clear the rejected token and redirect to search", async () => {
     await admin.setAuthToken();
+    await admin.seedPrivateSearchData();
     // A subsequent /me request must not hide a token-reseeding regression.
     await auth.mockCurrentUserFailure(500);
     await admin.mockPoliciesResponse(401, {
@@ -87,6 +91,9 @@ test.describe("Administration", () => {
     await common.expectVisible(auth.loginButton);
     await auth.expectAuthTokenRemoved();
     await common.expectHidden(admin.content);
+    await flightFinder.expectPrivateSearchDataRemoved();
+    await common.expectContainsText(flightFinder.searchAccessStatus, "Guest");
+    await flightFinder.expectOnlySessionExpirationError();
 
     await admin.expectRequestCount(1);
   });
@@ -277,6 +284,8 @@ test.describe("Administration", () => {
     await common.expectURL(Env.test);
     await common.expectVisible(auth.loginButton);
     await auth.expectAuthTokenRemoved();
+    await flightFinder.expectOnlySessionExpirationError();
+    await common.expectContainsText(flightFinder.searchAccessStatus, "Guest");
 
     await admin.expectSaveRequestCount(1);
   });

@@ -9,7 +9,7 @@ function saveToken(token) {
   verifiedAuthToken = null;
 
   localStorage.setItem("authToken", token);
-  document.getElementById("session-message").hidden = true;
+  clearSessionExpirationError();
 }
 
 function getToken() {
@@ -73,13 +73,7 @@ function endSession({ expired = false } = {}) {
   authUser = null;
   renderAuthUI();
 
-  const message = document.getElementById("session-message");
-
-  message.textContent = expired
-    ? "Your session has expired. Please sign in again."
-    : "";
-
-  message.hidden = !expired;
+  if (expired) showSessionExpirationError();
 }
 
 async function loadCurrentUser() {

@@ -28,6 +28,7 @@ export default class MainPage {
   readonly mainPageHeader: Locator;
   readonly searchAccessStatus: Locator;
   readonly sessionMessage: Locator;
+  readonly errorCards: Locator;
 
   readonly authContainer: Locator;
   readonly logoutButton: Locator;
@@ -75,7 +76,8 @@ export default class MainPage {
     this.heading = page.getByRole("heading", { level: 1 });
     this.mainPageHeader = page.locator(".main-page-header");
     this.searchAccessStatus = page.locator("#search-access-status");
-    this.sessionMessage = page.locator("#session-message");
+    this.sessionMessage = page.locator("#search-validation-error");
+    this.errorCards = page.locator(".error-card");
 
     this.authContainer = page.locator("#auth-container");
     this.logoutButton = page.getByRole("button", {
@@ -600,7 +602,7 @@ export default class MainPage {
     await expect(this.oldDestinationLimitWarning).toHaveCount(0);
   }
 
-  async expectClearedDestinationWarningLayoutAtWidth(
+  async expectErrorCardLayoutAtWidth(
     width: number,
   ): Promise<void> {
     await this.page.setViewportSize({ width, height: 900 });
@@ -794,7 +796,10 @@ export default class MainPage {
     await this.mockSearchAccessResponse(200, getSearchAccess(plan, overrides));
   }
 
-  async mockSearchSession(plan: "registered" | "premium"): Promise<void> {
+  async mockSearchSession(
+    plan: "registered" | "premium",
+    isAdmin = false,
+  ): Promise<void> {
     const token = "search-access-test-token";
 
     await this.page.route("**/api/auth/login", async (route) => {
@@ -812,7 +817,7 @@ export default class MainPage {
             email: "search@example.com",
             emailVerified: true,
             plan,
-            isAdmin: false,
+            isAdmin,
           },
         },
       });
@@ -1247,5 +1252,64 @@ export default class MainPage {
 
   async expectNoSearchUnavailableMessage(): Promise<void> {
     await expect(this.page.locator(".search-unavailable-card")).toHaveCount(0);
+  }
+
+  async expectOnlySessionExpirationError(): Promise<void> {
+    await expect(this.sessionMessage).toBeVisible();
+    await expect(this.sessionMessage).toHaveText(
+      "⚠️ Your session has expired. Please sign in again.",
+    );
+    await expect(this.sessionMessage).toHaveClass(/error-card/);
+    await expect(this.errorCards).toHaveCount(1);
+    await expect
+      .poll(() =>
+        this.sessionMessage.evaluate((message) => message.parentElement?.id),
+      )
+      .toBe("selected-container");
+  }
+
+  async dismissSessionMessage(): Promise<void> {
+    await this.sessionMessage.click();
+    await expect(this.sessionMessage).toBeHidden();
+  }
+
+  async mockAnonymousSearchAccess(maxDestinations = 1): Promise<void> {
+    await this.mockSearchAccess("anonymous", { maxDestinations });
+  }
+
+  async refreshSearchAccess(): Promise<void> {
+    await this.page.evaluate(() => {
+      void (window as Window & { refreshSearchAccess: () => Promise<void> })
+        .refreshSearchAccess();
+    });
+  }
+
+  async rememberSharedErrorElement(): Promise<void> {
+    await this.sessionMessage.evaluate((message) => {
+      (window as Window & { sharedErrorElement?: Element }).sharedErrorElement =
+        message;
+    });
+  }
+
+  async expectSharedErrorElementReused(): Promise<void> {
+    await expect
+      .poll(() =>
+        this.sessionMessage.evaluate(
+          (message) =>
+            (window as Window & { sharedErrorElement?: Element })
+              .sharedErrorElement === message,
+        ),
+      )
+      .toBe(true);
+  }
+
+  async expectPrivateSearchDataRemoved(): Promise<void> {
+    await expect
+      .poll(() =>
+        this.page.evaluate(() =>
+          sessionStorage.getItem("flightFinder.lastSearch.v1"),
+        ),
+      )
+      .toBeNull();
   }
 }

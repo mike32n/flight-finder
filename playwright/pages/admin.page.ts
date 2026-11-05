@@ -66,6 +66,15 @@ export default class AdminPage {
     }
   }
 
+  async seedPrivateSearchData(): Promise<void> {
+    await this.page.evaluate(() => {
+      sessionStorage.setItem(
+        "flightFinder.lastSearch.v1",
+        JSON.stringify({ ownerUserId: 42 }),
+      );
+    });
+  }
+
   async mockPoliciesResponse(status: number, body: unknown): Promise<void> {
     await this.page.route("**/api/admin/plan-policies", async (route) => {
       this.requestCount++;

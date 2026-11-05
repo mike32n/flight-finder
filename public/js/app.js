@@ -28,6 +28,7 @@ let searchPageInitialized = false;
 let searchPageActive = true;
 let searchSessionRequestId = 0;
 let configuredMaxDestinations = 3;
+let sessionExpirationErrorActive = false;
 
 const resultCardResizeObserver =
   typeof ResizeObserver === "undefined"
@@ -315,7 +316,7 @@ async function refreshSearchSession() {
   if (!isCurrent() || !isSessionContextCurrent(context)) return;
 
   if (authState === "authenticated") {
-    document.getElementById("session-message").hidden = true;
+    clearSessionExpirationError();
   }
 
   renderAuthUI();
@@ -445,6 +446,11 @@ window.onload = async function () {
 
   restoreSearchSetup();
   searchPageInitialized = true;
+
+  if (sessionStorage.getItem("flightFinder.sessionExpired") === "true") {
+    sessionStorage.removeItem("flightFinder.sessionExpired");
+    endSession({ expired: true });
+  }
 
   await refreshSearchSession();
 };
@@ -643,40 +649,56 @@ function showSearchValidationError(
   const container = document.getElementById("selected-container");
 
   if (!message) {
+    if (sessionExpirationErrorActive) return;
+
     if (container.querySelector(".error-card")) {
       renderSelected();
     }
     return;
   }
 
-  const error = document.createElement("div");
+  if (
+    sessionExpirationErrorActive &&
+    message !== "⚠️ Your session has expired. Please sign in again."
+  ) {
+    return;
+  }
 
-  error.id = "search-validation-error";
-  error.className = "card error-card";
+  let error = container.querySelector("#search-validation-error");
+  const isNewError = error === null;
+
+  if (isNewError) {
+    error = document.createElement("div");
+    error.id = "search-validation-error";
+    error.className = "card error-card";
+    error.tabIndex = 0;
+    error.setAttribute("role", "alert");
+    error.title = "Click to dismiss";
+
+    const dismiss = () => {
+      if (
+        sessionExpirationErrorActive ||
+        error.dataset.preserveSelection === "true"
+      ) {
+        error.remove();
+        container.classList.remove("has-search-access-warning");
+        sessionExpirationErrorActive = false;
+      } else {
+        renderSelected();
+      }
+    };
+
+    error.addEventListener("click", dismiss);
+    error.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        dismiss();
+      }
+    });
+  }
+
   error.textContent = message;
-  error.tabIndex = 0;
-  error.setAttribute("role", "alert");
-  error.title = "Click to dismiss";
-
-  const dismiss = () => {
-    if (preserveSelection) {
-      error.remove();
-      container.classList.remove("has-search-access-warning");
-    } else {
-      renderSelected();
-    }
-  };
-
-  error.addEventListener("click", () => {
-    dismiss();
-  });
-
-  error.addEventListener("keydown", (event) => {
-    if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault();
-      dismiss();
-    }
-  });
+  error.dataset.preserveSelection = String(preserveSelection);
 
   if (preserveSelection) {
     container.classList.add("has-search-access-warning");
@@ -684,6 +706,30 @@ function showSearchValidationError(
   } else {
     container.replaceChildren(error);
   }
+}
+
+function clearSearchValidationError() {
+  const error = document.getElementById("search-validation-error");
+
+  error?.remove();
+  document
+    .getElementById("selected-container")
+    .classList.remove("has-search-access-warning");
+}
+
+function showSessionExpirationError() {
+  sessionExpirationErrorActive = true;
+  showSearchValidationError(
+    "⚠️ Your session has expired. Please sign in again.",
+    { preserveSelection: true },
+  );
+}
+
+function clearSessionExpirationError() {
+  if (!sessionExpirationErrorActive) return;
+
+  sessionExpirationErrorActive = false;
+  clearSearchValidationError();
 }
 
 function renderOrigin() {
@@ -722,7 +768,14 @@ function selectDestination(dest) {
 
 function renderSelected() {
   const container = document.getElementById("selected-container");
-  container.classList.remove("has-search-access-warning");
+  const sessionError = sessionExpirationErrorActive
+    ? container.querySelector("#search-validation-error")
+    : null;
+
+  if (!sessionError) {
+    container.classList.remove("has-search-access-warning");
+  }
+
   container.innerHTML = "";
 
   selectedDestinations.forEach((code) => {
@@ -738,6 +791,10 @@ function renderSelected() {
 
     container.appendChild(badge);
   });
+
+  if (sessionError) {
+    container.appendChild(sessionError);
+  }
 
   updateSearchControls();
 

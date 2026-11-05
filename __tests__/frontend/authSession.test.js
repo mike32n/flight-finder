@@ -14,6 +14,47 @@ function createStorage() {
 
 function createBrowser() {
   const elements = new Map();
+  const children = [];
+
+  function createElement(id = "") {
+    return {
+      id,
+      value: "",
+      hidden: true,
+      disabled: false,
+      innerHTML: "",
+      textContent: "",
+      className: "",
+      dataset: {},
+      classList: {
+        add: jest.fn(),
+        remove: jest.fn(),
+      },
+      validity: { badInput: false },
+      addEventListener: jest.fn(),
+      remove: jest.fn(function () {
+        const index = children.indexOf(this);
+        if (index !== -1) children.splice(index, 1);
+        if (elements.get(this.id) === this) elements.delete(this.id);
+      }),
+      setAttribute: jest.fn(),
+      querySelector: () => null,
+      querySelectorAll: () => [],
+    };
+  }
+
+  const selectedContainer = createElement("selected-container");
+  selectedContainer.querySelector = (selector) =>
+    selector === ".error-card"
+      ? children.find((element) => element.className.includes("error-card")) ??
+        null
+      : null;
+  selectedContainer.appendChild = (element) => {
+    element.parentElement = selectedContainer;
+    children.push(element);
+    elements.set(element.id, element);
+  };
+  elements.set("selected-container", selectedContainer);
 
   const context = vm.createContext({
     AbortController,
@@ -42,21 +83,12 @@ function createBrowser() {
     document: {
       getElementById(id) {
         if (!elements.has(id)) {
-          elements.set(id, {
-            value: "",
-            hidden: true,
-            disabled: false,
-            innerHTML: "",
-            textContent: "",
-            validity: { badInput: false },
-            addEventListener: jest.fn(),
-            querySelector: () => null,
-            querySelectorAll: () => [],
-          });
+          elements.set(id, createElement(id));
         }
 
         return elements.get(id);
       },
+      createElement: () => createElement(),
       querySelectorAll: () => [],
     },
   });
@@ -113,14 +145,14 @@ describe("frontend session handling", () => {
     expect(run("authUser")).toBeNull();
     expect(run("sessionStorage.getItem(SEARCH_STATE_KEY)")).toBeNull();
     expect(context.document.getElementById("results").innerHTML).toBe("");
-
-    expect(context.document.getElementById("session-message").textContent).toBe(
-      "Your session has expired. Please sign in again.",
+    const expirationMessage = context.document.getElementById(
+      "search-validation-error",
     );
-
-    expect(context.document.getElementById("session-message").hidden).toBe(
-      false,
+    expect(expirationMessage.textContent).toBe(
+      "⚠️ Your session has expired. Please sign in again.",
     );
+    expect(expirationMessage.className).toContain("error-card");
+    expect(context.document.getElementById("admin-link").hidden).toBe(true);
 
     if (action !== "loadCurrentUser()") {
       expect(context.window.dispatchEvent).toHaveBeenCalledTimes(1);
@@ -162,9 +194,9 @@ describe("frontend session handling", () => {
 
       expect(run("getToken()")).toBe("new-token");
       expect(run("authUser")).toBeNull();
-      expect(context.document.getElementById("session-message").hidden).toBe(
-        true,
-      );
+      expect(
+        context.document.getElementById("search-validation-error").hidden,
+      ).toBe(true);
     },
   );
 

@@ -4,6 +4,7 @@ import Env from "../utils/env";
 import CommonPage from "../pages/common.page";
 import AuthPage from "../pages/auth.page";
 import FlightFinderPage from "../pages/flight-finder.page";
+import NavigationPage from "../pages/navigation.page";
 import { createVerifiedTestUser } from "../helpers/user.helper";
 
 const amsterdam = {
@@ -16,11 +17,13 @@ test.describe("Session lifecycle", () => {
   let common: CommonPage;
   let auth: AuthPage;
   let flightFinder: FlightFinderPage;
+  let navigation: NavigationPage;
 
   test.beforeEach(async ({ page }) => {
     common = new CommonPage(page);
     auth = new AuthPage(page);
     flightFinder = new FlightFinderPage(page);
+    navigation = new NavigationPage(page);
 
     await common.openPage(Env.test);
     await common.expectVisible(auth.loginButton);
@@ -57,7 +60,7 @@ test.describe("Session lifecycle", () => {
 
     await common.expectText(
       flightFinder.sessionMessage,
-      "Your session has expired. Please sign in again.",
+      "⚠️ Your session has expired. Please sign in again.",
     );
 
     await common.expectEnabled(flightFinder.searchButton);
@@ -161,7 +164,7 @@ test.describe("Session lifecycle", () => {
 
     await common.expectText(
       flightFinder.sessionMessage,
-      "Your session has expired. Please sign in again.",
+      "⚠️ Your session has expired. Please sign in again.",
     );
 
     await common.expectEnabled(flightFinder.searchButton);
@@ -201,5 +204,42 @@ test.describe("Session lifecycle", () => {
     await auth.expectAuthTokenRemoved();
     await common.expectEnabled(flightFinder.searchButton);
     await flightFinder.expectResultsEmpty();
+  });
+
+  test("TC-SESSION-09 | should replace a search error with a dismissible expiration message and clear authenticated UI", async () => {
+    await flightFinder.mockSearchSession("premium", true);
+    await auth.login("search@example.com", "password");
+    await common.expectVisible(flightFinder.logoutButton);
+    await common.expectVisible(navigation.adminLink);
+    await common.expectContainsText(
+      flightFinder.searchAccessStatus,
+      "Premium",
+    );
+
+    await flightFinder.selectAirportByEnter("ams");
+    await flightFinder.selectAirportByEnter("bcn");
+    await flightFinder.mockAnonymousSearchAccess();
+    await flightFinder.refreshSearchAccess();
+    await flightFinder.expectClearedDestinationWarning();
+    await flightFinder.rememberSharedErrorElement();
+
+    await auth.mockCurrentUserFailure(401);
+    await common.simulateCachedPageRestore();
+
+    await common.expectVisible(auth.loginButton);
+    await common.expectHidden(flightFinder.logoutButton);
+    await auth.expectAuthTokenRemoved();
+    await flightFinder.expectPrivateSearchDataRemoved();
+    await common.expectHidden(navigation.adminLink);
+    await common.expectContainsText(flightFinder.searchAccessStatus, "Guest");
+    await flightFinder.expectOnlySessionExpirationError();
+    await flightFinder.expectSharedErrorElementReused();
+    await flightFinder.expectErrorCardLayoutAtWidth(320);
+    await common.expectEnabled(flightFinder.searchButton);
+    await flightFinder.expectResultsEmpty();
+
+    await flightFinder.dismissSessionMessage();
+    await common.simulateCachedPageRestore();
+    await common.expectHidden(flightFinder.sessionMessage);
   });
 });

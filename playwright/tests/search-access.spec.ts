@@ -163,8 +163,8 @@ test.describe("Search access", () => {
 
     await flightFinder.expectOriginSelected("BUD");
     await flightFinder.expectSelectedDestinationCount(0);
-    await flightFinder.expectClearedDestinationWarningLayoutAtWidth(320);
-    await flightFinder.expectClearedDestinationWarningLayoutAtWidth(360);
+    await flightFinder.expectErrorCardLayoutAtWidth(320);
+    await flightFinder.expectErrorCardLayoutAtWidth(360);
     await common.click(flightFinder.searchValidationError);
     await common.expectNotPresent(flightFinder.searchValidationError);
     await common.expectText(
