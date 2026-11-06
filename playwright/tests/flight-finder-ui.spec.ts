@@ -24,4 +24,8 @@ test.describe("Flight Finder UI", () => {
   test("TC-UI-02 | should display main page elements", async () => {
     await flightFinder.expectMainPageElementsVisible();
   });
+
+  test("TC-UI-03 | should prepare shared shell and separate application views", async () => {
+    await flightFinder.expectAppStructurePrepared();
+  });
 });

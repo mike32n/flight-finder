@@ -25,7 +25,11 @@ type MockSearchResponse = MockSearchResult & {
 export default class MainPage {
   readonly page: Page;
   readonly heading: Locator;
+  readonly appShell: Locator;
+  readonly appHeader: Locator;
   readonly mainPageHeader: Locator;
+  readonly searchView: Locator;
+  readonly adminView: Locator;
   readonly searchAccessStatus: Locator;
   readonly sessionMessage: Locator;
   readonly errorCards: Locator;
@@ -74,7 +78,11 @@ export default class MainPage {
   constructor(page: Page) {
     this.page = page;
     this.heading = page.getByRole("heading", { level: 1 });
+    this.appShell = page.locator("#app-shell");
+    this.appHeader = page.locator("#app-header");
     this.mainPageHeader = page.locator(".main-page-header");
+    this.searchView = page.locator("#search-view");
+    this.adminView = page.locator("#admin-view");
     this.searchAccessStatus = page.locator("#search-access-status");
     this.sessionMessage = page.locator("#search-validation-error");
     this.errorCards = page.locator(".error-card");
@@ -188,6 +196,39 @@ export default class MainPage {
     ]) {
       await expect(element).toBeVisible();
     }
+  }
+
+  async expectAppStructurePrepared(): Promise<void> {
+    await expect(this.appShell.locator(":scope > #app-header")).toHaveCount(1);
+    await expect(this.appShell.locator(":scope > #search-view")).toHaveCount(1);
+    await expect(this.appShell.locator(":scope > #admin-view")).toHaveCount(1);
+
+    await expect(this.appHeader.locator("#admin-link")).toHaveCount(1);
+    await expect(this.appHeader.locator("#search-access-status")).toHaveCount(1);
+    await expect(this.appHeader.locator("#auth-container")).toHaveCount(1);
+    await expect(this.appHeader.locator("#theme-button")).toHaveCount(1);
+
+    await expect(this.searchView.locator("#selected-container")).toHaveCount(1);
+    await expect(this.searchView.locator(".form")).toHaveCount(1);
+    await expect(this.searchView.locator("#results")).toHaveCount(1);
+
+    await expect(this.adminView).toBeHidden();
+    await expect(this.adminView.locator("#admin-content")).toHaveCount(1);
+    await expect(
+      this.adminView.locator("#policy-form-anonymous"),
+    ).toHaveCount(1);
+    await expect(
+      this.adminView.locator("#policy-form-registered"),
+    ).toHaveCount(1);
+    await expect(this.adminView.locator("#policy-form-premium")).toHaveCount(1);
+    await expect(this.adminView.locator("#plan-policies-table")).toHaveCount(1);
+
+    const authModalOutsideApp = await this.appShell.evaluate((shell) => {
+      const modal = document.getElementById("auth-modal");
+      return modal !== null && !shell.contains(modal);
+    });
+
+    expect(authModalOutsideApp).toBe(true);
   }
 
   async expectHeaderLayoutAtWidth(
