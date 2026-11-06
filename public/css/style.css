@@ -142,6 +142,10 @@ body.dark {
   display: none !important;
 }
 
+html {
+  scrollbar-gutter: stable;
+}
+
 body {
   margin: 0;
   background: var(--bg);

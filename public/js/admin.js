@@ -11,6 +11,9 @@
   let isSaving = false;
   let accessVersion = 0;
   let pageActive = true;
+  let policiesLoaded = false;
+  let policyLoadPromise = null;
+  const embedded = document.getElementById("admin-view") !== null;
 
   const weekdays = [
     "Sunday",
@@ -204,6 +207,7 @@
 
   function showError(message) {
     resetAdminView();
+    policiesLoaded = false;
 
     const status = document.getElementById("admin-status");
 
@@ -254,7 +258,7 @@
     }
   }
 
-  async function loadPolicies() {
+  async function loadPolicies({ redirectOnUnauthorized = true } = {}) {
     const version = ++accessVersion;
 
     resetAdminView();
@@ -271,8 +275,8 @@
       token = localStorage.getItem("authToken");
 
       if (!token) {
-        redirectToSearch();
-        return;
+        if (redirectOnUnauthorized) redirectToSearch();
+        return false;
       }
 
       const response = await fetch("/api/admin/plan-policies", {
@@ -285,13 +289,17 @@
       if (!isCurrentAccess(version, token)) return;
 
       if (response.status === 401) {
-        redirectToSearch({ expired: true });
-        return;
+        if (redirectOnUnauthorized) {
+          redirectToSearch({ expired: true });
+        } else {
+          endSession({ expired: true });
+        }
+        return false;
       }
 
       if (response.status === 403) {
         showError("Admin access required.");
-        return;
+        return false;
       }
 
       if (!response.ok) {
@@ -313,12 +321,31 @@
 
       status.hidden = true;
       document.getElementById("admin-content").hidden = false;
+      policiesLoaded = true;
+      return true;
     } catch {
       if (!isCurrentAccess(version, token)) return;
 
       showError(
         "Plan policies could not be loaded. Please reload to try again.",
       );
+      return true;
+    }
+  }
+
+  async function initializeAdminView() {
+    if (policiesLoaded) return true;
+    if (policyLoadPromise) return policyLoadPromise;
+
+    const loadPromise = loadPolicies({ redirectOnUnauthorized: false });
+    policyLoadPromise = loadPromise;
+
+    try {
+      return await loadPromise;
+    } finally {
+      if (policyLoadPromise === loadPromise) {
+        policyLoadPromise = null;
+      }
     }
   }
 
@@ -421,21 +448,33 @@
     }
   });
 
+  if (embedded) {
+    window.initializeAdminView = initializeAdminView;
+  }
+
   window.addEventListener("pageshow", () => {
     pageActive = true;
-    void loadPolicies();
+    if (!embedded) void loadPolicies();
   });
 
   window.addEventListener("pagehide", () => {
     pageActive = false;
     accessVersion++;
+    policiesLoaded = false;
 
     resetAdminView();
   });
 
   window.addEventListener("storage", (event) => {
     if ((event.key === "authToken" || event.key === null) && pageActive) {
-      void loadPolicies();
+      if (embedded) {
+        accessVersion++;
+        policiesLoaded = false;
+        policyLoadPromise = null;
+        resetAdminView();
+      } else {
+        void loadPolicies();
+      }
     }
   });
 })();

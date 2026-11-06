@@ -1047,10 +1047,17 @@ export default class MainPage {
 
   async mockPendingSearch() {
     let requestCount = 0;
+    let failedRequestCount = 0;
     let releaseResponse!: () => void;
 
     const responseGate = new Promise<void>((resolve) => {
       releaseResponse = resolve;
+    });
+
+    this.page.on("requestfailed", (request) => {
+      if (request.url().endsWith("/search-stream")) {
+        failedRequestCount++;
+      }
     });
 
     await this.page.route("**/search-stream", async (route) => {
@@ -1069,6 +1076,10 @@ export default class MainPage {
 
       expectRequestCount: async (expected: number): Promise<void> => {
         await expect.poll(() => requestCount).toBe(expected);
+      },
+
+      expectAborted: async (): Promise<void> => {
+        await expect.poll(() => failedRequestCount).toBe(1);
       },
     };
   }
@@ -1209,6 +1220,21 @@ export default class MainPage {
 
   async expectResultsFooterText(text: string): Promise<void> {
     await expect(this.resultsFooter.filter({ hasText: text })).toBeVisible();
+  }
+
+  async expectInterruptedSearchPersisted(): Promise<void> {
+    await expect(this.resultsFooter).toContainText("Search interrupted.");
+    await expect
+      .poll(async () =>
+        this.page.evaluate(() => {
+          const saved = JSON.parse(
+            sessionStorage.getItem("flightFinder.lastSearch.v1") || "null",
+          );
+          return saved?.status;
+        }),
+      )
+      .toBe("interrupted");
+    await expect(this.results).not.toContainText("Error occurred.");
   }
 
   async expectRestoredSearchVisible(): Promise<void> {

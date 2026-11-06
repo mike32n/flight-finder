@@ -6,6 +6,15 @@
   color: var(--muted);
 }
 
+.admin-view #policies-heading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 56px;
+  margin: 0 0 20px;
+  text-align: center;
+}
+
 #admin-status {
   margin-top: 24px;
   color: var(--muted);

@@ -27,6 +27,7 @@ let searchOwnerUserId = null;
 let searchPageInitialized = false;
 let searchPageActive = true;
 let searchSessionRequestId = 0;
+let viewNavigationRequestId = 0;
 let configuredMaxDestinations = 3;
 let sessionExpirationErrorActive = false;
 
@@ -283,6 +284,127 @@ function pauseSearchPage() {
   setSearchAccessUnavailable("Verifying your session...");
 }
 
+function setAppView(view) {
+  document.getElementById("search-view").hidden = view !== "search";
+  document.getElementById("admin-view").hidden = view !== "admin";
+  const adminLink = document.getElementById("admin-link");
+  const adminIcon = adminLink.querySelector("span");
+  const isAdminView = view === "admin";
+
+  adminLink.href = isAdminView ? "#search" : "#admin";
+  adminLink.setAttribute(
+    "aria-label",
+    isAdminView ? "Back to Flight Finder" : "Administration",
+  );
+  adminLink.title = isAdminView ? "Back to Flight Finder" : "Administration";
+  adminIcon.textContent = isAdminView ? "←" : "⚙";
+
+  document.title =
+    isAdminView
+      ? "Flight Finder | Administration"
+      : "Flight Finder | Perfect Weekend Getaways";
+}
+
+function navigateToSearch({ replace = false } = {}) {
+  if (location.hash !== "#search") {
+    const updateHistory = replace ? history.replaceState : history.pushState;
+    updateHistory.call(history, { view: "search" }, "", "#search");
+  }
+
+  viewNavigationRequestId++;
+  setAppView("search");
+}
+
+function abortActiveSearch() {
+  const controller = searchAbortController;
+  if (!controller) return;
+
+  saveSearchState("interrupted");
+
+  const footer = document.getElementById("results-footer");
+  if (footer) {
+    footer.textContent =
+      `Search interrupted. Run a new search to finish. (failed: ${failedCount})`;
+  }
+
+  controller.abort();
+  searchAbortController = null;
+  isSearching = false;
+  updateSearchControls();
+}
+
+async function activateAdminView({ updateHistory = true } = {}) {
+  const requestId = ++viewNavigationRequestId;
+  const context = getSessionContext();
+  const authState = await loadCurrentUser();
+
+  if (requestId !== viewNavigationRequestId || !searchPageActive) {
+    return;
+  }
+
+  if (
+    authState !== "authenticated" ||
+    authUser?.isAdmin !== true ||
+    !isSessionContextCurrent(context)
+  ) {
+    navigateToSearch({ replace: true });
+    renderAuthUI();
+    return;
+  }
+
+  abortActiveSearch();
+
+  if (updateHistory && location.hash !== "#admin") {
+    history.pushState({ view: "admin" }, "", "#admin");
+  }
+
+  setAppView("admin");
+
+  const initializeAdmin = window.initializeAdminView;
+  if (typeof initializeAdmin !== "function") {
+    throw new Error("Administration view could not be initialized.");
+  }
+
+  const initialized = await initializeAdmin();
+
+  if (requestId !== viewNavigationRequestId || !searchPageActive) return;
+
+  if (!initialized) {
+    navigateToSearch({ replace: true });
+    renderAuthUI();
+  }
+}
+
+function initializeAppViewNavigation() {
+  document.getElementById("admin-link").addEventListener("click", (event) => {
+    if (
+      event.button !== 0 ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+    if (document.getElementById("admin-view").hidden) {
+      void activateAdminView();
+    } else {
+      navigateToSearch();
+    }
+  });
+
+  window.addEventListener("popstate", () => {
+    if (location.hash === "#admin") {
+      void activateAdminView({ updateHistory: false });
+    } else {
+      viewNavigationRequestId++;
+      setAppView("search");
+    }
+  });
+}
+
 async function refreshSearchSession() {
   if (!searchPageInitialized || !searchPageActive) return;
 
@@ -324,8 +446,31 @@ async function refreshSearchSession() {
   document.getElementById("results").hidden = false;
 }
 
-window.addEventListener("auth-changed", async () => {
+async function refreshSessionAndRoute() {
+  const requestId = ++viewNavigationRequestId;
+  const shouldRestoreAdmin = location.hash === "#admin";
+
+  if (shouldRestoreAdmin) {
+    setAppView("search");
+  }
+
   await refreshSearchSession();
+
+  if (requestId !== viewNavigationRequestId || !shouldRestoreAdmin) return;
+
+  if (
+    authUser?.isAdmin === true &&
+    isCurrentUserVerified() &&
+    isSessionContextCurrent(getSessionContext())
+  ) {
+    await activateAdminView({ updateHistory: false });
+  } else {
+    navigateToSearch({ replace: true });
+  }
+}
+
+window.addEventListener("auth-changed", async () => {
+  await refreshSessionAndRoute();
 });
 
 window.addEventListener("pagehide", () => {
@@ -338,7 +483,7 @@ window.addEventListener("pageshow", async (event) => {
   searchPageActive = true;
 
   if (event.persisted) {
-    await refreshSearchSession();
+    await refreshSessionAndRoute();
   }
 });
 
@@ -347,7 +492,7 @@ window.addEventListener("storage", async (event) => {
     event.storageArea === localStorage &&
     (event.key === "authToken" || event.key === null)
   ) {
-    await refreshSearchSession();
+    await refreshSessionAndRoute();
   }
 });
 
@@ -452,7 +597,14 @@ window.onload = async function () {
     endSession({ expired: true });
   }
 
+  initializeAppViewNavigation();
   await refreshSearchSession();
+
+  if (location.hash === "#admin") {
+    await activateAdminView({ updateHistory: false });
+  } else {
+    setAppView("search");
+  }
 };
 
 /* ========================= */
