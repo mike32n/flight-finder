@@ -176,6 +176,14 @@ h1 {
     text-shadow 0.3s ease;
 }
 
+#search-heading,
+#admin-heading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 82px;
+}
+
 .meta-info {
   margin-top: 10px;
   color: var(--muted);
@@ -680,6 +688,14 @@ body.dark #start-date {
   grid-area: insight;
   margin-top: 0;
   font-size: 0.85rem;
+}
+
+.result-card .price-insight.result-unit--wrapped {
+  width: fit-content;
+  max-width: 100%;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .result-row-primary {

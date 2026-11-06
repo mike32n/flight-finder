@@ -5,7 +5,7 @@ export default class NavigationPage {
   readonly adminIcon: Locator;
   readonly searchView: Locator;
   readonly adminView: Locator;
-  readonly selectedContainer: Locator;
+  readonly searchBadgeRow: Locator;
   readonly policiesHeading: Locator;
   readonly themeButton: Locator;
   readonly redundantBackControl: Locator;
@@ -16,7 +16,7 @@ export default class NavigationPage {
     this.adminIcon = this.adminLink.locator("span");
     this.searchView = page.locator("#search-view");
     this.adminView = page.locator("#admin-view");
-    this.selectedContainer = page.locator("#selected-container");
+    this.searchBadgeRow = page.locator("#selected-container");
     this.policiesHeading = page.locator("#policies-heading");
     this.themeButton = page.locator("#theme-button");
     this.redundantBackControl = page.locator("#admin-back-link");
@@ -80,9 +80,9 @@ export default class NavigationPage {
     await this.adminLink.page().setViewportSize({ width, height: 640 });
     await this.expectSearchViewActive();
     const searchBox = await this.adminLink.boundingBox();
-    const badgesBox = await this.selectedContainer.boundingBox();
+    const searchBadgeRowBox = await this.searchBadgeRow.boundingBox();
 
-    if (!searchBox || !badgesBox) {
+    if (!searchBox || !searchBadgeRowBox) {
       throw new Error("Search view layout is not measurable");
     }
 
@@ -124,10 +124,12 @@ export default class NavigationPage {
     expect(adminBox.y).toBe(searchBox.y);
     expect(adminBox.width).toBe(searchBox.width);
     expect(adminBox.height).toBe(searchBox.height);
-    expect(policiesBox.y).toBe(badgesBox.y);
-    expect(policiesBox.height).toBe(badgesBox.height);
+    expect(policiesBox.height).toBe(searchBadgeRowBox.height);
+    expect(policiesBox.y + policiesBox.height / 2).toBe(
+      searchBadgeRowBox.y + searchBadgeRowBox.height / 2,
+    );
     expect(policiesBox.x + policiesBox.width / 2).toBe(
-      badgesBox.x + badgesBox.width / 2,
+      searchBadgeRowBox.x + searchBadgeRowBox.width / 2,
     );
 
     const adminLayout = await this.adminLink.page().evaluate(() => {

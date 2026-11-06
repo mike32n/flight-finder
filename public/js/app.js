@@ -1717,6 +1717,7 @@ function updateResultCardLayout(card, observedWidth) {
   units.forEach((unit) => {
     unit.style.removeProperty("font-size");
     unit.style.removeProperty("letter-spacing");
+    unit.classList.remove("result-unit--wrapped");
     delete unit.dataset.scaled;
     const baseFontSize =
       Number(unit.dataset.baseFontSize) ||
@@ -1768,6 +1769,15 @@ function updateResultCardLayout(card, observedWidth) {
           }
         }
         unit.style.letterSpacing = `${lowSpacing}px`;
+      }
+
+      if (
+        unit.getBoundingClientRect().width > contentWidth &&
+        unit.classList.contains("price-insight")
+      ) {
+        unit.style.removeProperty("font-size");
+        unit.style.removeProperty("letter-spacing");
+        unit.classList.add("result-unit--wrapped");
       }
 
       unit.dataset.scaled = "true";

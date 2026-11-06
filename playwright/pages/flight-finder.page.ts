@@ -392,9 +392,15 @@ export default class MainPage {
           whiteSpace: getComputedStyle(node).whiteSpace,
           scrollWidth: node.scrollWidth,
           clientWidth: node.clientWidth,
+          lineCount: (() => {
+            const range = document.createRange();
+            range.selectNodeContents(node);
+            return range.getClientRects().length;
+          })(),
           textAlign: getComputedStyle(node).textAlign,
           baseFontSize: Number(node.dataset.baseFontSize),
           scaled: node.dataset.scaled === "true",
+          wrapped: node.classList.contains("result-unit--wrapped"),
         };
       };
       const row = (selector: string) => {
@@ -437,9 +443,14 @@ export default class MainPage {
       layout.insight,
     ].filter((entry) => entry !== null);
     units.forEach((entry) => {
-      expect(entry.whiteSpace).toBe("nowrap");
       expect(entry.scrollWidth).toBeLessThanOrEqual(entry.clientWidth + 1);
-      expect(entry.height).toBeLessThanOrEqual(entry.fontSize * 1.8);
+      if (entry.wrapped) {
+        expect(entry.whiteSpace).toBe("normal");
+        expect(entry.lineCount).toBeGreaterThan(1);
+      } else {
+        expect(entry.whiteSpace).toBe("nowrap");
+        expect(entry.height).toBeLessThanOrEqual(entry.fontSize * 1.8);
+      }
       expect(entry.left).toBeGreaterThanOrEqual(layout.innerLeft - 1);
       expect(entry.right).toBeLessThanOrEqual(layout.innerRight + 1);
     });
