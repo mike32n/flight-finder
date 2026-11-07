@@ -1109,6 +1109,152 @@ body.dark #start-date {
     white-space: nowrap;
     transform: none;
   }
+
+  #app-shell {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 80px);
+    min-height: min-content;
+  }
+
+  #app-header {
+    flex: 0 0 auto;
+  }
+
+  .app-view {
+    display: flex;
+    flex: 1 1 0;
+    flex-direction: column;
+    min-height: min-content;
+  }
+
+  #search-view > :not(#results-scroll-shell) {
+    flex: 0 0 auto;
+  }
+
+  .admin-view > :not(#admin-content) {
+    flex: 0 0 auto;
+  }
+
+  #results-scroll-shell,
+  .admin-view #admin-content {
+    flex: 1 1 0;
+    min-height: 120px;
+    min-width: 0;
+  }
+
+  #results,
+  .admin-view #admin-content {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  #results {
+    min-height: 0;
+  }
+
+  .admin-view #admin-content {
+    min-height: 120px;
+  }
+
+  #results-scroll-shell {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 12px;
+    grid-template-rows: minmax(0, 1fr);
+    overflow: hidden;
+  }
+
+  #results {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  #results::-webkit-scrollbar {
+    display: none;
+  }
+
+  #results-scrollbar {
+    position: relative;
+    align-self: start;
+    min-height: 0;
+    border-radius: 6px;
+    background: transparent;
+    cursor: default;
+    touch-action: none;
+    visibility: hidden;
+  }
+
+  #results-scrollbar::after {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 6px;
+    box-sizing: border-box;
+    border-radius: 0 6px 6px 0;
+    border-top: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    content: "";
+    pointer-events: none;
+    visibility: hidden;
+  }
+
+  #results-scrollbar[data-has-results="true"] {
+    visibility: visible;
+  }
+
+  #results-scrollbar[data-has-results="true"]::after {
+    visibility: visible;
+  }
+
+  #results-scrollbar[data-active="true"] {
+    cursor: pointer;
+  }
+
+  #results-scrollbar-thumb {
+    position: absolute;
+    top: 0;
+    left: 3px;
+    width: 6px;
+    border-radius: 6px;
+    background: #000;
+    visibility: hidden;
+  }
+
+  #results-scrollbar[data-active="true"] #results-scrollbar-thumb {
+    visibility: visible;
+  }
+
+  #results-footer:empty {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  #results-scroll-shell {
+    display: block;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  #results {
+    overflow: visible;
+    overflow-y: visible;
+    scrollbar-width: auto;
+  }
+
+  #results::-webkit-scrollbar {
+    display: initial;
+  }
+
+  #results-scrollbar {
+    display: none;
+  }
+
+  #results-footer:empty {
+    display: none;
+  }
 }
 
 /* =====================================================

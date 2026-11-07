@@ -135,13 +135,22 @@
             </div>
           </div>
 
-          <button id="search-button" onclick="search()" disabled>
-            Search
-          </button>
+          <button id="search-button" onclick="search()" disabled>Search</button>
         </div>
 
         <div id="loading" class="hidden">Loading...</div>
-        <div id="results"></div>
+        <div id="results-scroll-shell">
+          <div
+            id="results"
+            role="region"
+            aria-label="Flight search results"
+            tabindex="0"
+          ></div>
+          <div id="results-scrollbar" aria-hidden="true">
+            <div id="results-scrollbar-thumb"></div>
+          </div>
+        </div>
+        <div id="results-footer" class="meta-info"></div>
       </main>
 
       <section
@@ -155,11 +164,7 @@
 
         <p id="admin-status" role="status">Loading plan policies...</p>
 
-        <section
-          id="admin-content"
-          aria-labelledby="policies-heading"
-          hidden
-        >
+        <section id="admin-content" aria-labelledby="policies-heading" hidden>
           <p class="admin-description">
             Update the settings for each plan, then save that plan.
           </p>

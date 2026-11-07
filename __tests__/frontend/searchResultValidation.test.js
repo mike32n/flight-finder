@@ -42,7 +42,13 @@ function savedSearch() {
 
 function createBrowser(saved = savedSearch(), user = null) {
   const storage = new Map([[storageKey, JSON.stringify(saved)]]);
-  const footer = { textContent: "" };
+  const footer = {
+    textContent: "",
+    children: [],
+    appendChild(child) {
+      this.children.push(child);
+    },
+  };
 
   const container = {
     innerHTML: "",
@@ -59,7 +65,14 @@ function createBrowser(saved = savedSearch(), user = null) {
       addEventListener() {},
       getElementById: (id) =>
         id === "results" ? container : id === "results-footer" ? footer : null,
-      createElement: () => ({ appendChild() {} }),
+      createElement: () => ({
+        textContent: "",
+        className: "",
+        children: [],
+        appendChild(child) {
+          this.children.push(child);
+        },
+      }),
     },
     sessionStorage: {
       getItem: (key) => storage.get(key) ?? null,
@@ -105,6 +118,15 @@ describe("search result validation", () => {
     expect(createCard).toHaveBeenCalledTimes(2);
     expect(storage.has(storageKey)).toBe(true);
     expect(footer.textContent).toBe("Finished...(failed: 0)");
+    expect(footer.children).toHaveLength(1);
+    expect(footer.children[0].className).toContain("saved-search-info");
+    expect(footer.children[0].textContent).toMatch(/^Saved search:/);
+    expect(footer.children[0].children[0].className).toBe(
+      "price-change-warning",
+    );
+    expect(footer.children[0].children[0].textContent).toBe(
+      "Prices may have changed.",
+    );
   });
 
   test.each([

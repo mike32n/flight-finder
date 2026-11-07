@@ -45,6 +45,220 @@ const resultCardResizeObserver =
         });
       });
 
+function initializeResultsScrollbar() {
+  const appShell = document.getElementById("app-shell");
+  const searchView = document.getElementById("search-view");
+  const appHeader = document.getElementById("app-header");
+  const results = document.getElementById("results");
+  const footer = document.getElementById("results-footer");
+  const track = document.getElementById("results-scrollbar");
+  const thumb = document.getElementById("results-scrollbar-thumb");
+
+  if (
+    !appShell ||
+    !searchView ||
+    !appHeader ||
+    !results ||
+    !footer ||
+    !track ||
+    !thumb
+  ) {
+    throw new Error("Results scrollbar elements are missing");
+  }
+
+  let dragOffset = null;
+
+  const update = () => {
+    const isDesktop = window.matchMedia("(min-width: 769px)").matches;
+    const isSearchView = !searchView.hidden;
+    const hasResults = results.querySelector(".result-card") !== null;
+
+    if (!isDesktop || !isSearchView) {
+      appShell.style.removeProperty("height");
+      appShell.style.removeProperty("min-height");
+      searchView.style.removeProperty("min-height");
+    } else {
+      const shellRect = appShell.getBoundingClientRect();
+      const resultsRect = results.getBoundingClientRect();
+      const contentHeight = Math.max(
+        results.scrollHeight,
+        ...Array.from(results.children, (child) => {
+          const childRect = child.getBoundingClientRect();
+          return childRect.bottom - resultsRect.top + results.scrollTop;
+        }),
+      );
+      const firstCard = results.querySelector(".result-card");
+      const minimumResultsHeight = Math.max(
+        120,
+        firstCard?.getBoundingClientRect().height ?? 0,
+      );
+      const shellStyle = getComputedStyle(appShell);
+      const fixedContentHeight = resultsRect.top - shellRect.top;
+      const footerRect = footer.getBoundingClientRect();
+      const footerStyle = getComputedStyle(footer);
+      const footerSpace =
+        (footerStyle.display === "none" ? 0 : footerRect.height) +
+        Number.parseFloat(footerStyle.marginTop) +
+        Number.parseFloat(footerStyle.marginBottom);
+      const bottomSpace =
+        Number.parseFloat(shellStyle.paddingBottom) +
+        Number.parseFloat(shellStyle.borderBottomWidth);
+      const minimumShellHeight =
+        fixedContentHeight + minimumResultsHeight + footerSpace + bottomSpace;
+      const contentShellHeight =
+        fixedContentHeight +
+        Math.max(contentHeight, minimumResultsHeight) +
+        footerSpace +
+        bottomSpace;
+      const availableShellHeight =
+        window.innerHeight -
+        Number.parseFloat(shellStyle.marginTop) -
+        Number.parseFloat(shellStyle.marginBottom);
+      const shellHeight = Math.max(
+        minimumShellHeight,
+        Math.min(contentShellHeight, availableShellHeight),
+      );
+      const requestedHeight = `${shellHeight}px`;
+      const requestedMinimumHeight = `${minimumShellHeight}px`;
+
+      searchView.style.minHeight = "0";
+      if (appShell.style.minHeight !== requestedMinimumHeight) {
+        appShell.style.minHeight = requestedMinimumHeight;
+      }
+      if (appShell.style.height !== requestedHeight) {
+        appShell.style.height = requestedHeight;
+      }
+    }
+
+    const hasOverflow =
+      isDesktop &&
+      isSearchView &&
+      hasResults &&
+      results.scrollHeight > results.clientHeight + 1;
+    const resultsRect = results.getBoundingClientRect();
+    const contentHeight = Math.max(
+      results.scrollHeight,
+      ...Array.from(results.children, (child) => {
+        const childRect = child.getBoundingClientRect();
+        return childRect.bottom - resultsRect.top + results.scrollTop;
+      }),
+    );
+
+    track.dataset.hasResults = String(isDesktop && isSearchView && hasResults);
+    track.dataset.active = String(hasOverflow);
+    track.style.height = `${
+      isDesktop && isSearchView && hasResults
+        ? Math.min(results.clientHeight, contentHeight)
+        : 0
+    }px`;
+
+    if (!hasOverflow) {
+      thumb.style.height = "0px";
+      thumb.style.transform = "translateY(0)";
+      return;
+    }
+
+    const trackHeight = track.clientHeight;
+    const thumbHeight = Math.min(
+      trackHeight,
+      (trackHeight * results.clientHeight) / results.scrollHeight,
+    );
+    const thumbTravel = trackHeight - thumbHeight;
+    const scrollTravel = results.scrollHeight - results.clientHeight;
+    const thumbTop = (results.scrollTop / scrollTravel) * thumbTravel;
+
+    thumb.style.height = `${thumbHeight}px`;
+    thumb.style.transform = `translateY(${thumbTop}px)`;
+  };
+
+  const scrollToTrackPosition = (clientY, offset) => {
+    const trackRect = track.getBoundingClientRect();
+    const thumbHeight = thumb.getBoundingClientRect().height;
+    const thumbTravel = track.clientHeight - thumbHeight;
+
+    if (thumbTravel <= 0) return;
+
+    const thumbTop = Math.max(
+      0,
+      Math.min(
+        track.clientHeight - thumbHeight,
+        clientY - trackRect.top - offset,
+      ),
+    );
+    const scrollTravel = results.scrollHeight - results.clientHeight;
+
+    results.scrollTop = (thumbTop / thumbTravel) * scrollTravel;
+  };
+
+  results.addEventListener("scroll", update, { passive: true });
+  track.addEventListener("pointerdown", (event) => {
+    if (track.dataset.active !== "true") return;
+
+    event.preventDefault();
+    const thumbRect = thumb.getBoundingClientRect();
+    dragOffset =
+      event.target === thumb
+        ? event.clientY - thumbRect.top
+        : thumbRect.height / 2;
+    scrollToTrackPosition(event.clientY, dragOffset);
+    track.setPointerCapture(event.pointerId);
+  });
+  track.addEventListener("pointermove", (event) => {
+    if (dragOffset !== null) {
+      scrollToTrackPosition(event.clientY, dragOffset);
+    }
+  });
+  const endDrag = () => {
+    dragOffset = null;
+  };
+  track.addEventListener("pointerup", endDrag);
+  track.addEventListener("pointercancel", endDrag);
+  track.addEventListener("lostpointercapture", endDrag);
+  track.addEventListener(
+    "wheel",
+    (event) => {
+      if (track.dataset.active !== "true") return;
+
+      event.preventDefault();
+      results.scrollTop += event.deltaY;
+    },
+    { passive: false },
+  );
+
+  const resizeObserver = new ResizeObserver(update);
+  resizeObserver.observe(appHeader);
+  resizeObserver.observe(footer);
+  resizeObserver.observe(searchView);
+  resizeObserver.observe(results);
+  resizeObserver.observe(track);
+
+  const mutationObserver = new MutationObserver(update);
+  mutationObserver.observe(results, {
+    childList: true,
+    characterData: true,
+    subtree: true,
+  });
+  const footerObserver = new MutationObserver(update);
+  footerObserver.observe(footer, {
+    childList: true,
+    characterData: true,
+    subtree: true,
+  });
+  const viewObserver = new MutationObserver(update);
+  viewObserver.observe(searchView, {
+    attributes: true,
+    attributeFilter: ["hidden"],
+  });
+
+  window.addEventListener("resize", () => {
+    results.querySelectorAll(".result-card").forEach((card) => {
+      updateResultCardLayout(card);
+    });
+    update();
+  });
+  update();
+}
+
 window.emailVerificationRequired = true;
 
 /* ========================= */
@@ -299,10 +513,9 @@ function setAppView(view) {
   adminLink.title = isAdminView ? "Back to Flight Finder" : "Administration";
   adminIcon.textContent = isAdminView ? "←" : "⚙";
 
-  document.title =
-    isAdminView
-      ? "Flight Finder | Administration"
-      : "Flight Finder | Perfect Weekend Getaways";
+  document.title = isAdminView
+    ? "Flight Finder | Administration"
+    : "Flight Finder | Perfect Weekend Getaways";
 }
 
 function navigateToSearch({ replace = false } = {}) {
@@ -323,8 +536,7 @@ function abortActiveSearch() {
 
   const footer = document.getElementById("results-footer");
   if (footer) {
-    footer.textContent =
-      `Search interrupted. Run a new search to finish. (failed: ${failedCount})`;
+    footer.textContent = `Search interrupted. Run a new search to finish. (failed: ${failedCount})`;
   }
 
   controller.abort();
@@ -497,6 +709,8 @@ window.addEventListener("storage", async (event) => {
 });
 
 window.onload = async function () {
+  initializeResultsScrollbar();
+
   const startDateInput = document.getElementById("start-date");
   const today = getTodayDate();
 
@@ -1080,6 +1294,8 @@ function clearSearchResults() {
     resultCardResizeObserver?.unobserve(card);
   });
   results.innerHTML = "";
+  const footer = document.getElementById("results-footer");
+  if (footer) footer.textContent = "";
 
   try {
     sessionStorage.removeItem(SEARCH_STATE_KEY);
@@ -1162,14 +1378,15 @@ function restoreSearchState() {
     }
 
     const timestamp = document.createElement("div");
-    timestamp.className = "meta-info";
+    timestamp.className = "meta-info saved-search-info";
     timestamp.textContent = `Saved search: ${new Date(saved.parameters.startedAt).toLocaleString()}.`;
 
     const priceNotice = document.createElement("div");
+    priceNotice.className = "price-change-warning";
     priceNotice.textContent = "Prices may have changed.";
     timestamp.appendChild(priceNotice);
 
-    resultsDiv.appendChild(timestamp);
+    getOrCreateFooter(resultsDiv).appendChild(timestamp);
   } catch (error) {
     console.warn("Could not restore search results:", error);
     clearSearchResults();
@@ -1502,6 +1719,7 @@ async function search() {
     saveSearchState("interrupted");
 
     if (currentResults.length === 0) {
+      document.getElementById("results-footer").textContent = "";
       resultsDiv.textContent = "Error occurred.";
     } else {
       document.getElementById("results-footer").textContent =
@@ -1590,10 +1808,9 @@ function insertSortedWithDOM(item, container) {
 
   // insert into DOM
   const cards = container.querySelectorAll(".card");
-  const footer = document.getElementById("results-footer");
 
   if (index >= cards.length) {
-    container.insertBefore(node, footer);
+    container.appendChild(node);
   } else {
     container.insertBefore(node, cards[index]);
   }
@@ -1639,13 +1856,11 @@ function createCard(r) {
   const title = document.createElement("strong");
   const origin = document.createElement("span");
   origin.className = "route-city";
-  origin.textContent =
-    `${getCity(originCode, r.origin?.city)}\u00a0(${originCode})`;
+  origin.textContent = `${getCity(originCode, r.origin?.city)}\u00a0(${originCode})`;
 
   const destination = document.createElement("span");
   destination.className = "route-city";
-  destination.textContent =
-    `${getCity(r.destination.code, r.destination.city)}\u00a0(${r.destination.code})`;
+  destination.textContent = `${getCity(r.destination.code, r.destination.city)}\u00a0(${r.destination.code})`;
 
   title.append(origin, " → ", destination);
 
@@ -1804,12 +2019,29 @@ function updateResultCardLayout(card, observedWidth) {
 
 function getOrCreateFooter(container) {
   let el = document.getElementById("results-footer");
+  const searchView = document.getElementById("search-view");
+  const footerContainer =
+    searchView && typeof searchView.appendChild === "function"
+      ? searchView
+      : container;
 
   if (!el) {
     el = document.createElement("div");
     el.id = "results-footer";
     el.className = "meta-info";
-    container.appendChild(el);
+  }
+
+  if (
+    el.parentElement !== footerContainer &&
+    typeof footerContainer.appendChild === "function"
+  ) {
+    footerContainer.appendChild(el);
+  }
+
+  if (el.textContent === "") {
+    el.hidden = true;
+  } else {
+    el.hidden = false;
   }
 
   return el;
@@ -1817,6 +2049,7 @@ function getOrCreateFooter(container) {
 
 function updateFooter(container, isDone = false) {
   const el = getOrCreateFooter(container);
+  el.hidden = false;
 
   if (isDone) {
     el.textContent = `Finished...(failed: ${failedCount})`;
@@ -1827,6 +2060,7 @@ function updateFooter(container, isDone = false) {
 
 function initFooter(container) {
   const el = getOrCreateFooter(container);
+  el.hidden = false;
   el.textContent = "Loading...";
 }
 
@@ -1841,8 +2075,7 @@ function showNoResults(container) {
     </span>
   `;
 
-  const footer = document.getElementById("results-footer");
-  container.insertBefore(noResults, footer);
+  container.appendChild(noResults);
 }
 
 function showSearchUnavailable(container) {
@@ -1857,8 +2090,7 @@ function showSearchUnavailable(container) {
     </span>
   `;
 
-  const footer = document.getElementById("results-footer");
-  container.insertBefore(message, footer);
+  container.appendChild(message);
 }
 
 function openFlight(r) {

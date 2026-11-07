@@ -5,6 +5,12 @@ import {
   SearchPolicy,
 } from "../data/search-access";
 
+declare global {
+  interface Window {
+    refreshSearchAccess: () => Promise<void>;
+  }
+}
+
 type MockSearchResult = {
   city?: string;
   originCity?: string;
@@ -204,7 +210,9 @@ export default class MainPage {
     await expect(this.appShell.locator(":scope > #admin-view")).toHaveCount(1);
 
     await expect(this.appHeader.locator("#admin-link")).toHaveCount(1);
-    await expect(this.appHeader.locator("#search-access-status")).toHaveCount(1);
+    await expect(this.appHeader.locator("#search-access-status")).toHaveCount(
+      1,
+    );
     await expect(this.appHeader.locator("#auth-container")).toHaveCount(1);
     await expect(this.appHeader.locator("#theme-button")).toHaveCount(1);
 
@@ -214,12 +222,12 @@ export default class MainPage {
 
     await expect(this.adminView).toBeHidden();
     await expect(this.adminView.locator("#admin-content")).toHaveCount(1);
-    await expect(
-      this.adminView.locator("#policy-form-anonymous"),
-    ).toHaveCount(1);
-    await expect(
-      this.adminView.locator("#policy-form-registered"),
-    ).toHaveCount(1);
+    await expect(this.adminView.locator("#policy-form-anonymous")).toHaveCount(
+      1,
+    );
+    await expect(this.adminView.locator("#policy-form-registered")).toHaveCount(
+      1,
+    );
     await expect(this.adminView.locator("#policy-form-premium")).toHaveCount(1);
     await expect(this.adminView.locator("#plan-policies-table")).toHaveCount(1);
 
@@ -654,9 +662,7 @@ export default class MainPage {
     await expect(this.oldDestinationLimitWarning).toHaveCount(0);
   }
 
-  async expectErrorCardLayoutAtWidth(
-    width: number,
-  ): Promise<void> {
+  async expectErrorCardLayoutAtWidth(width: number): Promise<void> {
     await this.page.setViewportSize({ width, height: 900 });
 
     const layout = await this.searchValidationError.evaluate((warning) => {
@@ -1249,7 +1255,11 @@ export default class MainPage {
   }
 
   async expectRestoredSearchVisible(): Promise<void> {
-    await expect(this.results.getByText(/^Saved search:/)).toBeVisible();
+    await expect(this.resultsFooter.getByText(/^Saved search:/)).toBeVisible();
+    await expect(
+      this.resultsFooter.getByText("Prices may have changed."),
+    ).toBeVisible();
+    await expect(this.results).not.toContainText(/^Saved search:/);
   }
 
   async expectResultsEmpty(): Promise<void> {
@@ -1357,8 +1367,7 @@ export default class MainPage {
 
   async refreshSearchAccess(): Promise<void> {
     await this.page.evaluate(() => {
-      void (window as Window & { refreshSearchAccess: () => Promise<void> })
-        .refreshSearchAccess();
+      void window.refreshSearchAccess();
     });
   }
 
