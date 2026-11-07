@@ -78,4 +78,16 @@ test.describe("Responsive scrolling", () => {
       false,
     );
   });
+
+  test("TC-SCROLL-02 | should not grow the empty Search shell with viewport height", async ({
+    page,
+  }) => {
+    const common = new CommonPage(page);
+    const auth = new AuthPage(page);
+    const navigation = new NavigationPage(page);
+
+    await common.openPage(Env.test);
+    await common.expectVisible(auth.loginButton);
+    await navigation.expectEmptyResultsShellDoesNotGrowWithViewport();
+  });
 });

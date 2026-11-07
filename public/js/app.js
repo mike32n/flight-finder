@@ -80,11 +80,19 @@ function initializeResultsScrollbar() {
     } else {
       const shellRect = appShell.getBoundingClientRect();
       const resultsRect = results.getBoundingClientRect();
-      const contentHeight = Math.max(
-        results.scrollHeight,
+      const actualContentHeight = Math.max(
+        0,
         ...Array.from(results.children, (child) => {
           const childRect = child.getBoundingClientRect();
-          return childRect.bottom - resultsRect.top + results.scrollTop;
+          const marginBottom = Number.parseFloat(
+            getComputedStyle(child).marginBottom,
+          );
+          return (
+            childRect.bottom -
+            resultsRect.top +
+            results.scrollTop +
+            marginBottom
+          );
         }),
       );
       const firstCard = results.querySelector(".result-card");
@@ -107,7 +115,7 @@ function initializeResultsScrollbar() {
         fixedContentHeight + minimumResultsHeight + footerSpace + bottomSpace;
       const contentShellHeight =
         fixedContentHeight +
-        Math.max(contentHeight, minimumResultsHeight) +
+        Math.max(actualContentHeight, minimumResultsHeight) +
         footerSpace +
         bottomSpace;
       const availableShellHeight =
@@ -136,7 +144,7 @@ function initializeResultsScrollbar() {
       hasResults &&
       results.scrollHeight > results.clientHeight + 1;
     const resultsRect = results.getBoundingClientRect();
-    const contentHeight = Math.max(
+    const scrollContentHeight = Math.max(
       results.scrollHeight,
       ...Array.from(results.children, (child) => {
         const childRect = child.getBoundingClientRect();
@@ -148,7 +156,7 @@ function initializeResultsScrollbar() {
     track.dataset.active = String(hasOverflow);
     track.style.height = `${
       isDesktop && isSearchView && hasResults
-        ? Math.min(results.clientHeight, contentHeight)
+        ? Math.min(results.clientHeight, scrollContentHeight)
         : 0
     }px`;
 

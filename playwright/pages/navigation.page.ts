@@ -784,6 +784,44 @@ export default class NavigationPage {
     );
   }
 
+  async expectEmptyResultsShellDoesNotGrowWithViewport(): Promise<void> {
+    const page = this.results.page();
+    const shell = page.locator("#app-shell");
+
+    await page.setViewportSize({ width: 1280, height: 700 });
+    await this.expectSearchViewActive();
+    await expect(this.results.locator(".result-card")).toHaveCount(0);
+    await expect(this.resultsFooter).toBeEmpty();
+    await expect(this.resultsFooter).toBeHidden();
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+        ),
+    );
+
+    const initialShellHeight = await shell.evaluate(
+      (element) => element.getBoundingClientRect().height,
+    );
+
+    await page.setViewportSize({ width: 1280, height: 1000 });
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+        ),
+    );
+
+    await expect(this.results.locator(".result-card")).toHaveCount(0);
+    await expect(this.resultsFooter).toBeEmpty();
+    await expect(this.resultsFooter).toBeHidden();
+
+    const increasedShellHeight = await shell.evaluate(
+      (element) => element.getBoundingClientRect().height,
+    );
+    expect(increasedShellHeight).toBeLessThanOrEqual(initialShellHeight + 1);
+  }
+
   async expectResponsiveScrollingAtHeight(
     height: number,
     adminContent: Locator,
