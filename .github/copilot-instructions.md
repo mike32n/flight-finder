@@ -59,6 +59,7 @@ This repository is a Node.js/Express app that serves a browser UI from `public/`
 - Specs should use page object methods for interactions and assertions.
 - Prefer reusable page object methods over feature-specific duplicated methods.
 - Passing a locator to a reusable page object method is acceptable when it avoids unnecessary duplication.
+- Keep test cases in ascending TC-ID order within each `test.describe` block (e.g. TC-01 before TC-02).
 - Avoid arbitrary `waitForTimeout()` calls.
 - Prefer Playwright auto-waiting and reliable user-facing locators.
 - Preserve existing test isolation and setup conventions.
