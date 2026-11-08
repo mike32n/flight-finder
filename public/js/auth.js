@@ -143,18 +143,27 @@ function renderAuthUI() {
   if (authUser) {
     container.innerHTML = `
       <div class="auth-user-card">
-        <div class="auth-user-icon">🔐</div>
+        <div class="auth-user-icon" aria-hidden="true">🔐</div>
 
-        <div class="auth-user-info">
-          <div class="auth-user-label">Signed in as</div>
-          <div id="auth-user-email" class="auth-user-email"></div>
+        <div
+          class="auth-user-info"
+          role="group"
+          aria-label="Signed in"
+          aria-describedby="auth-user-email"
+        >
+          <div class="auth-user-label" aria-hidden="true">Signed in</div>
+          <span id="auth-user-email" class="auth-user-email" hidden></span>
         </div>
 
         <button id="logout-btn">Logout</button>
       </div>
     `;
 
-    document.getElementById("auth-user-email").textContent = authUser.email;
+    const info = container.querySelector(".auth-user-info");
+    const email = document.getElementById("auth-user-email");
+    email.textContent = authUser.email;
+    email.title = authUser.email;
+    info.title = authUser.email;
 
     document.getElementById("logout-btn").addEventListener("click", logout);
   } else {

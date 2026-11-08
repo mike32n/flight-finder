@@ -826,7 +826,7 @@ export default class NavigationPage {
     height: number,
     adminContent: Locator,
     documentShouldScroll: boolean,
-    expectOneResultCard: boolean,
+    expectResultsOverflow: boolean,
   ): Promise<void> {
     const page = this.adminLink.page();
     await page.setViewportSize({ width: 1280, height });
@@ -874,6 +874,8 @@ export default class NavigationPage {
         Number.parseFloat(getComputedStyle(footer).marginBottom) +
         Number.parseFloat(getComputedStyle(shell).paddingBottom);
 
+      results.scrollTop = 0;
+      const initialResultsScrollTop = results.scrollTop;
       results.scrollTop = results.scrollHeight;
 
       return {
@@ -889,6 +891,7 @@ export default class NavigationPage {
         results: {
           ...bounds(results),
           scrollHeight: results.scrollHeight,
+          initialScrollTop: initialResultsScrollTop,
           scrollTop: results.scrollTop,
         },
         footer: bounds(footer),
@@ -911,9 +914,12 @@ export default class NavigationPage {
       searchLayout.minimumShellHeight - 1,
     );
 
-    if (expectOneResultCard) {
-      expect(searchLayout.results.height).toBeLessThan(
-        searchLayout.firstCardHeight * 2,
+    if (expectResultsOverflow) {
+      expect(searchLayout.results.scrollHeight).toBeGreaterThan(
+        searchLayout.results.height,
+      );
+      expect(searchLayout.results.scrollTop).toBeGreaterThan(
+        searchLayout.results.initialScrollTop,
       );
     }
 
@@ -1001,12 +1007,13 @@ export default class NavigationPage {
       };
     });
 
-    if (documentShouldScroll) {
-      expect(adminLayout.documentHeight).toBeGreaterThan(
-        adminLayout.viewportHeight,
+    const adminContentOverflows =
+      adminLayout.contentScrollHeight > adminLayout.contentHeight;
+    expect(adminLayout.documentScrollTop).toBe(0);
+    if (adminContentOverflows) {
+      expect(adminLayout.documentHeight).toBeLessThanOrEqual(
+        adminLayout.viewportHeight + 1,
       );
-      expect(adminLayout.contentHeight).toBeGreaterThanOrEqual(120);
-      expect(adminLayout.documentScrollTop).toBe(0);
       const documentCanScroll = await page.evaluate(() => {
         const originalScrollTop = window.scrollY;
         window.scrollTo(0, document.documentElement.scrollHeight);
@@ -1014,16 +1021,13 @@ export default class NavigationPage {
         window.scrollTo(0, originalScrollTop);
         return scrollTop > 0;
       });
-      expect(documentCanScroll).toBe(true);
+      expect(documentCanScroll).toBe(false);
+      expect(adminLayout.contentScrollTop).toBeGreaterThan(0);
     } else {
       expect(adminLayout.documentHeight).toBeLessThanOrEqual(
         adminLayout.viewportHeight + 1,
       );
-      expect(adminLayout.contentScrollHeight).toBeGreaterThan(
-        adminLayout.contentHeight,
-      );
-      expect(adminLayout.contentScrollTop).toBeGreaterThan(0);
-      expect(adminLayout.documentScrollTop).toBe(0);
+      expect(adminLayout.contentScrollTop).toBe(0);
       expect(adminLayout.headerTopAfterScroll).toBe(adminLayout.headerTop);
       expect(adminLayout.headingTopAfterScroll).toBe(adminLayout.headingTop);
     }

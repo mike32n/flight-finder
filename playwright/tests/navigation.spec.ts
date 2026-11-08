@@ -4,7 +4,9 @@ import Env from "../utils/env";
 import CommonPage from "../pages/common.page";
 import AdminPage from "../pages/admin.page";
 import AuthPage from "../pages/auth.page";
-import FlightFinderPage from "../pages/flight-finder.page";
+import FlightFinderPage, {
+  type HeaderControlLayout,
+} from "../pages/flight-finder.page";
 import NavigationPage from "../pages/navigation.page";
 
 import {
@@ -49,13 +51,21 @@ test.describe("Admin navigation", () => {
   for (const account of ["guest", "registered"] as const) {
     test(`TC-NAV-01-${account.toUpperCase()} | should hide admin navigation for a ${account} user`, async () => {
       if (account === "registered") {
-        const user = await createVerifiedTestUser();
+        const user = await createVerifiedTestUser(
+          "e2e-responsive-header-very-long-account-email",
+        );
 
         await auth.login(user.email, user.password);
         await common.expectVisible(flightFinder.logoutButton);
       }
 
       await common.expectHidden(navigation.adminLink);
+
+      for (const width of [
+        320, 360, 390, 440, 768, 769, 800, 900, 1024, 1280,
+      ]) {
+        await flightFinder.expectHeaderLayoutAtWidth(width);
+      }
     });
   }
 
@@ -63,9 +73,19 @@ test.describe("Admin navigation", () => {
     await loginAsAdmin();
     await mockAdminPolicies();
 
-    for (const width of [320, 360, 390, 1280]) {
-      await navigation.expectSharedCornerIconAtWidth(width);
+    for (const width of [320, 360, 390, 440, 768, 769, 800, 900, 1024, 1280]) {
+      await flightFinder.expectHeaderLayoutAtWidth(
+        width,
+        "Registered plan · Up to 3 destinations · Smart Flex: on",
+      );
     }
+
+    await common.expectLightThemeIsActive();
+    await common.click(flightFinder.toggleThemeButton);
+    await common.expectDarkThemeIsActive();
+    await common.click(flightFinder.toggleThemeButton);
+    await common.expectLightThemeIsActive();
+
     await navigation.openAdminView();
     await common.expectURL(/#admin$/);
 
@@ -75,7 +95,36 @@ test.describe("Admin navigation", () => {
     await admin.expectRequestCount(1);
   });
 
-  test("TC-NAV-03 | should support browser Back and Forward without duplicate policy loads", async () => {
+  test("TC-NAV-03 | should keep authentication and theme positions stable across auth states", async () => {
+    const widths = [320, 360, 390, 440, 768, 769, 800, 900, 1024, 1280];
+    const guestLayouts: HeaderControlLayout[] = [];
+
+    for (const width of widths) {
+      guestLayouts.push(await flightFinder.expectHeaderLayoutAtWidth(width));
+    }
+
+    const registeredUser = await createVerifiedTestUser(
+      "e2e-responsive-header-layout",
+    );
+    await auth.login(registeredUser.email, registeredUser.password);
+
+    for (let index = 0; index < widths.length; index++) {
+      await flightFinder.expectHeaderLayoutAtWidth(widths[index]);
+      await flightFinder.expectHeaderControlsMatch(guestLayouts[index]);
+    }
+
+    await common.click(flightFinder.logoutButton);
+    const adminUser = await createVerifiedAdminTestUser();
+    await auth.login(adminUser.email, adminUser.password);
+    await common.expectVisible(navigation.adminLink);
+
+    for (let index = 0; index < widths.length; index++) {
+      await flightFinder.expectHeaderLayoutAtWidth(widths[index]);
+      await flightFinder.expectHeaderControlsMatch(guestLayouts[index]);
+    }
+  });
+
+  test("TC-NAV-04 | should support browser Back and Forward without duplicate policy loads", async () => {
     await loginAsAdmin();
     await mockAdminPolicies();
 
@@ -91,7 +140,7 @@ test.describe("Admin navigation", () => {
     await admin.expectRequestCount(1);
   });
 
-  test("TC-NAV-04 | should load and refresh a direct Administration URL", async () => {
+  test("TC-NAV-05 | should load and refresh a direct Administration URL", async () => {
     await loginAsAdmin();
     await mockAdminPolicies();
 
@@ -105,7 +154,7 @@ test.describe("Admin navigation", () => {
     await admin.expectRequestCount(2);
   });
 
-  test("TC-NAV-05 | should reject direct Administration navigation for a non-admin", async () => {
+  test("TC-NAV-06 | should reject direct Administration navigation for a non-admin", async () => {
     const user = await createVerifiedTestUser();
 
     await auth.login(user.email, user.password);
@@ -117,7 +166,7 @@ test.describe("Admin navigation", () => {
     await common.expectHidden(admin.content);
   });
 
-  test("TC-NAV-06 | should reject direct Administration navigation after session expiration", async () => {
+  test("TC-NAV-07 | should reject direct Administration navigation after session expiration", async () => {
     await loginAsAdmin();
     await auth.mockCurrentUserFailure(401);
 
@@ -130,7 +179,7 @@ test.describe("Admin navigation", () => {
     await flightFinder.expectOnlySessionExpirationError();
   });
 
-  test("TC-NAV-07 | should recheck admin authorization when history returns to Administration", async () => {
+  test("TC-NAV-08 | should recheck admin authorization when history returns to Administration", async () => {
     await loginAsAdmin();
     await mockAdminPolicies();
 
@@ -145,7 +194,7 @@ test.describe("Admin navigation", () => {
     await common.expectHidden(admin.content);
   });
 
-  test("TC-NAV-08 | should preserve unsaved Admin edits without reloading policies", async () => {
+  test("TC-NAV-09 | should preserve unsaved Admin edits without reloading policies", async () => {
     await loginAsAdmin();
     await mockAdminPolicies();
     await navigation.openAdminView();
@@ -168,7 +217,7 @@ test.describe("Admin navigation", () => {
     await admin.expectRequestCount(1);
   });
 
-  test("TC-NAV-09 | should abort an active search and preserve its interrupted state", async () => {
+  test("TC-NAV-10 | should abort an active search and preserve its interrupted state", async () => {
     await loginAsAdmin();
     await mockAdminPolicies();
 
@@ -188,7 +237,7 @@ test.describe("Admin navigation", () => {
     await flightFinder.expectInterruptedSearchPersisted();
   });
 
-  test("TC-NAV-10 | should hide admin navigation after logout and reject history restoration", async () => {
+  test("TC-NAV-11 | should hide admin navigation after logout and reject history restoration", async () => {
     await loginAsAdmin();
     await mockAdminPolicies();
 

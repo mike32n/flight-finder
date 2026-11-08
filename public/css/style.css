@@ -241,31 +241,148 @@ h1 {
   outline-offset: 2px;
 }
 
-.main-page-header {
+#app-header {
+  --header-corner-size: 32px;
+  --header-control-gap: 12px;
+  --auth-item-gap: 8px;
+  --auth-card-inline-padding: 8px;
+  --auth-slot-width: 177.203125px; /* Natural icon, label, Logout, gap, and padding width. */
+  --auth-control-height: var(--header-corner-size);
+}
+
+#app-header .main-page-header {
   display: grid;
-  grid-template-columns: 40px minmax(0, 1fr) 40px;
+  grid-template-columns: minmax(var(--header-corner-size), 1fr) var(
+      --auth-slot-width
+    ) minmax(var(--header-corner-size), 1fr);
+  grid-template-areas:
+    "admin auth theme"
+    "status status status";
   align-items: start;
-  gap: 12px;
+  column-gap: 0;
+  row-gap: var(--header-control-gap);
 }
 
-.main-page-header .corner-icon {
-  flex: 0 0 40px;
+#app-header .corner-icon {
+  position: static;
+  inset: auto;
+  flex: 0 0 var(--header-corner-size);
+  width: var(--header-corner-size);
+  height: var(--header-corner-size);
+  align-self: start;
 }
 
-.main-page-header #admin-link {
-  grid-column: 1;
+#app-header .main-page-header #admin-link {
+  grid-area: admin;
+  justify-self: start;
 }
 
-.main-page-header #search-access-status {
-  grid-column: 2;
+#app-header .main-page-header #search-access-status {
+  grid-area: status;
   min-width: 0;
+  /* Reserve the longest current plan label's two lines across auth states. */
+  min-height: 2lh;
   margin: 0;
   text-align: center;
   overflow-wrap: anywhere;
 }
 
-.main-page-header #theme-button {
-  grid-column: 3;
+#app-header .header-controls {
+  display: contents;
+}
+
+#app-header #auth-container {
+  grid-area: auth;
+  justify-self: center;
+  align-self: start;
+  width: var(--auth-slot-width);
+  min-width: var(--auth-slot-width);
+  max-width: var(--auth-slot-width);
+  height: var(--auth-control-height);
+  margin: 0;
+}
+
+#app-header #auth-container .auth-bar,
+#app-header #auth-container .auth-user-card {
+  height: auto;
+  margin: 0;
+}
+
+#app-header #auth-container .auth-bar {
+  display: grid;
+  grid-template-columns: 0.68065fr 1fr;
+  gap: var(--auth-item-gap);
+  width: 100%;
+  max-width: 100%;
+  height: var(--auth-control-height);
+  min-height: var(--auth-control-height);
+  align-content: center;
+  padding: 0 var(--auth-card-inline-padding);
+}
+
+#app-header #auth-container #login-btn {
+  flex: 0 0 auto;
+  width: 100%;
+  height: var(--auth-control-height);
+  min-height: var(--auth-control-height);
+  padding: 0 4px;
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+#app-header #auth-container #register-btn {
+  flex: 0 0 auto;
+  width: 100%;
+  height: var(--auth-control-height);
+  min-height: var(--auth-control-height);
+  padding: 0 4px;
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+#app-header #auth-container #logout-btn {
+  flex: 0 0 auto;
+  width: auto;
+  height: var(--auth-control-height);
+  min-height: var(--auth-control-height);
+  padding: 0 10px;
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+#app-header #auth-container .auth-user-card {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: var(--auth-item-gap);
+  width: 100%;
+  min-width: var(--auth-slot-width);
+  max-width: 100%;
+  height: var(--auth-control-height);
+  padding: 0 var(--auth-card-inline-padding);
+  border: 0;
+}
+
+#app-header #auth-container .auth-user-info {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  width: max-content;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+#app-header #auth-container .auth-user-icon {
+  flex: 0 0 auto;
+}
+
+#app-header #auth-container .auth-user-label {
+  white-space: nowrap;
+}
+
+#app-header .main-page-header #theme-button {
+  grid-area: theme;
+  justify-self: end;
 }
 
 /* =====================================================
@@ -997,6 +1114,32 @@ body.dark #start-date {
    ===================================================== */
 
 @media (min-width: 769px) {
+  #app-header .main-page-header {
+    grid-template-columns:
+      var(--header-corner-size) minmax(0, 1fr) var(--auth-slot-width)
+      var(--header-corner-size);
+    grid-template-areas: "admin status auth theme";
+    align-items: center;
+    column-gap: var(--header-control-gap);
+    row-gap: 0;
+  }
+
+  #app-header .corner-icon {
+    align-self: center;
+  }
+
+  #app-header .main-page-header #search-access-status {
+    min-height: 0;
+    align-self: center;
+    white-space: nowrap;
+    font-size: 0.9rem;
+  }
+
+  #app-header #auth-container {
+    justify-self: end;
+    align-self: center;
+  }
+
   /* Main search form */
 
   .form {

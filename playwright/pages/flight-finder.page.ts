@@ -28,12 +28,25 @@ type MockSearchResponse = MockSearchResult & {
   results?: MockSearchResult[];
 };
 
+export type HeaderControlLayout = {
+  authCenter: number;
+  authLeft: number;
+  authHeight: number;
+  authWidth: number;
+  headerHeight: number;
+  loginHeight: number;
+  registerHeight: number;
+  themeLeft: number;
+  themeTop: number;
+  themeRight: number;
+};
+
 export default class MainPage {
   readonly page: Page;
+  private documentLoadCount = 0;
   readonly heading: Locator;
   readonly appShell: Locator;
   readonly appHeader: Locator;
-  readonly mainPageHeader: Locator;
   readonly searchView: Locator;
   readonly adminView: Locator;
   readonly searchAccessStatus: Locator;
@@ -83,10 +96,12 @@ export default class MainPage {
 
   constructor(page: Page) {
     this.page = page;
+    page.on("load", () => {
+      this.documentLoadCount++;
+    });
     this.heading = page.getByRole("heading", { level: 1 });
     this.appShell = page.locator("#app-shell");
     this.appHeader = page.locator("#app-header");
-    this.mainPageHeader = page.locator(".main-page-header");
     this.searchView = page.locator("#search-view");
     this.adminView = page.locator("#admin-view");
     this.searchAccessStatus = page.locator("#search-access-status");
@@ -242,7 +257,8 @@ export default class MainPage {
   async expectHeaderLayoutAtWidth(
     width: number,
     statusText?: string,
-  ): Promise<void> {
+  ): Promise<HeaderControlLayout> {
+    const loadCount = this.documentLoadCount;
     await this.page.setViewportSize({ width, height: 900 });
 
     if (statusText !== undefined) {
@@ -251,39 +267,427 @@ export default class MainPage {
       }, statusText);
     }
 
-    const layout = await this.mainPageHeader.evaluate((header) => {
+    await expect(this.authContainer.locator(":scope > *")).toBeVisible();
+
+    const layout = await this.appHeader.evaluate((header) => {
       const admin = header.querySelector("#admin-link");
       const status = header.querySelector("#search-access-status");
       const theme = header.querySelector("#theme-button");
+      const controls = header.querySelector(".header-controls");
+      const auth = header.querySelector("#auth-container");
+      const authContent = auth?.firstElementChild;
+      const mainHeader = header.querySelector(".main-page-header");
+      const container = header.closest(".container");
+      const login = header.querySelector("#login-btn");
+      const register = header.querySelector("#register-btn");
+      const logout = header.querySelector("#logout-btn");
+      const email = header.querySelector("#auth-user-email");
 
-      if (!admin || !status || !theme) {
+      if (
+        !admin ||
+        !status ||
+        !theme ||
+        !controls ||
+        !auth ||
+        !mainHeader ||
+        !container
+      ) {
         throw new Error("Main page header elements are missing");
       }
 
       const headerBox = header.getBoundingClientRect();
+      const containerBox = container.getBoundingClientRect();
       const adminBox = admin.getBoundingClientRect();
+      const adminStyle = getComputedStyle(admin);
       const statusBox = status.getBoundingClientRect();
       const themeBox = theme.getBoundingClientRect();
+      const themeStyle = getComputedStyle(theme);
+      const authBox = auth.getBoundingClientRect();
+      const authContentBox = authContent?.getBoundingClientRect();
+      const loginBox = login?.getBoundingClientRect();
+      const registerBox = register?.getBoundingClientRect();
+      const logoutBox = logout?.getBoundingClientRect();
+      const authCard = auth.querySelector(".auth-user-card");
+      const info = auth.querySelector(".auth-user-info");
+      const icon = auth.querySelector(".auth-user-icon");
+      const infoBox = info?.getBoundingClientRect();
+      const iconBox = icon?.getBoundingClientRect();
+      const authCardBox = authCard?.getBoundingClientRect();
+      const label = auth.querySelector(".auth-user-label");
+      const authBar = auth.querySelector(".auth-bar");
+      const emailStyle = email ? getComputedStyle(email) : null;
+      const authCardStyle = authCard ? getComputedStyle(authCard) : null;
+      const authBarStyle = authBar ? getComputedStyle(authBar) : null;
+      const statusStyle = getComputedStyle(status);
+      const mainHeaderStyle = getComputedStyle(mainHeader);
+      const containerStyle = getComputedStyle(container);
+      const textRange = document.createRange();
+      textRange.selectNodeContents(status);
+      const measureText = (element: Element | null) => {
+        if (!(element instanceof HTMLElement)) return 0;
+        const context = document.createElement("canvas").getContext("2d");
+        if (!context) throw new Error("Could not measure auth button text");
+        context.font = getComputedStyle(element).font;
+        return context.measureText(element.textContent ?? "").width;
+      };
+      const overlaps = (first: DOMRect, second: DOMRect) =>
+        first.width > 0 &&
+        first.height > 0 &&
+        second.width > 0 &&
+        second.height > 0 &&
+        first.left < second.right &&
+        first.right > second.left &&
+        first.top < second.bottom &&
+        first.bottom > second.top;
 
       return {
-        headerCenter: headerBox.left + headerBox.width / 2,
-        statusCenter: statusBox.left + statusBox.width / 2,
+        headerScrollWidth: header.scrollWidth,
+        headerClientWidth: header.clientWidth,
+        headerLeft: headerBox.left,
+        headerRight: headerBox.right,
+        headerHeight: headerBox.height,
+        containerContentWidth:
+          container.clientWidth -
+          parseFloat(containerStyle.paddingLeft) -
+          parseFloat(containerStyle.paddingRight),
+        containerCenter: containerBox.left + containerBox.width / 2,
         adminRight: adminBox.right,
+        adminLeft: adminBox.left,
+        adminTop: adminBox.top,
+        adminTopOffset: adminBox.top - containerBox.top,
+        adminLeftOffset: adminBox.left - containerBox.left,
+        adminWidth: parseFloat(adminStyle.width),
+        adminHeight: adminBox.height,
+        adminPosition: adminStyle.position,
+        adminVisible: getComputedStyle(admin).display !== "none",
+        headerColumnGap: parseFloat(mainHeaderStyle.columnGap),
         statusLeft: statusBox.left,
         statusRight: statusBox.right,
+        statusTop: statusBox.top,
+        statusCenter: statusBox.top + statusBox.height / 2,
+        statusTextAlign: statusStyle.textAlign,
+        statusWhiteSpace: statusStyle.whiteSpace,
+        statusFontSize: parseFloat(statusStyle.fontSize),
+        statusOverflowWrap: statusStyle.overflowWrap,
+        statusScrollWidth: status.scrollWidth,
+        statusClientWidth: status.clientWidth,
+        statusContentWidth:
+          statusBox.width -
+          parseFloat(statusStyle.paddingLeft) -
+          parseFloat(statusStyle.paddingRight),
+        statusTextWidth: measureText(status),
+        statusLineCount: textRange.getClientRects().length,
+        statusPosition: statusStyle.position,
         themeLeft: themeBox.left,
+        themeTop: themeBox.top,
+        themeTopOffset: themeBox.top - containerBox.top,
+        themeRight: themeBox.right,
+        themeRightOffset: containerBox.right - themeBox.right,
+        themeWidth: themeBox.width,
+        themeHeight: themeBox.height,
+        themePosition: themeStyle.position,
+        authOverlapsAdmin: overlaps(authBox, adminBox),
+        authOverlapsTheme: overlaps(authBox, themeBox),
+        authTop: authBox.top,
+        authLeft: authBox.left,
+        authRight: authBox.right,
+        authLeftClearance: authBox.left - (headerBox.left + themeBox.width),
+        authRightClearance: themeBox.left - authBox.right,
+        authThemeGap: themeBox.left - authBox.right,
+        authHeight: authBox.height,
+        authPosition: getComputedStyle(auth).position,
+        loginHeight: loginBox?.height ?? 0,
+        registerHeight: registerBox?.height ?? 0,
+        logoutHeight: logoutBox?.height ?? 0,
+        authContentPosition: authContent
+          ? getComputedStyle(authContent).position
+          : null,
+        loginWidth: loginBox?.width ?? 0,
+        loginScrollWidth: login?.scrollWidth ?? 0,
+        loginClientWidth: login?.clientWidth ?? 0,
+        loginLeft: loginBox?.left ?? 0,
+        loginTop: loginBox?.top ?? 0,
+        loginPosition: login ? getComputedStyle(login).position : null,
+        registerWidth: registerBox?.width ?? 0,
+        registerScrollWidth: register?.scrollWidth ?? 0,
+        registerClientWidth: register?.clientWidth ?? 0,
+        registerRight: registerBox?.right ?? 0,
+        registerTop: registerBox?.top ?? 0,
+        registerPosition: register ? getComputedStyle(register).position : null,
+        logoutPosition: logout ? getComputedStyle(logout).position : null,
+        logoutWidth: logoutBox?.width ?? 0,
+        logoutPadding: logout ? getComputedStyle(logout).padding : null,
+        userInfoWidth: info?.getBoundingClientRect().width ?? 0,
+        userInfoLeft: infoBox?.left ?? 0,
+        userInfoRight: infoBox?.right ?? 0,
+        userInfoTop: infoBox?.top ?? 0,
+        userInfoHeight: infoBox?.height ?? 0,
+        userInfoCenter: infoBox ? infoBox.top + infoBox.height / 2 : 0,
+        userInfoRole: info?.getAttribute("role") ?? "",
+        userInfoTitle: info?.getAttribute("title") ?? "",
+        userInfoDescribedBy: info?.getAttribute("aria-describedby") ?? "",
+        userInfoLabel: label?.textContent?.trim() ?? "",
+        iconWidth: iconBox?.width ?? 0,
+        iconRight: iconBox?.right ?? 0,
+        iconCenter: iconBox ? iconBox.top + iconBox.height / 2 : 0,
+        authCardWidth: authCardBox?.width ?? 0,
+        authCardHeight: authCardBox?.height ?? 0,
+        authCardScrollWidth: authCard?.scrollWidth ?? 0,
+        authCardClientWidth: authCard?.clientWidth ?? 0,
+        authCardDisplay: authCardStyle?.display ?? null,
+        authCardFlexWrap: authCardStyle?.flexWrap ?? null,
+        authCardGap: authCardStyle?.gap ?? null,
+        authBarPadding: authBarStyle?.padding ?? null,
+        authCardPadding: authCardStyle?.padding ?? null,
+        authCardBorder: authCardStyle?.borderWidth ?? null,
+        logoutLeft: logoutBox?.left ?? 0,
+        logoutTop: logoutBox?.top ?? 0,
+        authWidth: authBox.width,
+        authCenter: authBox.left + authBox.width / 2,
+        availableBetweenCorners: themeBox.left - adminBox.right,
+        centeredNoOverlapMaxAuthWidth:
+          2 *
+          Math.min(
+            containerBox.left + containerBox.width / 2 - adminBox.right,
+            themeBox.left - (containerBox.left + containerBox.width / 2),
+          ),
+        authContentWidth: authContentBox?.width ?? 0,
+        emailTitle: email?.getAttribute("title") ?? "",
+        emailText: email?.textContent ?? "",
+        emailHidden: email instanceof HTMLElement ? email.hidden : false,
+        emailPosition: emailStyle?.position ?? "",
+        authContentHeight: authContentBox?.height ?? 0,
         documentWidth: document.documentElement.scrollWidth,
         viewportWidth: document.documentElement.clientWidth,
       };
     });
+    expect(layout.statusTextAlign).toBe("center");
+    expect(layout.statusOverflowWrap).toBe("anywhere");
+    expect(layout.statusScrollWidth).toBeLessThanOrEqual(
+      layout.statusClientWidth,
+    );
+    expect(layout.statusPosition).toBe("static");
+    expect(layout.themePosition).toBe("static");
+    expect(layout.authPosition).toBe("static");
+    expect(layout.authContentPosition).toBe("static");
+    if (layout.loginPosition !== null) {
+      expect(layout.loginPosition).toBe("static");
+    }
+    if (layout.registerPosition !== null) {
+      expect(layout.registerPosition).toBe("static");
+    }
+    if (layout.logoutPosition !== null) {
+      expect(layout.logoutPosition).toBe("static");
+    }
+    expect(layout.headerScrollWidth).toBeLessThanOrEqual(
+      layout.headerClientWidth + 1,
+    );
+    expect(layout.headerClientWidth).toBeCloseTo(
+      layout.containerContentWidth,
+      0,
+    );
+    expect(layout.documentWidth).toBeLessThanOrEqual(layout.viewportWidth + 1);
+    const expectedAuthWidth = 177.203125;
+    expect(layout.authWidth).toBeCloseTo(expectedAuthWidth, 2);
+    expect(layout.authContentWidth).toBeCloseTo(layout.authWidth, 2);
+    expect(layout.authHeight).toBeCloseTo(layout.themeHeight, 2);
+    expect(layout.authOverlapsAdmin).toBe(false);
+    expect(layout.authOverlapsTheme).toBe(false);
+    expect(layout.authTop).toBeCloseTo(layout.themeTop, 0);
+    expect(layout.themeRight).toBeCloseTo(layout.headerRight, 0);
+    expect(layout.themeWidth).toBeCloseTo(32, 0);
+    expect(layout.themeHeight).toBeCloseTo(32, 0);
+    expect(layout.themeTopOffset).toBeCloseTo(layout.themeRightOffset, 0);
+    expect(layout.themeTopOffset).toBeCloseTo(30, 0);
 
-    expect(
-      Math.abs(layout.statusCenter - layout.headerCenter),
-    ).toBeLessThanOrEqual(1);
-    expect(layout.statusLeft).toBeGreaterThanOrEqual(layout.adminRight);
-    expect(layout.statusRight).toBeLessThanOrEqual(layout.themeLeft);
-    expect(layout.documentWidth).toBeLessThanOrEqual(layout.viewportWidth);
+    if (layout.adminVisible) {
+      expect(layout.adminPosition).toBe("static");
+      expect(layout.adminLeft).toBeCloseTo(layout.headerLeft, 0);
+      expect(layout.adminTop).toBeCloseTo(layout.themeTop, 0);
+      expect(layout.adminWidth).toBeCloseTo(32, 0);
+      expect(layout.adminHeight).toBeCloseTo(32, 0);
+      expect(layout.adminTopOffset).toBeCloseTo(layout.adminLeftOffset, 0);
+      expect(layout.adminTopOffset).toBeCloseTo(30, 0);
+      expect(layout.authWidth).toBeLessThanOrEqual(
+        layout.centeredNoOverlapMaxAuthWidth + 0.01,
+      );
+    }
+
+    if (width <= 768) {
+      const expectedCornerClearance = Math.max(
+        0,
+        (layout.headerClientWidth - layout.authWidth - 2 * layout.themeWidth) /
+          2,
+      );
+      expect(layout.authLeftClearance).toBeCloseTo(expectedCornerClearance, 1);
+      expect(layout.authRightClearance).toBeCloseTo(expectedCornerClearance, 1);
+      if (expectedCornerClearance >= 20) {
+        expect(layout.authLeftClearance).toBeGreaterThanOrEqual(20);
+        expect(layout.authRightClearance).toBeGreaterThanOrEqual(20);
+      }
+      expect(layout.authCenter).toBeCloseTo(layout.containerCenter, 0);
+      expect(layout.statusLeft).toBeCloseTo(layout.headerLeft, 0);
+      expect(layout.statusRight).toBeCloseTo(layout.headerRight, 0);
+      expect(layout.authTop + layout.authHeight).toBeLessThanOrEqual(
+        layout.statusTop,
+      );
+      if (layout.adminVisible) {
+        const availableBetweenCorners =
+          layout.headerClientWidth - layout.adminWidth - layout.themeWidth;
+        expect(layout.availableBetweenCorners).toBeCloseTo(
+          availableBetweenCorners,
+          2,
+        );
+        expect(layout.centeredNoOverlapMaxAuthWidth).toBeCloseTo(
+          availableBetweenCorners,
+          2,
+        );
+        expect(layout.authWidth).toBeLessThanOrEqual(
+          layout.centeredNoOverlapMaxAuthWidth + 0.01,
+        );
+        expect(layout.authLeft).toBeGreaterThanOrEqual(layout.adminRight);
+        expect(layout.authRight).toBeLessThanOrEqual(layout.themeLeft);
+      }
+    } else {
+      expect(layout.statusWhiteSpace).toBe("nowrap");
+      expect(layout.statusLineCount).toBe(1);
+      expect(layout.statusScrollWidth).toBeLessThanOrEqual(
+        layout.statusClientWidth,
+      );
+      expect(layout.statusCenter).toBeCloseTo(
+        layout.authTop + layout.authHeight / 2,
+        0,
+      );
+      expect(layout.adminRight).toBeLessThanOrEqual(layout.statusLeft);
+      expect(layout.statusRight).toBeLessThanOrEqual(layout.authLeft);
+      expect(layout.authThemeGap).toBeCloseTo(layout.headerColumnGap, 1);
+      expect(layout.statusFontSize).toBeGreaterThanOrEqual(12);
+      expect(layout.statusFontSize).toBeLessThanOrEqual(14.4);
+      expect(layout.statusFontSize).toBeCloseTo(14.4, 2);
+      expect(layout.statusTextWidth).toBeLessThanOrEqual(
+        layout.statusContentWidth,
+      );
+    }
+
+    if (layout.logoutWidth > 0) {
+      expect(layout.userInfoLabel).toBe("Signed in");
+      expect(layout.emailHidden).toBe(true);
+      expect(layout.userInfoRole).toBe("group");
+      expect(layout.userInfoDescribedBy).toBe("auth-user-email");
+      expect(layout.userInfoTitle).toBe(layout.emailText);
+      expect(layout.emailTitle).toBe(layout.emailText);
+      expect(layout.emailText.length).toBeGreaterThan(0);
+      expect(layout.emailPosition).toBe("static");
+      await expect(
+        this.authContainer.getByRole("group", { name: "Signed in" }),
+      ).toHaveAccessibleDescription(layout.emailText);
+      expect(layout.logoutHeight).toBeCloseTo(layout.themeHeight, 2);
+      expect(layout.authCardDisplay).toBe("flex");
+      expect(layout.authCardFlexWrap).toBe("nowrap");
+      expect(layout.authCardGap).toBe("8px");
+      expect(layout.authCardWidth).toBeCloseTo(layout.authWidth, 2);
+      expect(layout.authCardHeight).toBeCloseTo(layout.authHeight, 2);
+      expect(layout.authHeight).toBeCloseTo(layout.themeHeight, 2);
+      expect(layout.authContentHeight).toBeCloseTo(layout.authHeight, 2);
+      expect(layout.authCardScrollWidth).toBeLessThanOrEqual(
+        layout.authCardClientWidth + 1,
+      );
+      expect(layout.authCardPadding).toBe("0px 8px");
+      expect(layout.authCardBorder).toBe("0px");
+      expect(layout.logoutPadding).toBe("0px 10px");
+      expect(layout.userInfoWidth).toBeGreaterThan(0);
+      expect(layout.userInfoCenter).toBeCloseTo(
+        layout.authTop + layout.authHeight / 2,
+        2,
+      );
+      expect(layout.iconCenter).toBeCloseTo(
+        layout.authTop + layout.authHeight / 2,
+        2,
+      );
+      expect(layout.userInfoRight).toBeLessThanOrEqual(layout.logoutLeft);
+      expect(layout.iconRight).toBeLessThanOrEqual(layout.userInfoLeft);
+    }
+
+    if (layout.loginWidth > 0 && layout.registerWidth > 0) {
+      expect(layout.authBarPadding).toBe("0px 8px");
+      expect(layout.authContentHeight).toBeCloseTo(layout.authHeight, 2);
+      expect(layout.loginTop).toBeCloseTo(layout.registerTop, 0);
+      expect(layout.registerRight - layout.loginLeft).toBeCloseTo(
+        layout.authWidth - 16,
+        2,
+      );
+      expect(layout.loginHeight).toBeCloseTo(layout.themeHeight, 2);
+      expect(layout.registerHeight).toBeCloseTo(layout.themeHeight, 2);
+      expect(layout.loginWidth / layout.registerWidth).toBeCloseTo(0.68065, 2);
+      expect(layout.loginScrollWidth).toBeLessThanOrEqual(
+        layout.loginClientWidth,
+      );
+      expect(layout.registerScrollWidth).toBeLessThanOrEqual(
+        layout.registerClientWidth,
+      );
+    }
+
+    if (statusText !== undefined && width === 320) {
+      expect(layout.statusLineCount).toBeGreaterThan(1);
+    }
+
+    expect(this.documentLoadCount).toBe(loadCount);
     await expect(this.searchAccessStatus).toBeVisible();
+    return {
+      authCenter: layout.authCenter,
+      authLeft: layout.authLeft,
+      authHeight: layout.authHeight,
+      authWidth: layout.authWidth,
+      headerHeight: layout.headerHeight,
+      loginHeight: layout.loginHeight,
+      registerHeight: layout.registerHeight,
+      themeLeft: layout.themeLeft,
+      themeTop: layout.themeTop,
+      themeRight: layout.themeRight,
+    };
+  }
+
+  async expectHeaderControlsMatch(
+    expected: HeaderControlLayout,
+  ): Promise<void> {
+    const layout = await this.appHeader.evaluate((header) => {
+      const auth = header.querySelector("#auth-container");
+      const theme = header.querySelector("#theme-button");
+
+      if (!auth || !theme) {
+        throw new Error("Header authentication or theme control is missing");
+      }
+
+      const authBox = auth.getBoundingClientRect();
+      const themeBox = theme.getBoundingClientRect();
+
+      return {
+        authCenter: authBox.left + authBox.width / 2,
+        authLeft: authBox.left,
+        authHeight: authBox.height,
+        authWidth: authBox.width,
+        headerHeight: header.getBoundingClientRect().height,
+        loginHeight:
+          auth.querySelector("#login-btn")?.getBoundingClientRect().height ?? 0,
+        registerHeight:
+          auth.querySelector("#register-btn")?.getBoundingClientRect().height ??
+          0,
+        themeLeft: themeBox.left,
+        themeTop: themeBox.top,
+        themeRight: themeBox.right,
+      };
+    });
+
+    expect(layout.authCenter).toBeCloseTo(expected.authCenter, 0);
+    expect(layout.authLeft).toBeCloseTo(expected.authLeft, 0);
+    expect(layout.authWidth).toBeCloseTo(expected.authWidth, 0);
+    expect(layout.authHeight).toBeCloseTo(expected.authHeight, 0);
+    expect(layout.headerHeight).toBeCloseTo(expected.headerHeight, 0);
+    expect(layout.authHeight).toBeCloseTo(expected.loginHeight, 0);
+    expect(expected.loginHeight).toBeCloseTo(expected.registerHeight, 0);
+    expect(layout.themeLeft).toBeCloseTo(expected.themeLeft, 0);
+    expect(layout.themeTop).toBeCloseTo(expected.themeTop, 0);
+    expect(layout.themeRight).toBeCloseTo(expected.themeRight, 0);
   }
 
   async clickSelectedContainer(code: string): Promise<void> {

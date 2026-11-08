@@ -30,18 +30,20 @@
             Loading search settings...
           </p>
 
-          <button
-            type="button"
-            id="theme-button"
-            class="corner-icon corner-icon--right"
-            onclick="toggleTheme()"
-            aria-label="Switch to dark theme"
-            title="Switch to dark theme"
-          >
-            🌙
-          </button>
+          <div class="header-controls">
+            <div id="auth-container"></div>
+            <button
+              type="button"
+              id="theme-button"
+              class="corner-icon corner-icon--right"
+              onclick="toggleTheme()"
+              aria-label="Switch to dark theme"
+              title="Switch to dark theme"
+            >
+              🌙
+            </button>
+          </div>
         </div>
-        <div id="auth-container"></div>
       </header>
 
       <main id="search-view" class="app-view" aria-labelledby="search-heading">
