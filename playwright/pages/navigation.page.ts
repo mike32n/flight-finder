@@ -1190,7 +1190,7 @@ export default class NavigationPage {
     await this.resultsFooter.evaluate((footer) => {
       const timestamp = document.createElement("div");
       timestamp.className = "meta-info saved-search-info";
-      timestamp.textContent = "Saved search: 11/6/2026, 11:22:03 PM.";
+      timestamp.textContent = "Saved search: 11/6/2026, 11:22:03 PM. ";
 
       const warning = document.createElement("div");
       warning.className = "price-change-warning";

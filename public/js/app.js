@@ -1388,7 +1388,7 @@ function restoreSearchState() {
 
     const timestamp = document.createElement("div");
     timestamp.className = "meta-info saved-search-info";
-    timestamp.textContent = `Saved search: ${new Date(saved.parameters.startedAt).toLocaleString()}.`;
+    timestamp.textContent = `Saved search: ${new Date(saved.parameters.startedAt).toLocaleString()}. `;
 
     const priceNotice = document.createElement("div");
     priceNotice.className = "price-change-warning";

@@ -1666,6 +1666,83 @@ export default class MainPage {
     await expect(this.results).not.toContainText(/^Saved search:/);
   }
 
+  async expectSavedSearchFooterLayout(
+    width: number,
+    expected: "single" | "two" | "narrow",
+  ): Promise<void> {
+    await this.page.setViewportSize({ width, height: 900 });
+    const savedInfo = this.resultsFooter.locator(".saved-search-info");
+    await expect(savedInfo).toHaveCount(1);
+    await expect(savedInfo).toBeVisible();
+
+    const layout = await savedInfo.evaluate((element) => {
+      const timestamp = element.firstChild;
+      const warning = element.querySelector(".price-change-warning");
+      const footer = element.parentElement;
+      const saved = JSON.parse(
+        sessionStorage.getItem("flightFinder.lastSearch.v1") || "null",
+      );
+      if (
+        !timestamp ||
+        timestamp.nodeType !== Node.TEXT_NODE ||
+        !warning ||
+        !footer ||
+        !saved
+      ) {
+        throw new Error("Saved-search footer content is missing");
+      }
+
+      const lines = (node: Node) => {
+        const range = document.createRange();
+        range.selectNodeContents(node);
+        return Array.from(range.getClientRects(), (rect) => ({
+          top: rect.top,
+          left: rect.left,
+          right: rect.right,
+        }));
+      };
+      const bounds = element.getBoundingClientRect();
+      return {
+        timestamp: timestamp.textContent,
+        expectedTimestamp: `Saved search: ${new Date(saved.parameters.startedAt).toLocaleString()}. `,
+        warning: warning.textContent,
+        status: footer.firstChild?.textContent,
+        timestampLines: lines(timestamp),
+        warningLines: lines(warning),
+        left: bounds.left,
+        right: bounds.right,
+      };
+    });
+
+    expect(layout.status).toBe("Finished...(failed: 0)");
+    expect(layout.timestamp).toBe(layout.expectedTimestamp);
+    expect(layout.warning).toBe("Prices may have changed.");
+    expect(layout.warningLines).toHaveLength(1);
+    expect(layout.timestampLines.length).toBeGreaterThan(0);
+    for (const line of [...layout.timestampLines, ...layout.warningLines]) {
+      expect(line.left).toBeGreaterThanOrEqual(layout.left - 1);
+      expect(line.right).toBeLessThanOrEqual(layout.right + 1);
+    }
+
+    if (expected !== "narrow") {
+      expect(layout.timestampLines).toHaveLength(1);
+      if (expected === "single") {
+        expect(layout.warningLines[0].top).toBeCloseTo(
+          layout.timestampLines[0].top,
+          0,
+        );
+      } else {
+        expect(layout.warningLines[0].top).toBeGreaterThan(
+          layout.timestampLines[0].top,
+        );
+      }
+    } else {
+      expect(layout.warningLines[0].top).toBeGreaterThanOrEqual(
+        layout.timestampLines[0].top,
+      );
+    }
+  }
+
   async expectResultsEmpty(): Promise<void> {
     await expect(this.results).toBeEmpty();
   }

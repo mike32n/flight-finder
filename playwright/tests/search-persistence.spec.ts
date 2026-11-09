@@ -168,3 +168,31 @@ test.describe("Search persistence", () => {
     await searchMock.expectRequestCount(1);
   });
 });
+
+test.describe("Saved search footer layout", () => {
+  test.use({ locale: "en-US", timezoneId: "UTC" });
+
+  test("TC-PERSIST-05 | should wrap the saved search warning only when needed", async ({
+    page,
+  }) => {
+    const common = new CommonPage(page);
+    const flightFinder = new FlightFinderPage(page);
+
+    await common.installClock("2026-11-09T11:18:48.000Z");
+    await common.openPage(Env.test);
+    const searchMock = await flightFinder.mockSearchSequence([amsterdam]);
+    await flightFinder.selectAirportByEnter("ams");
+    await common.click(flightFinder.searchButton);
+    await flightFinder.expectResultsFooterText("Finished...(failed: 0)");
+    await common.reloadPage();
+    await flightFinder.expectRestoredSearchVisible();
+
+    await flightFinder.expectSavedSearchFooterLayout(320, "narrow");
+    await flightFinder.expectSavedSearchFooterLayout(360, "two");
+    await flightFinder.expectSavedSearchFooterLayout(390, "two");
+    await flightFinder.expectSavedSearchFooterLayout(768, "single");
+    await flightFinder.expectSavedSearchFooterLayout(769, "single");
+    await flightFinder.expectSavedSearchFooterLayout(1280, "single");
+    await searchMock.expectRequestCount(1);
+  });
+});

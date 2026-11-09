@@ -189,6 +189,11 @@ h1 {
   color: var(--muted);
 }
 
+.saved-search-info .price-change-warning {
+  display: inline-block;
+  white-space: nowrap;
+}
+
 #loading {
   color: var(--muted);
 }
@@ -1114,6 +1119,10 @@ body.dark #start-date {
    ===================================================== */
 
 @media (min-width: 769px) {
+  .saved-search-info {
+    white-space: nowrap;
+  }
+
   #app-header .main-page-header {
     grid-template-columns:
       var(--header-corner-size) minmax(0, 1fr) var(--auth-slot-width)
