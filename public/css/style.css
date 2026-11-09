@@ -542,6 +542,11 @@ button:disabled {
   opacity: var(--disabled-opacity);
 }
 
+#smart-flex-preference-error {
+  margin: 8px 0 0;
+  overflow-wrap: anywhere;
+}
+
 /* =====================================================
    6. NIGHTS STEPPER
    ===================================================== */
@@ -737,7 +742,8 @@ body.dark #start-date {
   box-shadow: var(--card-hover-shadow);
 }
 
-.error-card {
+.error-card,
+#smart-flex-preference-error {
   padding: 10px 20px;
   background: var(--error-card-bg);
   color: var(--error-card-text);

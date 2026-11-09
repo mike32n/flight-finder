@@ -31,7 +31,12 @@
               Loading search settings...
             </p>
             <label class="smart-flex-preference" for="smart-flex-preference">
-              <input id="smart-flex-preference" type="checkbox" disabled />
+              <input
+                id="smart-flex-preference"
+                type="checkbox"
+                aria-describedby="smart-flex-preference-error"
+                disabled
+              />
               Smart Flex
             </label>
           </div>
@@ -50,6 +55,7 @@
             </button>
           </div>
         </div>
+        <p id="smart-flex-preference-error" role="alert" hidden></p>
       </header>
 
       <main id="search-view" class="app-view" aria-labelledby="search-heading">

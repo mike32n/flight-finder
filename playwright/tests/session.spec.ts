@@ -5,7 +5,10 @@ import CommonPage from "../pages/common.page";
 import AuthPage from "../pages/auth.page";
 import FlightFinderPage from "../pages/flight-finder.page";
 import NavigationPage from "../pages/navigation.page";
-import { createVerifiedTestUser } from "../helpers/user.helper";
+import {
+  createVerifiedAdminTestUser,
+  createVerifiedTestUser,
+} from "../helpers/user.helper";
 
 const { updateSmartFlexPreference } = require("../../models/userModel");
 
@@ -252,22 +255,83 @@ test.describe("Session lifecycle", () => {
 
     await flightFinder.expectSmartFlexPreference(false);
     await auth.login(firstUser.email, firstUser.password);
-    await flightFinder.expectSmartFlexPreference(true);
+    await flightFinder.expectSmartFlexPreference(true, true);
+    await flightFinder.toggleSmartFlexPreference();
+    await flightFinder.expectSmartFlexPreference(false, true);
     await common.reloadPage();
-    await flightFinder.expectSmartFlexPreference(true);
+    await flightFinder.expectSmartFlexPreference(false, true);
 
     await common.click(flightFinder.logoutButton);
     await flightFinder.expectSmartFlexPreference(false);
     await auth.login(secondUser.email, secondUser.password);
-    await flightFinder.expectSmartFlexPreference(false);
+    await flightFinder.expectSmartFlexPreference(false, true);
+    await flightFinder.toggleSmartFlexPreference();
+    await flightFinder.expectSmartFlexPreference(true, true);
+    await common.reloadPage();
+    await flightFinder.expectSmartFlexPreference(true, true);
 
-    await updateSmartFlexPreference(secondUser.userId, true);
+    await common.click(flightFinder.logoutButton);
+    await auth.login(firstUser.email, firstUser.password);
+    await flightFinder.expectSmartFlexPreference(false, true);
+    await updateSmartFlexPreference(firstUser.userId, true);
     await common.simulateCachedPageRestore();
-    await flightFinder.expectSmartFlexPreference(true);
+    await flightFinder.expectSmartFlexPreference(true, true);
 
     await auth.mockCurrentUserFailure(401);
     await common.simulateCachedPageRestore();
     await flightFinder.expectSmartFlexPreference(false);
     await auth.expectAuthTokenRemoved();
+  });
+
+  test("TC-SESSION-11 | should restore the saved preference when a change is rejected", async () => {
+    const user = await createVerifiedTestUser();
+    await auth.login(user.email, user.password);
+    await flightFinder.expectSmartFlexPreference(true, true);
+    await flightFinder.mockSmartFlexSaveFailure(400);
+
+    await flightFinder.toggleSmartFlexPreference();
+
+    await flightFinder.expectSmartFlexSaveError("saved");
+    await flightFinder.expectSmartFlexPreference(true, true);
+    await flightFinder.clearSmartFlexSaveFailure();
+    await flightFinder.toggleSmartFlexPreference();
+    await flightFinder.expectSmartFlexPreference(false, true);
+    await flightFinder.expectSmartFlexSaveErrorHidden();
+    await common.reloadPage();
+    await flightFinder.expectSmartFlexPreference(false, true);
+  });
+
+  test("TC-SESSION-12 | should reconcile the preference after an uncertain save", async () => {
+    const user = await createVerifiedTestUser();
+    await auth.login(user.email, user.password);
+    await flightFinder.expectSmartFlexPreference(true, true);
+    await flightFinder.mockSmartFlexSaveFailure(500);
+
+    await flightFinder.toggleSmartFlexPreference();
+
+    await flightFinder.expectSmartFlexSaveError("confirmed");
+    await flightFinder.expectSmartFlexPreference(true, true);
+    await common.expectEnabled(flightFinder.searchButton);
+  });
+
+  test("TC-SESSION-13 | should show Smart Flex save errors in both Admin and Search", async () => {
+    const user = await createVerifiedAdminTestUser();
+    await auth.login(user.email, user.password);
+    await navigation.openAdminView();
+    await flightFinder.expectSmartFlexPreference(true, true);
+    await flightFinder.mockSmartFlexSaveFailure(400);
+
+    await flightFinder.toggleSmartFlexPreference();
+    await flightFinder.expectSmartFlexSaveError("saved");
+    for (const width of [320, 360, 390, 768, 1280]) {
+      await flightFinder.expectSmartFlexErrorLayoutAtWidth(width);
+    }
+
+    await navigation.returnToSearchView();
+    await flightFinder.expectSmartFlexSaveError("saved");
+    await flightFinder.clearSmartFlexSaveFailure();
+    await flightFinder.toggleSmartFlexPreference();
+    await flightFinder.expectSmartFlexPreference(false, true);
+    await flightFinder.expectSmartFlexSaveErrorHidden();
   });
 });

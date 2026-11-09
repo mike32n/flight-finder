@@ -55,6 +55,7 @@ export default class MainPage {
   readonly adminView: Locator;
   readonly searchAccessStatus: Locator;
   readonly smartFlexPreference: Locator;
+  readonly smartFlexPreferenceError: Locator;
   readonly sessionMessage: Locator;
   readonly errorCards: Locator;
 
@@ -114,6 +115,9 @@ export default class MainPage {
       name: "Smart Flex",
       exact: true,
     });
+    this.smartFlexPreferenceError = this.appHeader.locator(
+      "#smart-flex-preference-error",
+    );
     this.sessionMessage = page.locator("#search-validation-error");
     this.errorCards = page.locator(".error-card");
 
@@ -228,10 +232,89 @@ export default class MainPage {
     }
   }
 
-  async expectSmartFlexPreference(checked: boolean): Promise<void> {
+  async expectSmartFlexPreference(
+    checked: boolean,
+    enabled = false,
+  ): Promise<void> {
     await expect(this.smartFlexPreference).toBeVisible();
-    await expect(this.smartFlexPreference).toBeDisabled();
+    if (enabled) {
+      await expect(this.smartFlexPreference).toBeEnabled();
+    } else {
+      await expect(this.smartFlexPreference).toBeDisabled();
+    }
     await expect(this.smartFlexPreference).toBeChecked({ checked });
+  }
+
+  async toggleSmartFlexPreference(): Promise<void> {
+    await this.smartFlexPreference.click();
+  }
+
+  async mockSmartFlexSaveFailure(status: 400 | 500): Promise<void> {
+    await this.page.route("**/api/auth/me", async (route) => {
+      if (route.request().method() !== "PATCH") {
+        await route.fallback();
+        return;
+      }
+
+      await route.fulfill({ status, json: { success: false } });
+    });
+  }
+
+  async clearSmartFlexSaveFailure(): Promise<void> {
+    await this.page.unroute("**/api/auth/me");
+  }
+
+  async expectSmartFlexSaveError(outcome: "saved" | "confirmed"): Promise<void> {
+    await expect(this.smartFlexPreferenceError).toBeVisible();
+    await expect(this.smartFlexPreferenceError).toContainText(
+      `Smart Flex preference could not be ${outcome}.`,
+    );
+    await expect(this.smartFlexPreferenceError).toHaveRole("alert");
+    await expect(this.smartFlexPreference).toHaveAttribute(
+      "aria-describedby",
+      "smart-flex-preference-error",
+    );
+    await expect(this.smartFlexPreference).toHaveAccessibleDescription(
+      new RegExp(`Smart Flex preference could not be ${outcome}\\.`),
+    );
+    await expect(this.appHeader.getByRole("alert")).toHaveCount(1);
+  }
+
+  async expectSmartFlexSaveErrorHidden(): Promise<void> {
+    await expect(this.smartFlexPreferenceError).toBeHidden();
+  }
+
+  async expectSmartFlexErrorLayoutAtWidth(width: number): Promise<void> {
+    await this.page.setViewportSize({ width, height: 900 });
+    await expect(this.smartFlexPreferenceError).toBeVisible();
+    const layout = await this.appHeader.evaluate((header) => {
+      const feedback = header.querySelector("#smart-flex-preference-error");
+      const controls = header.querySelector(".main-page-header");
+      if (!(feedback instanceof HTMLElement) || !controls) {
+        throw new Error("Smart Flex feedback or header controls are missing");
+      }
+      const feedbackBox = feedback.getBoundingClientRect();
+      const controlsBox = controls.getBoundingClientRect();
+      const headerBox = header.getBoundingClientRect();
+      return {
+        top: feedbackBox.top,
+        bottom: feedbackBox.bottom,
+        left: feedbackBox.left,
+        right: feedbackBox.right,
+        controlsBottom: controlsBox.bottom,
+        headerBottom: headerBox.bottom,
+        viewportWidth: document.documentElement.clientWidth,
+        documentWidth: document.documentElement.scrollWidth,
+        scrollWidth: feedback.scrollWidth,
+        clientWidth: feedback.clientWidth,
+      };
+    });
+    expect(layout.top).toBeGreaterThanOrEqual(layout.controlsBottom);
+    expect(layout.bottom).toBeLessThanOrEqual(layout.headerBottom + 1);
+    expect(layout.left).toBeGreaterThanOrEqual(0);
+    expect(layout.right).toBeLessThanOrEqual(layout.viewportWidth);
+    expect(layout.documentWidth).toBeLessThanOrEqual(layout.viewportWidth + 1);
+    expect(layout.scrollWidth).toBeLessThanOrEqual(layout.clientWidth + 1);
   }
 
   async expectAppStructurePrepared(): Promise<void> {

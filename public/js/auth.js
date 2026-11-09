@@ -2,6 +2,32 @@ let authUser = null;
 let verifiedAuthToken = null;
 let sessionVersion = 0;
 let currentUserRequestId = 0;
+const pendingSmartFlexSaves = new Map();
+let pendingSmartFlexError = null;
+
+function showSmartFlexError(message) {
+  const feedback = document.getElementById("smart-flex-preference-error");
+  feedback.textContent = message;
+  feedback.hidden = false;
+}
+
+function clearSmartFlexError() {
+  pendingSmartFlexError = null;
+  const feedback = document.getElementById("smart-flex-preference-error");
+  feedback.textContent = "";
+  feedback.hidden = true;
+}
+
+function showPendingSmartFlexError(user) {
+  if (
+    pendingSmartFlexError &&
+    pendingSmartFlexError.userId === user?.id &&
+    isSessionContextCurrent(pendingSmartFlexError.context)
+  ) {
+    showSmartFlexError(pendingSmartFlexError.message);
+    pendingSmartFlexError = null;
+  }
+}
 
 function resetSmartFlexPreference() {
   const checkbox = document.getElementById("smart-flex-preference");
@@ -11,6 +37,7 @@ function resetSmartFlexPreference() {
 
 function saveToken(token) {
   resetSmartFlexPreference();
+  clearSmartFlexError();
   sessionVersion++;
   authUser = null;
   verifiedAuthToken = null;
@@ -27,6 +54,12 @@ function invalidateCurrentUserVerification() {
   resetSmartFlexPreference();
   currentUserRequestId++;
   verifiedAuthToken = null;
+}
+
+function invalidateSessionForTokenChange() {
+  sessionVersion++;
+  clearSmartFlexError();
+  invalidateCurrentUserVerification();
 }
 
 function getSessionContext() {
@@ -72,6 +105,7 @@ function removeToken() {
 
 function endSession({ expired = false } = {}) {
   resetSmartFlexPreference();
+  clearSmartFlexError();
   if (expired) {
     clearPrivateSearchResults();
   } else {
@@ -98,6 +132,12 @@ async function loadCurrentUser() {
   if (!context.token) {
     authUser = null;
     return "anonymous";
+  }
+
+  const pendingSave = pendingSmartFlexSaves.get(context.token);
+  if (pendingSave) {
+    await pendingSave;
+    if (!isCurrent()) return "stale";
   }
 
   try {
@@ -134,21 +174,190 @@ async function loadCurrentUser() {
       ["registered", "premium"].includes(authUser.plan) &&
       typeof authUser.smartFlexPreference === "boolean"
     ) {
-      document.getElementById("smart-flex-preference").checked =
-        authUser.smartFlexPreference;
+      const checkbox = document.getElementById("smart-flex-preference");
+      checkbox.checked = authUser.smartFlexPreference;
+      checkbox.disabled = false;
     } else {
       console.error("Invalid Smart Flex preference or plan for current user.");
     }
 
+    showPendingSmartFlexError(authUser);
     return "authenticated";
   } catch (error) {
     if (!isCurrent()) return "stale";
 
+    showPendingSmartFlexError(authUser);
     console.error("Could not verify the current session:", error);
 
     return "unavailable";
   }
 }
+
+async function saveSmartFlexPreference() {
+  const saveTimeoutMs = 15000;
+  const checkbox = document.getElementById("smart-flex-preference");
+  const user = authUser;
+  const context = getSessionContext();
+  const requestId = currentUserRequestId;
+
+  if (
+    checkbox.disabled ||
+    !context.token ||
+    !isCurrentUserVerified() ||
+    !["registered", "premium"].includes(user?.plan) ||
+    typeof user.smartFlexPreference !== "boolean"
+  ) {
+    if (
+      user &&
+      isCurrentUserVerified() &&
+      pendingSmartFlexSaves.has(context.token)
+    ) {
+      checkbox.checked = user.smartFlexPreference;
+    } else {
+      resetSmartFlexPreference();
+    }
+    return;
+  }
+
+  const preference = checkbox.checked;
+  checkbox.checked = user.smartFlexPreference;
+  checkbox.disabled = true;
+
+  const isOriginalSession = () =>
+    isSessionContextCurrent(context) && authUser === user;
+
+  const isCurrent = () =>
+    isOriginalSession() &&
+    requestId === currentUserRequestId &&
+    verifiedAuthToken === context.token;
+
+  const reportFailure = (message) => {
+    if (!isOriginalSession()) return false;
+
+    if (isCurrent()) {
+      showSmartFlexError(message);
+      pendingSmartFlexError = null;
+    } else {
+      pendingSmartFlexError = { context, userId: user.id, message };
+    }
+    return true;
+  };
+
+  let release;
+  const pending = new Promise((resolve) => {
+    release = resolve;
+  });
+  pendingSmartFlexSaves.set(context.token, pending);
+  let reconcile = false;
+  const controller = new AbortController();
+  let timeoutId;
+
+  try {
+    const operation = (async () => {
+      const response = await fetch("/api/auth/me", {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${context.token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ smartFlexPreference: preference }),
+        signal: controller.signal,
+      });
+
+      if (!response.ok || !isOriginalSession()) return { response };
+      return { response, data: await response.json() };
+    })();
+    const timeout = new Promise((_, reject) => {
+      timeoutId = setTimeout(() => {
+        reject(new Error("Smart Flex preference request timed out"));
+        controller.abort();
+      }, saveTimeoutMs);
+    });
+    const { response, data } = await Promise.race([operation, timeout]);
+
+    if (response.status === 401) {
+      if (isCurrent()) {
+        expireSessionIfUnauthorized(response, context);
+      } else if (
+        reportFailure("Smart Flex preference could not be saved. Please try again.")
+      ) {
+        console.error("Smart Flex preference was rejected: session verification required.");
+      }
+      return;
+    }
+
+    if (response.status === 400) {
+      if (
+        reportFailure("Smart Flex preference could not be saved. Please try again.")
+      ) {
+        console.error("Smart Flex preference was rejected.");
+      }
+      return;
+    }
+
+    if (!response.ok) {
+      throw new Error(`Smart Flex preference request failed: ${response.status}`);
+    }
+
+    if (!isOriginalSession()) return;
+    if (data?.success !== true || data.smartFlexPreference !== preference) {
+      throw new Error("Invalid Smart Flex preference response");
+    }
+
+    clearSmartFlexError();
+    if (!isCurrent()) return;
+    user.smartFlexPreference = data.smartFlexPreference;
+    checkbox.checked = user.smartFlexPreference;
+  } catch (error) {
+    if (
+      reportFailure(
+        "Smart Flex preference could not be confirmed. Please reload if it does not refresh.",
+      )
+    ) {
+      console.error("Could not confirm Smart Flex preference:", error);
+      reconcile = isCurrent();
+    }
+  } finally {
+    clearTimeout(timeoutId);
+    if (pendingSmartFlexSaves.get(context.token) === pending) {
+      pendingSmartFlexSaves.delete(context.token);
+    }
+    release();
+
+    if (!reconcile && isCurrent()) checkbox.disabled = false;
+  }
+
+  if (reconcile && isCurrent()) {
+    const verification = loadCurrentUser();
+    const verificationRequestId = currentUserRequestId;
+    updateSearchControls();
+    const authState = await verification;
+
+    if (
+      authState === "anonymous" &&
+      !getToken() &&
+      sessionVersion === context.version + 1 &&
+      currentUserRequestId === verificationRequestId
+    ) {
+      window.dispatchEvent(new Event("auth-changed"));
+    } else if (
+      isSessionContextCurrent(context) &&
+      currentUserRequestId === verificationRequestId
+    ) {
+      if (authState === "unavailable") {
+        setSearchAccessUnavailable(
+          "Your session could not be verified. Please reload the page to try again.",
+        );
+      } else if (authState === "authenticated") {
+        updateSearchControls();
+      }
+    }
+  }
+}
+
+document
+  .getElementById("smart-flex-preference")
+  .addEventListener("change", saveSmartFlexPreference);
 
 function renderAuthUI() {
   const adminLink = document.getElementById("admin-link");
