@@ -62,6 +62,7 @@ describe.each(["/search", "/search-stream"])("%s search access", (endpoint) => {
       email_verified: 1,
       plan: "premium",
       is_admin: 0,
+      smart_flex_preference: true,
     });
 
     findPlanPolicyByName.mockImplementation(async (plan) => ({
@@ -104,6 +105,108 @@ describe.each(["/search", "/search-stream"])("%s search access", (endpoint) => {
     expect(searchFlights).not.toHaveBeenCalled();
     expect(searchFlightsStream).not.toHaveBeenCalled();
   }
+
+  test.each([
+    ["anonymous", true, null, true],
+    ["anonymous", false, null, false],
+    ["registered", true, true, true],
+    ["registered", true, false, false],
+    ["registered", false, true, false],
+    ["registered", false, false, false],
+    ["premium", true, true, true],
+    ["premium", true, false, false],
+    ["premium", false, true, false],
+    ["premium", false, false, false],
+  ])(
+    "applies %s policy=%s preference=%s as %s",
+    async (plan, allowed, preference, expected) => {
+      policies[plan].smartFlexEnabled = allowed;
+
+      if (plan === "anonymous") {
+        parameters.smartFlexPreference = !allowed;
+        parameters.allowFlexSearch = !allowed;
+      } else {
+        findUserById.mockResolvedValue({
+          id: 1,
+          email: "search@example.com",
+          email_verified: 1,
+          plan,
+          is_admin: 0,
+          smart_flex_preference: preference,
+        });
+      }
+
+      const response = await submit(
+        plan === "anonymous" ? undefined : createToken(),
+      );
+
+      expect(response.statusCode).toBe(200);
+      expect(searchMock()).toHaveBeenCalledWith(
+        expect.objectContaining({ allowFlexSearch: expected }),
+      );
+      expect(searchMock().mock.calls[0][0]).not.toHaveProperty(
+        "smartFlexPreference",
+      );
+      if (plan === "anonymous") {
+        expect(findUserById).not.toHaveBeenCalled();
+      }
+    },
+  );
+
+  test.each([undefined, null, 0, 1, "true"])(
+    "rejects an invalid authenticated preference: %p",
+    async (preference) => {
+      findUserById.mockResolvedValue({
+        id: 1,
+        email: "search@example.com",
+        email_verified: 1,
+        plan: "premium",
+        is_admin: 0,
+        smart_flex_preference: preference,
+      });
+      const consoleSpy = jest
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
+
+      try {
+        const response = await submit(createToken());
+
+        expect(response.statusCode).toBe(500);
+        expectNoSearch();
+        expect(consoleSpy).toHaveBeenCalled();
+      } finally {
+        consoleSpy.mockRestore();
+      }
+    },
+  );
+
+  test.each([
+    [false, true, true, false],
+    [true, false, true, false],
+    [true, true, false, true],
+  ])(
+    "ignores body permissions when preference=%s policy=%s and body=%s",
+    async (preference, allowed, submitted, expected) => {
+      findUserById.mockResolvedValue({
+        id: 1,
+        email: "search@example.com",
+        email_verified: 1,
+        plan: "premium",
+        is_admin: 0,
+        smart_flex_preference: preference,
+      });
+      policies.premium.smartFlexEnabled = allowed;
+      parameters.smartFlexPreference = submitted;
+      parameters.allowFlexSearch = submitted;
+
+      const response = await submit(createToken());
+
+      expect(response.statusCode).toBe(200);
+      const searchParameters = searchMock().mock.calls[0][0];
+      expect(searchParameters.allowFlexSearch).toBe(expected);
+      expect(searchParameters).not.toHaveProperty("smartFlexPreference");
+    },
+  );
 
   test("applies anonymous restrictions and ignores submitted privileges", async () => {
     parameters.allowFlexSearch = true;
@@ -150,6 +253,7 @@ describe.each(["/search", "/search-stream"])("%s search access", (endpoint) => {
       email_verified: 1,
       plan: "registered",
       is_admin: 1,
+      smart_flex_preference: true,
     });
 
     const response = await submit(createToken());

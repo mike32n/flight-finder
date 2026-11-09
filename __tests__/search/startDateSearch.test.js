@@ -22,6 +22,7 @@ jest.mock("../../middlewares/resolveSearchAccess", () => ({
         ...require("../../config/planDefaults").premium,
       },
     };
+    req.currentUser = { id: 1, plan: "premium", smartFlexPreference: true };
 
     next();
   },

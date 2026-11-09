@@ -15,6 +15,10 @@ describe("applySearchAccess", () => {
     plan = "anonymous",
     policy = planDefaults[plan],
     parameters = {},
+    currentUser = plan === "anonymous"
+      ? undefined
+      : { id: 1, plan, smartFlexPreference: true },
+    tokenUser,
   } = {}) {
     const req = {
       body: {
@@ -26,6 +30,8 @@ describe("applySearchAccess", () => {
         ...parameters,
       },
       searchAccess: { plan, policy },
+      currentUser,
+      user: tokenUser,
     };
 
     const res = {
@@ -94,6 +100,54 @@ describe("applySearchAccess", () => {
     expect(req.searchParameters.allowFlexSearch).toBe(false);
     expect(req.searchParameters).not.toHaveProperty("smartFlexEnabled");
     expect(next).toHaveBeenCalledTimes(1);
+  });
+
+  test.each([
+    null,
+    {},
+    { id: 1, plan: "premium" },
+    { id: 1, plan: "premium", smartFlexPreference: 1 },
+    { id: 0, plan: "premium", smartFlexPreference: true },
+    { id: 1, plan: "registered", smartFlexPreference: true },
+  ])("rejects an invalid authenticated context: %p", (currentUser) => {
+    const consoleSpy = jest
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+
+    try {
+      const { req, res, next } = runMiddleware({
+        plan: "premium",
+        currentUser,
+      });
+
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Internal server error.",
+      });
+      expect(req).not.toHaveProperty("searchParameters");
+      expect(next).not.toHaveBeenCalled();
+      expect(consoleSpy).toHaveBeenCalled();
+    } finally {
+      consoleSpy.mockRestore();
+    }
+  });
+
+  test("does not treat an unresolved authenticated user as a guest", () => {
+    const consoleSpy = jest
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+
+    try {
+      const { req, res, next } = runMiddleware({ tokenUser: { userId: 1 } });
+
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(req).not.toHaveProperty("searchParameters");
+      expect(next).not.toHaveBeenCalled();
+      expect(consoleSpy).toHaveBeenCalled();
+    } finally {
+      consoleSpy.mockRestore();
+    }
   });
 
   test("rejects destinations exceeding the plan limit", () => {
