@@ -6,7 +6,9 @@ export default class NavigationPage {
   readonly searchView: Locator;
   readonly adminView: Locator;
   readonly searchBadgeRow: Locator;
+  readonly appShell: Locator;
   readonly results: Locator;
+  readonly resultsScrollShell: Locator;
   readonly resultsScrollbar: Locator;
   readonly resultsScrollbarThumb: Locator;
   readonly resultsFooter: Locator;
@@ -21,7 +23,9 @@ export default class NavigationPage {
     this.searchView = page.locator("#search-view");
     this.adminView = page.locator("#admin-view");
     this.searchBadgeRow = page.locator("#selected-container");
+    this.appShell = page.locator("#app-shell");
     this.results = page.locator("#results");
+    this.resultsScrollShell = page.locator("#results-scroll-shell");
     this.resultsScrollbar = page.locator("#results-scrollbar");
     this.resultsScrollbarThumb = page.locator("#results-scrollbar-thumb");
     this.resultsFooter = page.locator("#results-footer");
@@ -820,6 +824,97 @@ export default class NavigationPage {
       (element) => element.getBoundingClientRect().height,
     );
     expect(increasedShellHeight).toBeLessThanOrEqual(initialShellHeight + 1);
+  }
+
+  async expectEmptyResultsLayoutAtWidth(
+    width: number,
+    populatedShellHeight?: number,
+  ): Promise<number> {
+    const page = this.results.page();
+    await page.setViewportSize({ width, height: 1200 });
+    await expect(this.results).toBeEmpty();
+    await expect(this.resultsFooter).toBeHidden();
+
+    await expect
+      .poll(async () => {
+        const layout = await this.appShell.evaluate((shell) => {
+          const resultsShell = document.getElementById("results-scroll-shell");
+          if (!resultsShell) throw new Error("Results shell is missing");
+          const shellStyle = getComputedStyle(shell);
+          const shellBox = shell.getBoundingClientRect();
+          const resultsBox = resultsShell.getBoundingClientRect();
+          return {
+            resultsHeight: resultsBox.height,
+            bottomGap:
+              shellBox.bottom -
+              resultsBox.bottom -
+              Number.parseFloat(shellStyle.paddingBottom) -
+              Number.parseFloat(shellStyle.borderBottomWidth),
+            shellHeight: shellBox.height,
+          };
+        });
+        return width > 768
+          ? Math.abs(layout.resultsHeight) <= 1 &&
+              Math.abs(layout.bottomGap) <= 1
+          : layout.resultsHeight <= 1 && layout.shellHeight >= 1200;
+      })
+      .toBe(true);
+
+    const height = await this.appShell.evaluate(
+      (shell) => shell.getBoundingClientRect().height,
+    );
+    if (populatedShellHeight !== undefined) {
+      expect(height).toBeLessThan(populatedShellHeight - 1);
+    }
+    return height;
+  }
+
+  async expectResultsGrowAtWidth(
+    width: number,
+    emptyShellHeight: number,
+  ): Promise<number> {
+    await this.results.page().setViewportSize({ width, height: 1200 });
+    await expect(this.results.locator(".result-card")).not.toHaveCount(0);
+    await expect
+      .poll(() =>
+        this.appShell.evaluate((shell) => shell.getBoundingClientRect().height),
+      )
+      .toBeGreaterThan(emptyShellHeight + 1);
+    const layout = await this.resultsScrollShell.evaluate((shell) => {
+      const card = shell.querySelector(".result-card");
+      if (!card) throw new Error("Result card is missing");
+      return {
+        height: shell.getBoundingClientRect().height,
+        cardHeight: card.getBoundingClientRect().height,
+      };
+    });
+    expect(layout.height).toBeGreaterThanOrEqual(
+      Math.max(120, layout.cardHeight) - 1,
+    );
+    return this.appShell.evaluate(
+      (shell) => shell.getBoundingClientRect().height,
+    );
+  }
+
+  async expectNonCardResultsUseContentHeight(): Promise<void> {
+    await expect(this.results.locator(".result-card")).toHaveCount(0);
+    await expect(this.results.locator(".no-results-card")).toBeVisible();
+    await expect
+      .poll(() =>
+        this.results.evaluate((results) => {
+          const child = results.querySelector(".no-results-card");
+          if (!child) throw new Error("No-results message is missing");
+          const resultsBox = results.getBoundingClientRect();
+          const childBox = child.getBoundingClientRect();
+          const contentHeight =
+            childBox.bottom -
+            resultsBox.top +
+            results.scrollTop +
+            Number.parseFloat(getComputedStyle(child).marginBottom);
+          return Math.abs(resultsBox.height - contentHeight);
+        }),
+      )
+      .toBeLessThanOrEqual(1);
   }
 
   async expectResponsiveScrollingAtHeight(

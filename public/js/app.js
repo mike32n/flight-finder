@@ -96,18 +96,19 @@ function initializeResultsScrollbar() {
         }),
       );
       const firstCard = results.querySelector(".result-card");
-      const minimumResultsHeight = Math.max(
-        120,
-        firstCard?.getBoundingClientRect().height ?? 0,
-      );
+      const minimumResultsHeight = firstCard
+        ? Math.max(120, firstCard.getBoundingClientRect().height)
+        : 0;
       const shellStyle = getComputedStyle(appShell);
       const fixedContentHeight = resultsRect.top - shellRect.top;
       const footerRect = footer.getBoundingClientRect();
       const footerStyle = getComputedStyle(footer);
       const footerSpace =
-        (footerStyle.display === "none" ? 0 : footerRect.height) +
-        Number.parseFloat(footerStyle.marginTop) +
-        Number.parseFloat(footerStyle.marginBottom);
+        footerStyle.display === "none"
+          ? 0
+          : footerRect.height +
+            Number.parseFloat(footerStyle.marginTop) +
+            Number.parseFloat(footerStyle.marginBottom);
       const bottomSpace =
         Number.parseFloat(shellStyle.paddingBottom) +
         Number.parseFloat(shellStyle.borderBottomWidth);

@@ -7,7 +7,10 @@ import CommonPage from "../pages/common.page";
 import FlightFinderPage from "../pages/flight-finder.page";
 import NavigationPage from "../pages/navigation.page";
 
-import { createVerifiedAdminTestUser } from "../helpers/user.helper";
+import {
+  createVerifiedAdminTestUser,
+  createVerifiedTestUser,
+} from "../helpers/user.helper";
 
 const planDefaults = require("../../config/planDefaults");
 
@@ -89,5 +92,64 @@ test.describe("Responsive scrolling", () => {
     await common.openPage(Env.test);
     await common.expectVisible(auth.loginButton);
     await navigation.expectEmptyResultsShellDoesNotGrowWithViewport();
+  });
+
+  test("TC-SCROLL-03 | should size the Search shell as results are added and cleared", async ({
+    page,
+  }) => {
+    const common = new CommonPage(page);
+    const auth = new AuthPage(page);
+    const flightFinder = new FlightFinderPage(page);
+    const navigation = new NavigationPage(page);
+    const user = await createVerifiedTestUser();
+
+    await common.openPage(Env.test);
+    await flightFinder.expectAuthControlsVisible();
+    await navigation.expectEmptyResultsLayoutAtWidth(1280);
+    await auth.login(user.email, user.password);
+    await common.expectVisible(flightFinder.logoutButton);
+    await flightFinder.selectAirportByEnter("ams");
+
+    const widths = [1280, 1024, 769];
+    const emptyHeights: number[] = [];
+    for (const width of widths) {
+      emptyHeights.push(
+        await navigation.expectEmptyResultsLayoutAtWidth(width),
+      );
+    }
+    await navigation.expectEmptyResultsLayoutAtWidth(768);
+
+    await navigation.expectEmptyResultsLayoutAtWidth(1280);
+    await flightFinder.mockEmptySearch();
+    await common.click(flightFinder.searchButton);
+    await flightFinder.expectNoResults();
+    await flightFinder.expectResultsFooterText("Finished");
+    await navigation.expectNonCardResultsUseContentHeight();
+
+    await flightFinder.mockSearchSequence([
+      { city: "Amsterdam", code: "AMS", price: 20000 },
+    ]);
+    await common.click(flightFinder.searchButton);
+    await flightFinder.expectResultsFooterText("Finished");
+
+    const populatedHeights: number[] = [];
+    for (let index = 0; index < widths.length; index++) {
+      populatedHeights.push(
+        await navigation.expectResultsGrowAtWidth(
+          widths[index],
+          emptyHeights[index],
+        ),
+      );
+    }
+
+    await common.click(flightFinder.logoutButton);
+    await flightFinder.expectAuthControlsVisible();
+    for (let index = 0; index < widths.length; index++) {
+      await navigation.expectEmptyResultsLayoutAtWidth(
+        widths[index],
+        populatedHeights[index],
+      );
+    }
+    await navigation.expectEmptyResultsLayoutAtWidth(768);
   });
 });

@@ -252,9 +252,9 @@ h1 {
 
 #app-header .main-page-header {
   display: grid;
-  grid-template-columns: minmax(var(--header-corner-size), 1fr) var(
-      --auth-slot-width
-    ) minmax(var(--header-corner-size), 1fr);
+  grid-template-columns:
+    minmax(var(--header-corner-size), 1fr) var(--auth-slot-width)
+    minmax(var(--header-corner-size), 1fr);
   grid-template-areas:
     "admin auth theme"
     "status status status";
@@ -1282,8 +1282,11 @@ body.dark #start-date {
   #results-scroll-shell,
   .admin-view #admin-content {
     flex: 1 1 0;
-    min-height: 120px;
     min-width: 0;
+  }
+
+  #results-scroll-shell {
+    min-height: 0;
   }
 
   #results,
