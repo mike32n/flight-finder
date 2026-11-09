@@ -11,6 +11,7 @@ const {
   savePasswordResetToken,
   findUserByPasswordResetToken,
   updatePassword,
+  updateSmartFlexPreference,
 } = require("../models/userModel");
 
 const {
@@ -399,10 +400,61 @@ async function resetPassword(req, res) {
 }
 
 function getCurrentUser(req, res) {
+  res.set("Cache-Control", "no-store");
+
+  if (typeof req.currentUser.smartFlexPreference !== "boolean") {
+    console.error("Invalid Smart Flex preference for current user.");
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error.",
+    });
+  }
+
   return res.status(200).json({
     success: true,
     user: req.currentUser,
   });
+}
+
+async function updateCurrentUser(req, res) {
+  res.set("Cache-Control", "no-store");
+
+  if (
+    Object.keys(req.body).length !== 1 ||
+    typeof req.body.smartFlexPreference !== "boolean"
+  ) {
+    return res.status(400).json({
+      success: false,
+      message: "A Boolean smartFlexPreference is required with no other fields.",
+    });
+  }
+
+  try {
+    const updated = await updateSmartFlexPreference(
+      req.currentUser.id,
+      req.body.smartFlexPreference,
+    );
+
+    if (!updated) {
+      return res.status(401).json({
+        success: false,
+        message: "User not found.",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      smartFlexPreference: req.body.smartFlexPreference,
+    });
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error.",
+    });
+  }
 }
 
 module.exports = {
@@ -413,4 +465,5 @@ module.exports = {
   validateResetToken,
   resetPassword,
   getCurrentUser,
+  updateCurrentUser,
 };

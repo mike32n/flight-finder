@@ -26,6 +26,7 @@ async function loadUserAccess(req, res, next) {
       emailVerified: user.email_verified === 1,
       plan: user.plan,
       isAdmin: user.is_admin === 1,
+      smartFlexPreference: user.smart_flex_preference,
     };
   } catch (error) {
     console.error(error);
