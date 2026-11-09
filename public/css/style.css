@@ -1478,6 +1478,10 @@ body.dark #start-date {
 
   /* Authentication */
 
+  .auth-modal-close {
+    width: auto;
+  }
+
   .auth-user-card {
     max-width: 100%;
   }

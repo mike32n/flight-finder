@@ -144,4 +144,11 @@ test.describe("Authentication - Login", () => {
 
     await auth.expectAuthTokenRemoved();
   });
+
+  test("TC-LOGIN-08 | should position and close each authentication modal", async () => {
+    const desktopSize = await auth.expectModalCloseAtWidth(1280);
+    for (const width of [769, 768, 390, 320]) {
+      await auth.expectModalCloseAtWidth(width, desktopSize);
+    }
+  });
 });
