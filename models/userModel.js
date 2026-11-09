@@ -42,7 +42,7 @@ function findUserById(userId) {
   return new Promise((resolve, reject) => {
     getDb().get(
       `
-        SELECT id, email, email_verified, plan, is_admin
+        SELECT id, email, email_verified, plan, is_admin, smart_flex_preference
         FROM users
         WHERE id = ?
       `,
@@ -52,7 +52,40 @@ function findUserById(userId) {
           return reject(error);
         }
 
-        resolve(row || null);
+        resolve(
+          row
+            ? {
+                ...row,
+                smart_flex_preference: row.smart_flex_preference === 1,
+              }
+            : null,
+        );
+      },
+    );
+  });
+}
+
+function updateSmartFlexPreference(userId, preference) {
+  if (typeof preference !== "boolean") {
+    return Promise.reject(
+      new TypeError("Smart Flex preference must be a boolean."),
+    );
+  }
+
+  return new Promise((resolve, reject) => {
+    getDb().run(
+      `
+        UPDATE users
+        SET smart_flex_preference = ?
+        WHERE id = ?
+      `,
+      [preference ? 1 : 0, userId],
+      function (error) {
+        if (error) {
+          return reject(error);
+        }
+
+        resolve(this.changes === 1);
       },
     );
   });
@@ -221,6 +254,7 @@ function grantAdminByEmail(email) {
 module.exports = {
   createUser,
   findUserById,
+  updateSmartFlexPreference,
   findUserByEmail,
   findUserByVerificationToken,
   verifyUser,

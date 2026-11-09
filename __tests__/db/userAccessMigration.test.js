@@ -1,7 +1,11 @@
 process.env.DB_PATH = ":memory:";
 
 const { getDb, initDb, closeDb } = require("../../db");
-const { createUser, findUserByEmail } = require("../../models/userModel");
+const {
+  createUser,
+  findUserById,
+  findUserByEmail,
+} = require("../../models/userModel");
 
 function runSql(sql, parameters = []) {
   return new Promise((resolve, reject) => {
@@ -57,12 +61,13 @@ describe("user access migration", () => {
         is_admin: 0,
       }),
     );
+    expect((await findUserById(user.id)).smart_flex_preference).toBe(true);
   });
 
   test("creates new users with default access despite extra input fields", async () => {
     await initDb();
 
-    await createUser({
+    const created = await createUser({
       email: "new@example.com",
       passwordHash: "new-hash",
       verificationToken: null,
@@ -75,6 +80,7 @@ describe("user access migration", () => {
 
     expect(user.plan).toBe("registered");
     expect(user.is_admin).toBe(0);
+    expect((await findUserById(created.id)).smart_flex_preference).toBe(true);
   });
 
   test("stores plan and admin status independently", async () => {
@@ -115,10 +121,10 @@ describe("user access migration", () => {
     await runSql(
       `
         UPDATE users
-        SET plan = ?, is_admin = ?
+        SET plan = ?, is_admin = ?, smart_flex_preference = ?
         WHERE email = ?
       `,
-      ["premium", 1, "existing@example.com"],
+      ["premium", 1, 0, "existing@example.com"],
     );
 
     await initDb();
@@ -127,6 +133,7 @@ describe("user access migration", () => {
 
     expect(user.plan).toBe("premium");
     expect(user.is_admin).toBe(1);
+    expect((await findUserById(user.id)).smart_flex_preference).toBe(false);
   });
 
   test("completes a migration when only the plan column exists", async () => {
@@ -174,6 +181,20 @@ describe("user access migration", () => {
           "existing@example.com",
         ]),
       ).rejects.toThrow(/CHECK constraint failed/);
+    },
+  );
+
+  test.each([-1, 2, "true", null])(
+    "rejects an invalid Smart Flex preference: %p",
+    async (preference) => {
+      await initDb();
+
+      await expect(
+        runSql("UPDATE users SET smart_flex_preference = ? WHERE email = ?", [
+          preference,
+          "existing@example.com",
+        ]),
+      ).rejects.toThrow(/constraint failed/);
     },
   );
 });

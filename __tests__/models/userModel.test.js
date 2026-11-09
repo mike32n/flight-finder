@@ -5,6 +5,7 @@ const { initDb, closeDb } = require("../../db");
 const {
   createUser,
   findUserById,
+  updateSmartFlexPreference,
   findUserByEmail,
   findUserByVerificationToken,
   verifyUser,
@@ -260,8 +261,43 @@ describe("userModel", () => {
       email_verified: 1,
       plan: "registered",
       is_admin: 0,
+      smart_flex_preference: true,
     });
   });
+
+  test("updates Smart Flex preference without affecting another user", async () => {
+    const first = await createUser({
+      email: "flex-first@example.com",
+      passwordHash: "hashed-password",
+      verificationToken: null,
+    });
+    const second = await createUser({
+      email: "flex-second@example.com",
+      passwordHash: "hashed-password",
+      verificationToken: null,
+    });
+
+    expect(await updateSmartFlexPreference(first.id, false)).toBe(true);
+    expect((await findUserById(first.id)).smart_flex_preference).toBe(false);
+    expect((await findUserById(second.id)).smart_flex_preference).toBe(true);
+
+    expect(await updateSmartFlexPreference(first.id, true)).toBe(true);
+    expect((await findUserById(first.id)).smart_flex_preference).toBe(true);
+    expect((await findUserById(second.id)).smart_flex_preference).toBe(true);
+  });
+
+  test("returns false when updating a missing user's Smart Flex preference", async () => {
+    expect(await updateSmartFlexPreference(-1, false)).toBe(false);
+  });
+
+  test.each([0, 1, "false", null, undefined])(
+    "rejects a non-Boolean Smart Flex preference: %p",
+    async (preference) => {
+      await expect(updateSmartFlexPreference(-1, preference)).rejects.toThrow(
+        "Smart Flex preference must be a boolean.",
+      );
+    },
+  );
 
   test("returns null for a missing user ID", async () => {
     expect(await findUserById(-1)).toBeNull();
