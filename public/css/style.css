@@ -346,6 +346,7 @@ h1 {
   height: var(--auth-control-height);
   min-height: var(--auth-control-height);
   padding: 0 10px;
+  font-family: inherit;
   font-size: 0.9rem;
   line-height: 1;
 }
