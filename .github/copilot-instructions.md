@@ -1,161 +1,271 @@
-# Flight Finder Copilot instructions
+# Flight Finder -- Copilot instructions
 
-## Build, test, and validation commands
+## 1. Project overview
+
+Flight Finder is a Node.js/Express application with a browser UI in
+`public/` and APIs for flight search, authentication, administration,
+and search access.
+
+- `server.js` is the entry point. It loads environment variables,
+  initializes SQLite through `initDb()`, loads destinations, and
+  starts Express on port 3000.
+- `app.js` mounts the route groups: search (`/`), config (`/config`),
+  authentication (`/api/auth`), administration (`/api/admin`), and
+  search access (`/api/search-access`).
+- `routes/` contains HTTP route handlers. Middleware handles
+  validation and access checks before controller logic runs.
+- `controllers/` handles request/response flow, including the
+  `/search-stream` SSE endpoint and airport enrichment.
+- `services/flightSearchService.js` contains the flight-search logic:
+  trip combinations, concurrency limits, provider requests, Smart
+  Flex, and fallback behavior.
+- `providers/providerFactory.js` and `config/providerConfig.js` select
+  and initialize the provider. `FLIGHT_PROVIDER` supports `mock`,
+  `serpapi`, and `amadeus-*`.
+- `db.js` initializes SQLite tables, migrations, and destination data.
+  Destinations are loaded from the `destinations` table and cached in
+  memory at startup.
+- `config/appConfig.js` centralizes search limits, the default
+  departure airport, authentication defaults, and other application
+  settings.
+- Redis is used for caching and rate limiting. It must be running for
+  local search flows.
+
+## 2. Project conventions and source of truth
+
+- The application uses JavaScript and CommonJS
+  (`require`/`module.exports`). Playwright tests use TypeScript.
+  Follow the conventions of the area being changed.
+- The frontend is in `public/`. The backend handles validation,
+  authentication, access control, and provider orchestration.
+- Jest tests are in `__tests__/`; Playwright tests are in
+  `playwright/tests/`. Route tests commonly use `supertest` with a
+  minimal Express app.
+- Search requests are validated by `middlewares/validateSearch.js`
+  before reaching business logic. Validation covers origin,
+  destinations, weekday, nights, and `startDate`.
+- Search results are deduplicated by origin, destination, departure
+  date, and return date, then sorted by price.
+- Live search updates use Server-Sent Events. The stream ends with
+  `event: end\ndata: done\n\n` or an error event.
+- `db.js` also seeds destination rows and runs setup/migrations for
+  user access and plan policies; it does more than create the schema.
+- `readme.md` is the main product documentation. Use it for local
+  setup and feature behavior.
+- `.env.example` lists the required environment variables, including
+  provider credentials, JWT secret, Redis settings, and email
+  settings.
+- The default configuration uses BUD as the departure airport, allows
+  up to 3 destinations, returns up to 5 results, and enables Smart
+  Flex.
+- Local Jest and Playwright tests use `FLIGHT_PROVIDER=mock` by
+  default to avoid external flight API dependencies.
+
+**When investigating or changing the project:** - Inspect the current
+repository before making assumptions. - Treat the current code as the
+source of truth for what is implemented. - Treat agreed requirements and
+`readme.md` as the source of truth for intended behavior. - If
+implementation and intended behavior differ, investigate before deciding
+whether code, tests, or documentation need to change. - Do not assume
+that a feature, setting, dependency, or script exists unless the
+repository confirms it.
+
+## 3. Build, test, and validation commands
 
 - Install dependencies: `npm install`
-- Start the local app: `npm start`
-- Start Redis for local development: `docker compose -f docker-compose.redis.yml up -d`
+- Start the app: `npm start`
+- Start Redis: `docker compose -f docker-compose.redis.yml up -d`
 - Run all Jest tests: `npm test`
-- Run a single Jest file: `npx jest __tests__/routes/configRoutes.test.js --runInBand`
-- Run one Jest test name: `npx jest __tests__/routes/configRoutes.test.js --runInBand -t "should return public frontend configuration"`
-- Run all Playwright E2E tests: `npm run pw:test`
-- Run a single Playwright spec: `npx playwright test playwright/tests/login.spec.ts --project=chromium`
+- Run one Jest file:
+  `npx jest __tests__/routes/configRoutes.test.js --runInBand`
+- Run one Jest test by name:
+  `npx jest __tests__/routes/configRoutes.test.js --runInBand -t "should return public frontend configuration"`
+- Run all Playwright tests: `npm run pw:test`
+- Run one Playwright spec:
+  `npx playwright test playwright/tests/login.spec.ts --project=chromium`
 - Open the Playwright HTML report: `npm run pw:report`
-- CI runs Node 20 and executes `npm install` followed by `npm test`.
-- There is no dedicated lint script in `package.json` right now.
 
-## High-level architecture
+CI uses Node 20 and runs `npm install` followed by `npm test`. There is
+currently no dedicated lint script in `package.json`.
 
-This repository is a Node.js/Express app that serves a browser UI from `public/` and exposes search/auth/admin APIs.
+## 4. Playwright conventions
 
-- `server.js` is the entry point: it loads environment variables, initializes SQLite via `initDb()`, loads destinations, and starts Express on port 3000.
-- `app.js` mounts the main route groups: search routes at `/`, config routes under `/config`, auth under `/api/auth`, admin under `/api/admin`, and search-access under `/api/search-access`.
-- Route files in `routes/` are thin HTTP adapters. Validation and access checks are handled by middleware before the controller logic runs.
-- Controller logic in `controllers/` orchestrates request/response flow, including the SSE search stream (`/search-stream`) and airport enrichment used for UI output.
-- Business logic for searches lives in `services/flightSearchService.js`: it generates trip combinations, enforces concurrency limits, runs provider requests, and applies Smart Flex/fallback behavior.
-- Providers are abstracted behind `providers/providerFactory.js` and `config/providerConfig.js`. `FLIGHT_PROVIDER` selects the active backend (`mock`, `serpapi`, or `amadeus-*`), while the factory instantiates the matching implementation.
-- The database layer is centered in `db.js` and initializes SQLite tables and migrations; search destination data is loaded from the SQLite `destinations` table and cached in memory at startup.
-- `config/appConfig.js` centralizes search limits, default departure airport, auth defaults, and other operational settings; those values are consumed across routes/controllers and tests.
-- Redis is part of the runtime for cache/rate limiting, and the app expects it to be running for local search flows.
+- Use Playwright with TypeScript and follow the existing Page Object
+  Model.
+- Page objects belong in `playwright/pages/`; test specs belong in
+  `playwright/tests/`.
+- Define and maintain locators in page object classes.
+- Keep all Playwright `expect()` assertions inside page object
+  methods, including assertions in cross-page flows.
+- Specs must use page object methods for interactions and assertions.
+  Do not put direct assertions, locators, or raw Playwright `page`
+  operations in spec files.
+- Keep setup and navigation inside page objects or the project's
+  established fixtures; do not bypass the POM in a spec.
+- Prefer reusable page object methods. Passing a locator to a reusable
+  method is acceptable when it avoids unnecessary duplication.
+- Keep test cases in ascending TC-ID order within each `test.describe`
+  block.
+- Avoid arbitrary `waitForTimeout()` calls. Prefer Playwright
+  auto-waiting and reliable user-facing conditions.
+- After a resize or another asynchronous layout change, wait for the
+  relevant layout condition before measuring.
+- Preserve the existing test isolation, fixtures, and setup
+  conventions.
 
-## Key conventions in this codebase
+### Test assertions and responsive layout
 
-- Search requests are validated before business logic. `middlewares/validateSearch.js` checks origin, destination list, weekday, nights, and `startDate` rules before the controller executes.
-- Search results are deduplicated by origin/destination/departure/return and then sorted by price before sending the final response.
-- The app uses server-sent events for live search updates. `searchStream` writes `data:` chunks and ends with `event: end\ndata: done\n\n` or an error event on failure.
-- Local testing and Playwright E2E runs use the mock provider by default (`FLIGHT_PROVIDER=mock`) to avoid external flight API dependencies.
-- The project is CommonJS-based (`require`/`module.exports`), not TypeScript; keep new code aligned with the existing file layout and module style.
-- `public/` contains the browser UI, while the backend mostly handles validation, auth, access control, and provider orchestration.
-- Tests are split between Jest (`__tests__/`) and Playwright (`playwright/tests/`), and route tests commonly use `supertest` with a minimal Express app.
-- Database initialization is not just schema creation; `db.js` also seeds destination rows and runs migration/setup scripts for user access and plan policies.
+- Assert agreed product requirements and observable behavior, not
+  incidental implementation details or historical measurements.
+- Use exact pixel values only when they are explicit product
+  requirements.
+- Do not assume that Chromium, Firefox, and WebKit render identical
+  dimensions. Account for scrollbar gutters, font metrics, and
+  fractional-pixel rounding.
+- Derive expected geometry from the actual viewport, container, and
+  rendered elements. Use justified tolerances; do not widen tolerances
+  just to hide a layout defect.
+- Prefer behavioral checks over indirect proxies. For example, verify
+  that the intended element actually scrolls instead of inferring
+  scrollability from card count or content height.
+- Keep implementation-specific assertions when they protect an
+  explicit requirement.
 
-## Repo-specific notes
+### Failure diagnosis and coverage
 
-- `readme.md` is the main product documentation; use it as the source of truth for local setup and feature behavior.
-- The app expects `.env` values for provider credentials, JWT secret, Redis config, and email settings; see `.env.example` for the variable list.
-- The default app configuration is intentionally opinionated: one departure airport (`BUD`), max 3 destinations, max 5 results returned, and smart-flex enabled by default.
+- Start with the first failing assertion. Check its expected and
+  actual values, then trace the relevant page-object and helper calls.
+- Group failures that share a root cause. A shared helper can cause
+  failures in several unrelated-looking tests.
+- Classify the cause before changing anything: application regression,
+  outdated expectation, browser-specific rendering, or
+  timing/synchronization issue.
+- Do not change production code unless there is evidence of an
+  application defect.
+- When changing or replacing an assertion, preserve the behavior and
+  scenarios it originally covered.
+- Do not remove coverage or weaken an assertion just to make a test
+  pass. If coverage must change, explain why and get approval first.
+- Check both overflow and actual scroll movement, and verify that the
+  correct scroll container is being tested.
 
-## Playwright E2E testing conventions
+## 5. Jest conventions
 
-- Use Playwright with TypeScript.
-- Follow the existing Page Object Model (POM).
-- Page objects are located in `playwright/pages/`.
-- Test specifications are located in `playwright/tests/`.
-- Declare and maintain locators in page object classes.
-- Keep all Playwright `expect()` assertions inside page object methods.
-- All Playwright `expect()` assertions must be implemented inside page object methods, including cross-page flows.
-- Spec files must not contain direct Playwright assertions.
-- Spec files must not use the raw Playwright `page` API or define locators directly.
-- Specs should use page object methods for interactions and assertions.
-- Prefer reusable page object methods over feature-specific duplicated methods.
-- Passing a locator to a reusable page object method is acceptable when it avoids unnecessary duplication.
-- Keep test cases in ascending TC-ID order within each `test.describe` block (e.g. TC-01 before TC-02).
-- Avoid arbitrary `waitForTimeout()` calls.
-- Prefer Playwright auto-waiting and reliable user-facing locators.
-- Preserve existing test isolation and setup conventions.
-- Do not introduce unnecessary abstractions or duplicate existing helpers.
-
-## Jest testing conventions
-
-- Follow the existing Jest test structure and naming conventions.
-- Reuse existing test helpers and fixtures where appropriate.
-- Keep tests independent and avoid shared mutable state.
+- Follow the existing Jest structure and naming conventions.
+- Reuse existing helpers and fixtures where appropriate.
+- Keep tests independent; avoid shared mutable state.
 - Cover positive, negative, boundary, and error scenarios.
 - Add regression tests for bug fixes.
-- Do not change production code just to make a test pass.
+- Do not change production code solely to satisfy an incorrect test
+  expectation.
 
-## Implementation and refactoring rules
+## 6. Implementation and UI changes
 
-- Always inspect the existing implementation before proposing changes.
-- Treat the current repository code as the source of truth.
-- Do not assume functionality, configuration, or dependencies that are not present.
-- Preserve existing behavior unless explicitly requested otherwise.
-- Prefer small, focused changes over broad rewrites.
-- Avoid unnecessary dependencies and architectural complexity.
+- Prefer small, focused changes. Avoid broad rewrites, unnecessary
+  dependencies, and unnecessary architectural complexity.
+- Preserve existing behavior unless the user explicitly requests a
+  change.
 - Do not modify unrelated files.
-- Reuse existing utilities, methods, and patterns where possible.
-- If requirements are unclear, ask before making assumptions.
+- Reuse existing utilities, methods, DOM elements, containers, event
+  handlers, and rendering mechanisms where they already meet the
+  requirement.
+- Before adding a UI element or implementation, search for an existing
+  one that can be extended or reused.
+- For UI changes, inspect the relevant HTML, CSS, and JavaScript
+  together. Check DOM structure, rendering, state management, and
+  event handling.
+- Reusing CSS classes does not mean two elements share the same
+  implementation. If reuse is required, verify that the actual DOM
+  element and rendering mechanism are shared.
+- If multiple events or states can update the same UI element,
+  identify their interactions and define the expected priority,
+  replacement, dismissal, and persistence behavior.
+- Do not hide duplicate elements with CSS as a substitute for fixing
+  duplicate rendering or state management.
+- When reusing an existing UI element, preserve its position,
+  dimensions, alignment, styling, accessibility, and dismissal
+  behavior unless the requirement says otherwise.
+- For responsive layout issues, inspect actual rendered bounds,
+  computed styles, viewport dimensions, and relevant application
+  states before changing CSS.
+- Distinguish explicit design requirements from measurements observed
+  during earlier tests. A historical pixel value is not a permanent
+  requirement unless explicitly agreed.
+- Verify the rendered UI after the change. Confirm that the intended
+  behavior works and that duplicate elements or conflicting messages
+  are not present.
 
-## Existing UI and implementation reuse
+### Scroll-container sizing
 
-- Before implementing a new feature or UI element, search the existing codebase for functionality, components, DOM elements, containers, utilities, or rendering mechanisms that could already serve the same purpose.
-- Prefer extending or reusing existing implementations over creating parallel or duplicate implementations.
-- Do not create a new DOM element, container, component, event handler, or state-management mechanism when an existing one can fulfil the requirement.
-- When a requirement says that something must appear in the same place or behave like an existing element, interpret this as a requirement to investigate and reuse the existing implementation, not merely to reproduce its visual appearance.
-- For UI changes, inspect the relevant HTML structure, CSS rules, and JavaScript rendering and state-management logic together.
-- Reusing the same CSS classes or visual styling does not mean that two elements share the same implementation. Verify the actual DOM element and rendering mechanism when reuse is required.
-- When multiple events or application states can update the same UI element, identify their interactions and define the expected priority, replacement, dismissal, and persistence behavior.
-- Do not solve duplicate rendering or state-management problems merely by hiding one of the duplicate elements with CSS. Fix the underlying rendering or state-management logic.
-- Preserve existing positioning, dimensions, alignment, styling, accessibility, and dismissal behavior when reusing an existing UI element, unless the task explicitly requires a change.
-- Before considering a UI issue fixed, verify the actual rendered result and confirm that no duplicate elements or conflicting messages remain.
+- Keep content dimensions separate from the dimensions allocated to a
+  scroll container.
+- Use actual content extents for content-driven layout calculations.
+- Use `scrollHeight` and `clientHeight` for overflow calculations
+  where appropriate; do not treat them as interchangeable with actual
+  content dimensions.
+- Avoid sizing an ancestor from viewport-expanded scroll measurements
+  if that can create a layout feedback loop.
 
-## Proactive diagnostics and problem resolution
+## 7. Diagnostics
 
-- After making code changes, inspect the available IDE diagnostics, including the VS Code Problems panel, for errors and warnings related to modified files.
-- Pay particular attention to newly introduced errors, warnings, TypeScript diagnostics, unresolved imports, invalid references, and other problems caused by the current changes.
-- Fix issues introduced by the current changes as part of the current task, without waiting for the user to report them.
-- Before fixing an issue, determine whether it is:
-  - Introduced by the current changes.
-  - A pre-existing issue in an affected file or feature.
-  - Unrelated to the current task.
-- Do not silently expand the scope of a task to fix unrelated issues.
-- If a diagnostic points to code modified by the current task, investigate and fix it even if the relevant tests are passing.
-- For pre-existing or unrelated issues, report the findings and ask the user for approval before making changes.
-- If the IDE diagnostics or Problems panel are not accessible, use the available compiler, TypeScript checker, test runner, or other relevant project validation commands.
-- Never claim that the Problems panel was inspected if it was not actually accessible.
-- Do not attempt to fix every existing warning blindly. First establish whether it is relevant, introduced by the current work, or potentially risky.
-- After fixing a diagnostic, recheck the affected diagnostics and run the appropriate tests.
-- Report remaining diagnostics, including their file locations and why they were not addressed.
+- After changing code, inspect available IDE diagnostics, including
+  the VS Code Problems panel, for issues related to the changed files.
+- Check for errors, warnings, TypeScript diagnostics, unresolved
+  imports, and invalid references introduced by the change.
+- Fix issues introduced by the current task, even if tests pass.
+- Before fixing a reported issue, classify it as:
+  - introduced by the current changes;
+  - pre-existing in an affected file or feature; or
+  - unrelated to the task.
+- Do not silently expand the task to include pre-existing or unrelated
+  issues. Report them and ask for approval before changing them.
+- If IDE diagnostics are unavailable, run the relevant compiler,
+  TypeScript checker, tests, or other project validation. Do not claim
+  to have inspected diagnostics that were not accessible.
+- Do not fix existing warnings blindly. First establish their
+  relevance and risk.
+- After fixing a diagnostic, recheck it and run the relevant tests.
+- Report remaining relevant diagnostics, including file locations and
+  why they were not fixed.
 
-## Working workflow
+## 8. Workflow and approval
 
-For complex tasks:
+For a simple, clearly specified task, make the focused change directly.
 
-1. Analyze the current implementation.
-2. Identify affected files and dependencies.
-3. Propose a concise implementation plan.
-4. Wait for approval before making changes.
-5. Implement in small, logically grouped steps.
-6. Run relevant tests after implementation.
-7. Report modified files and actual test results.
+For a complex task --- one affecting multiple unrelated modules,
+architecture, data flow, authentication/authorization, or significant
+refactoring:
 
-- A task is considered complex if it affects multiple unrelated modules, changes architecture or data flow, modifies authentication/authorization behavior, or requires significant refactoring.
+1.  Inspect the current implementation and relevant tests.
+2.  Identify affected files and dependencies.
+3.  Present a concise plan.
+4.  Wait for the user's approval before implementation.
+5.  Implement in small, logically grouped steps.
+6.  Run the relevant tests and inspect diagnostics.
+7.  Report the changed files and actual results.
 
-For simple, clearly specified tasks, implementation can proceed directly.
+If a new issue appears during implementation, first decide whether it
+belongs to the approved task. Fix issues introduced by the current
+changes. Ask before changing pre-existing or unrelated code.
 
-Additional workflow rules:
+For UI work, verify the actual user-visible behavior, not just the
+presence of CSS classes or DOM elements. Passing tests alone does not
+make the task complete if relevant diagnostics or visible defects
+remain.
 
-- Before proposing a new implementation, inspect existing functionality and identify reusable components, utilities, and patterns.
-- For complex UI changes, inspect the HTML, CSS, and JavaScript implementation together before making changes.
-- If a new issue is discovered during implementation, determine whether it belongs to the current task before changing anything.
-- Fix issues introduced by the current changes as part of the current task.
-- Ask for approval before fixing pre-existing or unrelated issues.
-- After implementation, inspect available IDE diagnostics and address relevant issues introduced by the changes.
-- Do not consider a task complete solely because tests pass if relevant diagnostics still indicate problems.
-- Verify the actual user-visible behavior for UI changes, not just the presence of expected CSS classes or DOM elements.
+## 9. Git and change management
 
-## Git and change management
-
-- Never commit, push, or create branches without explicit approval.
-- Do not overwrite unrelated user changes.
+- Never commit, push, or create a branch without explicit user
+  approval.
+- Do not overwrite, revert, reset, or discard existing user changes
+  unless explicitly requested.
+- Preserve untracked files. Do not add or modify them unless the user
+  asks.
 - Review the final diff before reporting completion.
-- Do not claim tests passed unless they were actually executed.
-- Report any failing or skipped tests explicitly.
-
-Additional Git and change management rules:
-
-- Do not revert, reset, or discard existing user changes unless explicitly requested.
-- Keep changes logically grouped so that unrelated fixes can be committed separately.
-- If a change belongs to a separate logical task or commit, tell the user before proceeding with additional work.
-- Preserve untracked files and do not include them in changes unless explicitly requested.
-- Report the exact files modified and distinguish current-task changes from pre-existing working-tree changes.
+- Keep unrelated changes in separate logical groups. Tell the user
+  before doing additional work outside the agreed scope.
+- Do not claim that tests or checks passed unless they were actually
+  run.
+- Report failing or skipped tests explicitly.
+- At completion, list the exact files changed and distinguish
+  current-task changes from pre-existing working-tree changes.
