@@ -237,7 +237,7 @@ test.describe("Search access", () => {
     await common.expectEnabled(flightFinder.airportInput);
   });
 
-  test("TC-SEARCH-ACCESS-06 | should keep header status centered and within narrow viewports", async () => {
+  test("TC-SEARCH-ACCESS-06 | should center Smart Flex and truncate long header status", async () => {
     await flightFinder.mockSearchAccess("premium");
     await common.openPage(Env.test);
 
@@ -245,9 +245,11 @@ test.describe("Search access", () => {
       await flightFinder.expectHeaderLayoutAtWidth(width);
     }
 
+    const shortStatusLayout = await flightFinder.expectHeaderLayoutAtWidth(320);
     await flightFinder.expectHeaderLayoutAtWidth(
       320,
       "Search settings could not be loaded. Please reload the page to try again.",
     );
+    await flightFinder.expectHeaderControlsMatch(shortStatusLayout);
   });
 });

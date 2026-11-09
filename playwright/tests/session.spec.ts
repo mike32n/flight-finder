@@ -7,6 +7,8 @@ import FlightFinderPage from "../pages/flight-finder.page";
 import NavigationPage from "../pages/navigation.page";
 import { createVerifiedTestUser } from "../helpers/user.helper";
 
+const { updateSmartFlexPreference } = require("../../models/userModel");
+
 const amsterdam = {
   city: "Amsterdam",
   code: "AMS",
@@ -241,5 +243,31 @@ test.describe("Session lifecycle", () => {
     await flightFinder.dismissSessionMessage();
     await common.simulateCachedPageRestore();
     await common.expectHidden(flightFinder.sessionMessage);
+  });
+
+  test("TC-SESSION-10 | should display only the current user's saved Smart Flex preference", async () => {
+    const firstUser = await createVerifiedTestUser();
+    const secondUser = await createVerifiedTestUser();
+    await updateSmartFlexPreference(secondUser.userId, false);
+
+    await flightFinder.expectSmartFlexPreference(false);
+    await auth.login(firstUser.email, firstUser.password);
+    await flightFinder.expectSmartFlexPreference(true);
+    await common.reloadPage();
+    await flightFinder.expectSmartFlexPreference(true);
+
+    await common.click(flightFinder.logoutButton);
+    await flightFinder.expectSmartFlexPreference(false);
+    await auth.login(secondUser.email, secondUser.password);
+    await flightFinder.expectSmartFlexPreference(false);
+
+    await updateSmartFlexPreference(secondUser.userId, true);
+    await common.simulateCachedPageRestore();
+    await flightFinder.expectSmartFlexPreference(true);
+
+    await auth.mockCurrentUserFailure(401);
+    await common.simulateCachedPageRestore();
+    await flightFinder.expectSmartFlexPreference(false);
+    await auth.expectAuthTokenRemoved();
   });
 });

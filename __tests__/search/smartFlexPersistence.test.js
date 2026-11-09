@@ -43,8 +43,9 @@ describe.each(["/search", "/search-stream"])(
       originalFlex = appConfig.smartFlex.enabled;
       appConfig.search.weeksToGenerate = 1;
       appConfig.smartFlex.enabled = true;
-      providerSearch.mockReset().mockImplementation(
-        async (destination, departure, returnDate) => ({
+      providerSearch
+        .mockReset()
+        .mockImplementation(async (destination, departure, returnDate) => ({
           success: true,
           data: {
             destination,
@@ -53,8 +54,7 @@ describe.each(["/search", "/search-stream"])(
             price: 30000,
             currency: "HUF",
           },
-        }),
-      );
+        }));
     });
 
     afterEach(async () => {

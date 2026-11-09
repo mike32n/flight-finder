@@ -3,7 +3,14 @@ let verifiedAuthToken = null;
 let sessionVersion = 0;
 let currentUserRequestId = 0;
 
+function resetSmartFlexPreference() {
+  const checkbox = document.getElementById("smart-flex-preference");
+  checkbox.checked = false;
+  checkbox.disabled = true;
+}
+
 function saveToken(token) {
+  resetSmartFlexPreference();
   sessionVersion++;
   authUser = null;
   verifiedAuthToken = null;
@@ -17,6 +24,7 @@ function getToken() {
 }
 
 function invalidateCurrentUserVerification() {
+  resetSmartFlexPreference();
   currentUserRequestId++;
   verifiedAuthToken = null;
 }
@@ -63,6 +71,7 @@ function removeToken() {
 }
 
 function endSession({ expired = false } = {}) {
+  resetSmartFlexPreference();
   if (expired) {
     clearPrivateSearchResults();
   } else {
@@ -83,6 +92,7 @@ async function loadCurrentUser() {
   const isCurrent = () =>
     requestId === currentUserRequestId && isSessionContextCurrent(context);
 
+  resetSmartFlexPreference();
   verifiedAuthToken = null;
 
   if (!context.token) {
@@ -119,6 +129,16 @@ async function loadCurrentUser() {
 
     authUser = data.user;
     verifiedAuthToken = context.token;
+
+    if (
+      ["registered", "premium"].includes(authUser.plan) &&
+      typeof authUser.smartFlexPreference === "boolean"
+    ) {
+      document.getElementById("smart-flex-preference").checked =
+        authUser.smartFlexPreference;
+    } else {
+      console.error("Invalid Smart Flex preference or plan for current user.");
+    }
 
     return "authenticated";
   } catch (error) {

@@ -34,6 +34,10 @@ export type HeaderControlLayout = {
   authHeight: number;
   authWidth: number;
   headerHeight: number;
+  formTop: number;
+  formLeft: number;
+  formWidth: number;
+  formHeight: number;
   loginHeight: number;
   registerHeight: number;
   themeLeft: number;
@@ -50,6 +54,7 @@ export default class MainPage {
   readonly searchView: Locator;
   readonly adminView: Locator;
   readonly searchAccessStatus: Locator;
+  readonly smartFlexPreference: Locator;
   readonly sessionMessage: Locator;
   readonly errorCards: Locator;
 
@@ -105,6 +110,10 @@ export default class MainPage {
     this.searchView = page.locator("#search-view");
     this.adminView = page.locator("#admin-view");
     this.searchAccessStatus = page.locator("#search-access-status");
+    this.smartFlexPreference = this.appHeader.getByRole("checkbox", {
+      name: "Smart Flex",
+      exact: true,
+    });
     this.sessionMessage = page.locator("#search-validation-error");
     this.errorCards = page.locator(".error-card");
 
@@ -219,6 +228,12 @@ export default class MainPage {
     }
   }
 
+  async expectSmartFlexPreference(checked: boolean): Promise<void> {
+    await expect(this.smartFlexPreference).toBeVisible();
+    await expect(this.smartFlexPreference).toBeDisabled();
+    await expect(this.smartFlexPreference).toBeChecked({ checked });
+  }
+
   async expectAppStructurePrepared(): Promise<void> {
     await expect(this.appShell.locator(":scope > #app-header")).toHaveCount(1);
     await expect(this.appShell.locator(":scope > #search-view")).toHaveCount(1);
@@ -268,16 +283,25 @@ export default class MainPage {
     }
 
     await expect(this.authContainer.locator(":scope > *")).toBeVisible();
+    await expect(this.smartFlexPreference).toBeVisible();
+    await expect(this.appHeader.getByRole("status")).toHaveCount(1);
+    await expect(this.searchAccessStatus).toBeVisible();
+    await expect(this.searchAccessStatus).toHaveRole("status");
+    await expect(this.searchAccessStatus).toHaveText(statusText ?? /\S/);
 
     const layout = await this.appHeader.evaluate((header) => {
       const admin = header.querySelector("#admin-link");
       const status = header.querySelector("#search-access-status");
+      const preference = header.querySelector("#smart-flex-preference");
+      const preferenceLabel =
+        preference instanceof HTMLInputElement ? preference.labels?.[0] : null;
       const theme = header.querySelector("#theme-button");
       const controls = header.querySelector(".header-controls");
       const auth = header.querySelector("#auth-container");
       const authContent = auth?.firstElementChild;
       const mainHeader = header.querySelector(".main-page-header");
       const container = header.closest(".container");
+      const form = container?.querySelector("#search-view .form");
       const login = header.querySelector("#login-btn");
       const register = header.querySelector("#register-btn");
       const logout = header.querySelector("#logout-btn");
@@ -286,11 +310,13 @@ export default class MainPage {
       if (
         !admin ||
         !status ||
+        !preferenceLabel ||
         !theme ||
         !controls ||
         !auth ||
         !mainHeader ||
-        !container
+        !container ||
+        !form
       ) {
         throw new Error("Main page header elements are missing");
       }
@@ -300,6 +326,8 @@ export default class MainPage {
       const adminBox = admin.getBoundingClientRect();
       const adminStyle = getComputedStyle(admin);
       const statusBox = status.getBoundingClientRect();
+      const preferenceBox = preferenceLabel.getBoundingClientRect();
+      const formBox = form.getBoundingClientRect();
       const themeBox = theme.getBoundingClientRect();
       const themeStyle = getComputedStyle(theme);
       const authBox = auth.getBoundingClientRect();
@@ -323,13 +351,7 @@ export default class MainPage {
       const containerStyle = getComputedStyle(container);
       const textRange = document.createRange();
       textRange.selectNodeContents(status);
-      const measureText = (element: Element | null) => {
-        if (!(element instanceof HTMLElement)) return 0;
-        const context = document.createElement("canvas").getContext("2d");
-        if (!context) throw new Error("Could not measure auth button text");
-        context.font = getComputedStyle(element).font;
-        return context.measureText(element.textContent ?? "").width;
-      };
+      const statusTextRects = Array.from(textRange.getClientRects());
       const overlaps = (first: DOMRect, second: DOMRect) =>
         first.width > 0 &&
         first.height > 0 &&
@@ -346,6 +368,10 @@ export default class MainPage {
         headerLeft: headerBox.left,
         headerRight: headerBox.right,
         headerHeight: headerBox.height,
+        formTop: formBox.top,
+        formLeft: formBox.left,
+        formWidth: formBox.width,
+        formHeight: formBox.height,
         containerContentWidth:
           container.clientWidth -
           parseFloat(containerStyle.paddingLeft) -
@@ -365,19 +391,25 @@ export default class MainPage {
         statusRight: statusBox.right,
         statusTop: statusBox.top,
         statusCenter: statusBox.top + statusBox.height / 2,
-        statusTextAlign: statusStyle.textAlign,
         statusWhiteSpace: statusStyle.whiteSpace,
         statusFontSize: parseFloat(statusStyle.fontSize),
-        statusOverflowWrap: statusStyle.overflowWrap,
+        statusOverflowX: statusStyle.overflowX,
+        statusTextOverflow: statusStyle.textOverflow,
         statusScrollWidth: status.scrollWidth,
         statusClientWidth: status.clientWidth,
-        statusContentWidth:
-          statusBox.width -
-          parseFloat(statusStyle.paddingLeft) -
-          parseFloat(statusStyle.paddingRight),
-        statusTextWidth: measureText(status),
-        statusLineCount: textRange.getClientRects().length,
+        statusSingleLine:
+          statusTextRects.length > 0 &&
+          statusTextRects.every(
+            (rect) => Math.abs(rect.top - statusTextRects[0].top) < 0.5,
+          ),
         statusPosition: statusStyle.position,
+        preferenceLeft: preferenceBox.left,
+        preferenceRight: preferenceBox.right,
+        preferenceCenter: preferenceBox.left + preferenceBox.width / 2,
+        preferenceOverlapsStatus: overlaps(preferenceBox, statusBox),
+        preferenceOverlapsAdmin: overlaps(preferenceBox, adminBox),
+        preferenceOverlapsTheme: overlaps(preferenceBox, themeBox),
+        preferenceOverlapsAuth: overlaps(preferenceBox, authBox),
         themeLeft: themeBox.left,
         themeTop: themeBox.top,
         themeTopOffset: themeBox.top - containerBox.top,
@@ -461,12 +493,22 @@ export default class MainPage {
         viewportWidth: document.documentElement.clientWidth,
       };
     });
-    expect(layout.statusTextAlign).toBe("center");
-    expect(layout.statusOverflowWrap).toBe("anywhere");
-    expect(layout.statusScrollWidth).toBeLessThanOrEqual(
-      layout.statusClientWidth,
-    );
+    expect(layout.statusWhiteSpace).toBe("nowrap");
+    expect(layout.statusOverflowX).toBe("hidden");
+    expect(layout.statusTextOverflow).toBe("ellipsis");
+    expect(layout.statusSingleLine).toBe(true);
     expect(layout.statusPosition).toBe("static");
+    expect(layout.statusLeft).toBeGreaterThanOrEqual(layout.headerLeft);
+    expect(layout.statusRight).toBeLessThanOrEqual(layout.preferenceLeft);
+    expect(layout.preferenceRight).toBeLessThanOrEqual(layout.headerRight);
+    expect(layout.preferenceCenter).toBeCloseTo(
+      (layout.headerLeft + layout.headerRight) / 2,
+      0,
+    );
+    expect(layout.preferenceOverlapsStatus).toBe(false);
+    expect(layout.preferenceOverlapsAdmin).toBe(false);
+    expect(layout.preferenceOverlapsTheme).toBe(false);
+    expect(layout.preferenceOverlapsAuth).toBe(false);
     expect(layout.themePosition).toBe("static");
     expect(layout.authPosition).toBe("static");
     expect(layout.authContentPosition).toBe("static");
@@ -527,7 +569,6 @@ export default class MainPage {
       }
       expect(layout.authCenter).toBeCloseTo(layout.containerCenter, 0);
       expect(layout.statusLeft).toBeCloseTo(layout.headerLeft, 0);
-      expect(layout.statusRight).toBeCloseTo(layout.headerRight, 0);
       expect(layout.authTop + layout.authHeight).toBeLessThanOrEqual(
         layout.statusTop,
       );
@@ -549,11 +590,6 @@ export default class MainPage {
         expect(layout.authRight).toBeLessThanOrEqual(layout.themeLeft);
       }
     } else {
-      expect(layout.statusWhiteSpace).toBe("nowrap");
-      expect(layout.statusLineCount).toBe(1);
-      expect(layout.statusScrollWidth).toBeLessThanOrEqual(
-        layout.statusClientWidth,
-      );
       expect(layout.statusCenter).toBeCloseTo(
         layout.authTop + layout.authHeight / 2,
         0,
@@ -564,9 +600,6 @@ export default class MainPage {
       expect(layout.statusFontSize).toBeGreaterThanOrEqual(12);
       expect(layout.statusFontSize).toBeLessThanOrEqual(14.4);
       expect(layout.statusFontSize).toBeCloseTo(14.4, 2);
-      expect(layout.statusTextWidth).toBeLessThanOrEqual(
-        layout.statusContentWidth,
-      );
     }
 
     if (layout.logoutWidth > 0) {
@@ -628,17 +661,20 @@ export default class MainPage {
     }
 
     if (statusText !== undefined && width === 320) {
-      expect(layout.statusLineCount).toBeGreaterThan(1);
+      expect(layout.statusScrollWidth).toBeGreaterThan(layout.statusClientWidth);
     }
 
     expect(this.documentLoadCount).toBe(loadCount);
-    await expect(this.searchAccessStatus).toBeVisible();
     return {
       authCenter: layout.authCenter,
       authLeft: layout.authLeft,
       authHeight: layout.authHeight,
       authWidth: layout.authWidth,
       headerHeight: layout.headerHeight,
+      formTop: layout.formTop,
+      formLeft: layout.formLeft,
+      formWidth: layout.formWidth,
+      formHeight: layout.formHeight,
       loginHeight: layout.loginHeight,
       registerHeight: layout.registerHeight,
       themeLeft: layout.themeLeft,
@@ -653,13 +689,17 @@ export default class MainPage {
     const layout = await this.appHeader.evaluate((header) => {
       const auth = header.querySelector("#auth-container");
       const theme = header.querySelector("#theme-button");
+      const form = header
+        .closest(".container")
+        ?.querySelector("#search-view .form");
 
-      if (!auth || !theme) {
-        throw new Error("Header authentication or theme control is missing");
+      if (!auth || !theme || !form) {
+        throw new Error("Header controls or search form are missing");
       }
 
       const authBox = auth.getBoundingClientRect();
       const themeBox = theme.getBoundingClientRect();
+      const formBox = form.getBoundingClientRect();
 
       return {
         authCenter: authBox.left + authBox.width / 2,
@@ -667,6 +707,10 @@ export default class MainPage {
         authHeight: authBox.height,
         authWidth: authBox.width,
         headerHeight: header.getBoundingClientRect().height,
+        formTop: formBox.top,
+        formLeft: formBox.left,
+        formWidth: formBox.width,
+        formHeight: formBox.height,
         loginHeight:
           auth.querySelector("#login-btn")?.getBoundingClientRect().height ?? 0,
         registerHeight:
@@ -683,6 +727,10 @@ export default class MainPage {
     expect(layout.authWidth).toBeCloseTo(expected.authWidth, 0);
     expect(layout.authHeight).toBeCloseTo(expected.authHeight, 0);
     expect(layout.headerHeight).toBeCloseTo(expected.headerHeight, 0);
+    expect(layout.formTop).toBeCloseTo(expected.formTop, 0);
+    expect(layout.formLeft).toBeCloseTo(expected.formLeft, 0);
+    expect(layout.formWidth).toBeCloseTo(expected.formWidth, 0);
+    expect(layout.formHeight).toBeCloseTo(expected.formHeight, 0);
     expect(layout.authHeight).toBeCloseTo(expected.loginHeight, 0);
     expect(expected.loginHeight).toBeCloseTo(expected.registerHeight, 0);
     expect(layout.themeLeft).toBeCloseTo(expected.themeLeft, 0);
@@ -1280,6 +1328,7 @@ export default class MainPage {
             emailVerified: true,
             plan,
             isAdmin,
+            smartFlexPreference: true,
           },
         },
       });

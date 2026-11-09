@@ -713,6 +713,7 @@ window.addEventListener("storage", async (event) => {
     event.storageArea === localStorage &&
     (event.key === "authToken" || event.key === null)
   ) {
+    invalidateCurrentUserVerification();
     await refreshSessionAndRoute();
   }
 });

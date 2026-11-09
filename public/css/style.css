@@ -282,14 +282,23 @@ h1 {
   justify-self: start;
 }
 
-#app-header .main-page-header #search-access-status {
+#app-header .header-search-settings {
   grid-area: status;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content minmax(0, 1fr);
+  align-items: center;
   min-width: 0;
-  /* Reserve the longest current plan label's two lines across auth states. */
   min-height: 2lh;
-  margin: 0;
-  text-align: center;
-  overflow-wrap: anywhere;
+  pointer-events: none;
+}
+
+#app-header .main-page-header #search-access-status {
+  min-width: 0;
+  margin: 0 8px 0 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  pointer-events: auto;
 }
 
 #app-header .header-controls {
@@ -507,6 +516,30 @@ button:disabled {
 
 .field-label {
   display: none;
+}
+
+.smart-flex-preference {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 14px;
+  white-space: nowrap;
+  pointer-events: auto;
+}
+
+.smart-flex-preference input {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  margin: 0;
+  accent-color: var(--primary);
+}
+
+.smart-flex-preference input:disabled {
+  cursor: not-allowed;
+  opacity: var(--disabled-opacity);
 }
 
 /* =====================================================
@@ -1138,10 +1171,15 @@ body.dark #start-date {
     align-self: center;
   }
 
-  #app-header .main-page-header #search-access-status {
+  #app-header .header-search-settings {
+    grid-column: 1 / -1;
+    grid-row: 1;
     min-height: 0;
+  }
+
+  #app-header .main-page-header #search-access-status {
+    margin-left: calc(var(--header-corner-size) + var(--header-control-gap));
     align-self: center;
-    white-space: nowrap;
     font-size: 0.9rem;
   }
 
