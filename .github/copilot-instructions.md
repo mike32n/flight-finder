@@ -253,6 +253,17 @@ presence of CSS classes or DOM elements. Passing tests alone does not
 make the task complete if relevant diagnostics or visible defects
 remain.
 
+### Stateful and asynchronous behavior
+
+For bugs involving concurrent operations, authentication, persistence, retries, or UI state:
+
+- Trace the complete affected flow and identify the source of truth for each relevant state.
+- Distinguish independent validity conditions, such as session identity, request freshness, operation outcome, and UI state. Do not use one guard as a substitute for checks with different responsibilities.
+- Before changing code, identify relevant state transitions, race conditions, lifecycle events, and failure paths. Define which outcomes are valid and which must be ignored.
+- Distinguish confirmed success, confirmed failure, and uncertain outcomes. Do not assume that aborting a client request cancels a server-side operation.
+- Ensure pending operations are released on every terminal path. Consider stalled requests, late responses, retries, and cleanup when designing synchronization and timeout behavior.
+- Add deterministic regression tests for the identified scenarios, including overlapping operations and stale responses. Preserve existing success, failure, and boundary coverage.
+
 ## 9. Git and change management
 
 - Never commit, push, or create a branch without explicit user
