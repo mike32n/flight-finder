@@ -2,6 +2,12 @@ import { Locator, Page, expect } from "@playwright/test";
 
 type CloseButtonSize = { width: number; height: number };
 
+export type HeldLoginResponse = {
+  waitUntilRequested: () => Promise<void>;
+  waitUntilProcessed: () => Promise<void>;
+  release: () => void;
+};
+
 export default class AuthPage {
   readonly page: Page;
 
@@ -147,6 +153,96 @@ export default class AuthPage {
     await this.loginSubmitButton.click();
 
     await expect(this.authModal).toBeHidden();
+  }
+
+  async beginLogin(email: string, password: string): Promise<void> {
+    await this.loginButton.click();
+    await this.fillLoginForm(email, password);
+    await this.loginSubmitButton.click();
+  }
+
+  async holdNextLoginResponse(): Promise<HeldLoginResponse> {
+    let release!: () => void;
+    let requested!: () => void;
+    let responseFinished!: Promise<void>;
+    let held = false;
+    let released = false;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const arrived = new Promise<void>((resolve) => {
+      requested = resolve;
+    });
+
+    await this.page.route("**/api/auth/login", async (route) => {
+      if (held) {
+        await route.fallback();
+        return;
+      }
+
+      held = true;
+      responseFinished = this.page
+        .waitForResponse((response) => response.request() === route.request())
+        .then(async (response) => {
+          await response.finished();
+        });
+      requested();
+      await gate;
+      await route.continue();
+    });
+
+    return {
+      waitUntilRequested: () => arrived,
+      waitUntilProcessed: async () => {
+        await responseFinished;
+        await this.page.evaluate(
+          () =>
+            new Promise<void>((resolve) => {
+              requestAnimationFrame(() => requestAnimationFrame(resolve));
+            }),
+        );
+      },
+      release: () => {
+        if (!released) {
+          released = true;
+          release();
+        }
+      },
+    };
+  }
+
+  async openSharedSessionPage(url: string): Promise<AuthPage> {
+    const page = await this.page.context().newPage();
+    const auth = new AuthPage(page);
+    await page.goto(url);
+    return auth;
+  }
+
+  async closePage(): Promise<void> {
+    await this.page.close();
+  }
+
+  async expectAuthenticatedUser(email: string): Promise<void> {
+    await expect(this.page.locator("#auth-user-email")).toHaveText(email);
+  }
+
+  async expectSameAuthToken(other: AuthPage): Promise<void> {
+    const [token, otherToken] = await Promise.all([
+      this.page.evaluate(() => localStorage.getItem("authToken")),
+      other.page.evaluate(() => localStorage.getItem("authToken")),
+    ]);
+
+    expect(token).not.toBeNull();
+    expect(token).toBe(otherToken);
+  }
+
+  async expectLoginFormOpen(): Promise<void> {
+    await expect(this.authModal).toBeVisible();
+    await expect(this.loginFormContainer).toBeVisible();
+  }
+
+  async expectLoginSubmitEnabled(): Promise<void> {
+    await expect(this.loginSubmitButton).toBeEnabled();
   }
 
   async loginViaApi(email: string, password: string): Promise<void> {

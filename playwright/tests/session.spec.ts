@@ -334,4 +334,44 @@ test.describe("Session lifecycle", () => {
     await flightFinder.expectSmartFlexPreference(false, true);
     await flightFinder.expectSmartFlexSaveErrorHidden();
   });
+
+  test("TC-SESSION-14 | should retain a newer cross-tab session after a delayed login resolves", async () => {
+    const firstUser = await createVerifiedTestUser();
+    const secondUser = await createVerifiedTestUser();
+    await updateSmartFlexPreference(secondUser.userId, false);
+    const heldLogin = await auth.holdNextLoginResponse();
+
+    let secondAuth: AuthPage | undefined;
+
+    try {
+      await auth.beginLogin(firstUser.email, firstUser.password);
+      await heldLogin.waitUntilRequested();
+
+      secondAuth = await auth.openSharedSessionPage(Env.test);
+      const secondFlightFinder = new FlightFinderPage(secondAuth.page);
+
+      await secondAuth.login(secondUser.email, secondUser.password);
+      await secondAuth.expectAuthenticatedUser(secondUser.email);
+      await secondFlightFinder.expectSmartFlexPreference(false, true);
+      await secondFlightFinder.expectRegisteredSearchAccessReady();
+
+      await auth.expectAuthenticatedUser(secondUser.email);
+      await auth.expectSameAuthToken(secondAuth);
+      await flightFinder.expectSmartFlexPreference(false, true);
+      await flightFinder.expectRegisteredSearchAccessReady();
+
+      heldLogin.release();
+      await heldLogin.waitUntilProcessed();
+
+      await auth.expectAuthenticatedUser(secondUser.email);
+      await auth.expectSameAuthToken(secondAuth);
+      await auth.expectLoginFormOpen();
+      await auth.expectLoginSubmitEnabled();
+      await flightFinder.expectSmartFlexPreference(false, true);
+      await flightFinder.expectRegisteredSearchAccessReady();
+    } finally {
+      heldLogin.release();
+      if (secondAuth) await secondAuth.closePage();
+    }
+  });
 });

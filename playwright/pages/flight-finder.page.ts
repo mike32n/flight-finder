@@ -245,6 +245,11 @@ export default class MainPage {
     await expect(this.smartFlexPreference).toBeChecked({ checked });
   }
 
+  async expectRegisteredSearchAccessReady(): Promise<void> {
+    await expect(this.searchAccessStatus).toContainText("Registered");
+    await expect(this.searchButton).toBeEnabled();
+  }
+
   async toggleSmartFlexPreference(): Promise<void> {
     await this.smartFlexPreference.click();
   }
