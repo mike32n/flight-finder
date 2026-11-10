@@ -2,6 +2,8 @@ let authUser = null;
 let verifiedAuthToken = null;
 let sessionVersion = 0;
 let currentUserRequestId = 0;
+let loginAttemptId = 0;
+let activeLoginAttempt = null;
 const pendingSmartFlexSaves = new Map();
 let pendingSmartFlexError = null;
 
@@ -35,7 +37,15 @@ function resetSmartFlexPreference() {
   checkbox.disabled = true;
 }
 
-function saveToken(token) {
+function invalidateLoginAttempt() {
+  if (!activeLoginAttempt) return;
+
+  resetAuthButton(activeLoginAttempt.button);
+  activeLoginAttempt = null;
+}
+
+function saveToken(token, loginAttempt = null) {
+  if (activeLoginAttempt !== loginAttempt) invalidateLoginAttempt();
   resetSmartFlexPreference();
   clearSmartFlexError();
   sessionVersion++;
@@ -57,6 +67,7 @@ function invalidateCurrentUserVerification() {
 }
 
 function invalidateSessionForTokenChange() {
+  invalidateLoginAttempt();
   sessionVersion++;
   clearSmartFlexError();
   invalidateCurrentUserVerification();
@@ -97,6 +108,7 @@ function expireSessionIfUnauthorized(response, context) {
 }
 
 function removeToken() {
+  invalidateLoginAttempt();
   sessionVersion++;
   verifiedAuthToken = null;
 
@@ -493,8 +505,33 @@ document
     const password = document.getElementById("login-password").value;
     const button = event.target.querySelector('button[type="submit"]');
 
+    let interruptedContext = null;
+    if (
+      activeLoginAttempt &&
+      isSessionContextCurrent(activeLoginAttempt.context)
+    ) {
+      if (activeLoginAttempt.verifying) {
+        interruptedContext = activeLoginAttempt.context;
+        invalidateCurrentUserVerification();
+      } else {
+        interruptedContext = activeLoginAttempt.interruptedContext;
+      }
+    }
+    invalidateLoginAttempt();
+    const attempt = {
+      id: ++loginAttemptId,
+      button,
+      context: getSessionContext(),
+      interruptedContext,
+      verifying: false,
+    };
+    activeLoginAttempt = attempt;
+    const isCurrent = () =>
+      attempt.id === loginAttemptId && isSessionContextCurrent(attempt.context);
+
     setAuthButtonLoading(button, "Signing in...");
 
+    let loginFailed = false;
     try {
       const response = await fetch("/api/auth/login", {
         method: "POST",
@@ -507,18 +544,40 @@ document
         }),
       });
 
+      if (!isCurrent()) return;
+
       const data = await response.json();
+
+      if (!isCurrent()) return;
 
       if (!response.ok) {
         showAuthMessage("login-message", data.message);
+        loginFailed = true;
         return;
       }
 
-      saveToken(data.token);
+      try {
+        saveToken(data.token, attempt);
+      } finally {
+        attempt.context = getSessionContext();
+      }
 
-      const authState = await loadCurrentUser();
+      attempt.verifying = true;
+      const verification = loadCurrentUser();
+      const verificationRequestId = currentUserRequestId;
+      const authState = await verification;
+      attempt.verifying = false;
 
-      if (authState === "stale") return; //"stale" means that the session changed during the request or a new validation process was initiated (in such cases, the original call cannot modify the interface)
+      const expiredDuringVerification =
+        authState === "anonymous" &&
+        attempt.id === loginAttemptId &&
+        !getToken() &&
+        sessionVersion === attempt.context.version + 1 &&
+        currentUserRequestId === verificationRequestId;
+
+      if (authState === "stale" || (!isCurrent() && !expiredDuringVerification)) {
+        return;
+      }
 
       if (authState !== "authenticated") {
         const message = "Your session could not be verified. Please try again.";
@@ -537,9 +596,51 @@ document
 
       closeAuthModal();
     } catch {
-      showAuthMessage("login-message", "Login failed.");
+      if (isCurrent()) {
+        showAuthMessage("login-message", "Login failed.");
+        loginFailed = true;
+      }
     } finally {
-      resetAuthButton(button);
+      if (activeLoginAttempt === attempt) {
+        resetAuthButton(button);
+        try {
+          if (
+            loginFailed &&
+            attempt.interruptedContext?.token &&
+            isCurrent() &&
+            isSessionContextCurrent(attempt.interruptedContext) &&
+            !isCurrentUserVerified()
+          ) {
+            attempt.verifying = true;
+            const verification = loadCurrentUser();
+            const verificationRequestId = currentUserRequestId;
+            updateSearchControls();
+            const authState = await verification;
+            attempt.verifying = false;
+
+            if (
+              authState === "anonymous" &&
+              attempt.id === loginAttemptId &&
+              !getToken() &&
+              sessionVersion === attempt.context.version + 1 &&
+              currentUserRequestId === verificationRequestId
+            ) {
+              window.dispatchEvent(new Event("auth-changed"));
+            } else if (isCurrent() && currentUserRequestId === verificationRequestId) {
+              if (authState === "unavailable") {
+                setSearchAccessUnavailable(
+                  "Your session could not be verified. Please reload the page to try again.",
+                );
+              } else if (authState === "authenticated") {
+                renderAuthUI();
+                window.dispatchEvent(new Event("auth-changed"));
+              }
+            }
+          }
+        } finally {
+          if (activeLoginAttempt === attempt) invalidateLoginAttempt();
+        }
+      }
     }
   });
 

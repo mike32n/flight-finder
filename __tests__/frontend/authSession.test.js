@@ -128,7 +128,580 @@ function changePreference(context, checked) {
   return handler();
 }
 
+function deferred() {
+  let resolve;
+  const promise = new Promise((resolvePromise) => {
+    resolve = resolvePromise;
+  });
+  return { promise, resolve };
+}
+
+async function expectRecoveryStarted(recoveryStarted, failedLogin) {
+  const result = await Promise.race([
+    recoveryStarted.promise.then((request) => ({
+      event: "recovery GET started",
+      request,
+    })),
+    failedLogin.then(() => ({
+      event: "login completed without starting recovery GET",
+    })),
+  ]);
+  expect(result.event).toBe("recovery GET started");
+  return result.request;
+}
+
+function currentUserResponse(id, preference) {
+  return {
+    ok: true,
+    status: 200,
+    json: async () => ({
+      user: {
+        id,
+        email: `user${id}@example.com`,
+        plan: "registered",
+        smartFlexPreference: preference,
+      },
+    }),
+  };
+}
+
+function loginResponse(token) {
+  return { ok: true, status: 200, json: async () => ({ token }) };
+}
+
+function rejectedLoginResponse() {
+  return {
+    ok: false,
+    status: 401,
+    json: async () => ({ message: "Invalid credentials" }),
+  };
+}
+
+function setupLogin(browser) {
+  const { context, run } = browser;
+  const form = context.document.getElementById("login-form");
+  const button = context.document.getElementById("login-submit");
+  button.textContent = "Login";
+  form.querySelector = () => button;
+  for (const id of ["login-form", "register-form", "forgot-form"]) {
+    context.document.getElementById(id).reset = jest.fn();
+  }
+  context.document.getElementById("login-message").classList.toggle = jest.fn();
+  context.document.getElementById("auth-container").querySelector = () => ({});
+  context.location = { hash: "" };
+  run("searchPageInitialized = true; refreshSearchAccess = async () => {}");
+
+  const submitHandler = form.addEventListener.mock.calls.find(
+    ([event]) => event === "submit",
+  )[1];
+  const storageHandler = context.window.addEventListener.mock.calls.find(
+    ([event]) => event === "storage",
+  )[1];
+
+  return {
+    button,
+    submit: () => submitHandler({ preventDefault: jest.fn(), target: form }),
+    async switchAccount(token, id, preference) {
+      context.localStorage.setItem("authToken", token);
+      context.fetch.mockResolvedValueOnce(currentUserResponse(id, preference));
+      await storageHandler({
+        storageArea: context.localStorage,
+        key: "authToken",
+      });
+    },
+  };
+}
+
+async function beginInterruptedLogin(browser, login) {
+  const oldVerification = deferred();
+  const verificationStarted = deferred();
+  browser.context.fetch
+    .mockResolvedValueOnce(loginResponse("token-A"))
+    .mockImplementationOnce(() => {
+      verificationStarted.resolve();
+      return oldVerification.promise;
+    });
+
+  const firstLogin = login.submit();
+  await verificationStarted.promise;
+  return { firstLogin, oldVerification };
+}
+
+async function beginLoginRecovery(browser, login) {
+  const interrupted = await beginInterruptedLogin(browser, login);
+  const recovery = deferred();
+  const recoveryStarted = deferred();
+  browser.context.fetch
+    .mockResolvedValueOnce(rejectedLoginResponse())
+    .mockImplementationOnce((url, options) => {
+      recoveryStarted.resolve({ url, options });
+      return recovery.promise;
+    });
+  const failedLogin = login.submit();
+  const request = await expectRecoveryStarted(recoveryStarted, failedLogin);
+  expect(request.url).toBe("/api/auth/me");
+  expect(request.options.headers.Authorization).toBe("Bearer token-A");
+  return { ...interrupted, recovery, failedLogin };
+}
+
 describe("frontend session handling", () => {
+  describe("login freshness", () => {
+    test.each([
+      ["successful", "response"],
+      ["successful", "body"],
+      ["failed", "response"],
+      ["failed", "body"],
+    ])(
+      "ignores a delayed %s login %s after a cross-tab account change",
+      async (outcome, stage) => {
+        const browser = createBrowser();
+        const { context, run } = browser;
+        const login = setupLogin(browser);
+        const delayed = deferred();
+        const bodyStarted = deferred();
+        const ok = outcome === "successful";
+        const data = ok ? { token: "token-A" } : { message: "Old login error" };
+
+        if (stage === "response") {
+          context.fetch.mockImplementationOnce(() => delayed.promise);
+        } else {
+          context.fetch.mockResolvedValueOnce({
+            ok,
+            status: ok ? 200 : 401,
+            json: () => {
+              bodyStarted.resolve();
+              return delayed.promise;
+            },
+          });
+        }
+
+        const oldLogin = login.submit();
+        expect(login.button.disabled).toBe(true);
+        if (stage === "body") await bodyStarted.promise;
+
+        await login.switchAccount("token-B", 43, false);
+        expect(login.button.disabled).toBe(false);
+        expect(run("getToken()")).toBe("token-B");
+        expect(run("authUser.id")).toBe(43);
+        expectPreference(context, false, false);
+        const feedback = context.document.getElementById("login-message");
+        feedback.textContent = "Current session feedback";
+        const container = context.document.getElementById("auth-container");
+        const currentUI = container.innerHTML;
+
+        if (stage === "response") {
+          delayed.resolve({ ok, status: ok ? 200 : 401, json: async () => data });
+        } else {
+          delayed.resolve(data);
+        }
+        await oldLogin;
+
+        expect(run("getToken()")).toBe("token-B");
+        expect(run("authUser.id")).toBe(43);
+        expect(run("isCurrentUserVerified()")).toBe(true);
+        expectPreference(context, false, false);
+        expect(context.document.getElementById("auth-user-email").textContent)
+          .toBe("user43@example.com");
+        expect(container.innerHTML).toBe(currentUI);
+        expect(feedback.textContent).toBe("Current session feedback");
+        expect(context.document.getElementById("auth-modal").classList.add)
+          .not.toHaveBeenCalledWith("hidden");
+        expect(context.window.dispatchEvent).not.toHaveBeenCalled();
+        expect(login.button.disabled).toBe(false);
+      },
+    );
+
+    test("ignores a successful login response after logout", async () => {
+      const browser = createBrowser();
+      const { context, run } = browser;
+      const login = setupLogin(browser);
+      context.fetch.mockResolvedValueOnce(currentUserResponse(42, true));
+      await run('saveToken("token-A"); loadCurrentUser()');
+      run("renderAuthUI()");
+      const response = deferred();
+      context.fetch.mockImplementationOnce(() => response.promise);
+      const pendingLogin = login.submit();
+      expect(login.button.disabled).toBe(true);
+
+      run("logout()");
+      const feedback = context.document.getElementById("login-message");
+      feedback.textContent = "Current session feedback";
+      const dispatchCount = context.window.dispatchEvent.mock.calls.length;
+      expect(login.button.disabled).toBe(false);
+      response.resolve(loginResponse("token-B"));
+      await pendingLogin;
+
+      expect(run("getToken()")).toBeNull();
+      expect(run("authUser")).toBeNull();
+      expectPreference(context, false);
+      expect(context.document.getElementById("auth-container").innerHTML)
+        .toContain('id="login-btn"');
+      expect(feedback.textContent).toBe("Current session feedback");
+      expect(context.window.dispatchEvent).toHaveBeenCalledTimes(dispatchCount);
+      expect(context.fetch).toHaveBeenCalledTimes(2);
+      expect(login.button.disabled).toBe(false);
+    });
+
+    test("ignores an older login after a newer login succeeds", async () => {
+      const browser = createBrowser();
+      const { context, run } = browser;
+      const login = setupLogin(browser);
+      const firstResponse = deferred();
+      const secondResponse = deferred();
+      context.fetch
+        .mockImplementationOnce(() => firstResponse.promise)
+        .mockImplementationOnce(() => secondResponse.promise)
+        .mockResolvedValueOnce(currentUserResponse(43, false));
+
+      const firstLogin = login.submit();
+      const secondLogin = login.submit();
+      secondResponse.resolve(loginResponse("token-B"));
+      await secondLogin;
+
+      expect(run("getToken()")).toBe("token-B");
+      expect(run("authUser.id")).toBe(43);
+      expectPreference(context, false, false);
+      expect(login.button.disabled).toBe(false);
+      const feedback = context.document.getElementById("login-message");
+      feedback.textContent = "Current session feedback";
+      const dispatchCount = context.window.dispatchEvent.mock.calls.length;
+      const modalCloseCount = context.document.getElementById("auth-modal")
+        .classList.add.mock.calls.length;
+
+      firstResponse.resolve(loginResponse("token-A"));
+      await firstLogin;
+
+      expect(run("getToken()")).toBe("token-B");
+      expect(run("authUser.id")).toBe(43);
+      expectPreference(context, false, false);
+      expect(context.document.getElementById("auth-user-email").textContent)
+        .toBe("user43@example.com");
+      expect(feedback.textContent).toBe("Current session feedback");
+      expect(context.window.dispatchEvent).toHaveBeenCalledTimes(dispatchCount);
+      expect(context.document.getElementById("auth-modal").classList.add)
+        .toHaveBeenCalledTimes(modalCloseCount);
+      expect(login.button.disabled).toBe(false);
+    });
+
+    test.each([
+      [
+        "HTTP rejection",
+        () => Promise.resolve(rejectedLoginResponse()),
+        "Invalid credentials",
+      ],
+      [
+        "network failure",
+        () => Promise.reject(new Error("network failure")),
+        "Login failed.",
+      ],
+      [
+        "invalid response body",
+        () => Promise.resolve({
+          ok: true,
+          status: 200,
+          json: async () => {
+            throw new Error("invalid JSON");
+          },
+        }),
+        "Login failed.",
+      ],
+    ])(
+      "revalidates the interrupted session after %s",
+      async (_, failedResponse, expectedError) => {
+        const browser = createBrowser();
+        const { context, run } = browser;
+        const login = setupLogin(browser);
+        const { firstLogin, oldVerification } = await beginInterruptedLogin(
+          browser,
+          login,
+        );
+        const recovery = deferred();
+        const recoveryStarted = deferred();
+        context.fetch
+          .mockImplementationOnce(failedResponse)
+          .mockImplementationOnce((url, options) => {
+            recoveryStarted.resolve({ url, options });
+            return recovery.promise;
+          });
+
+        const failedLogin = login.submit();
+        const request = await expectRecoveryStarted(recoveryStarted, failedLogin);
+        expect(request.url).toBe("/api/auth/me");
+        expect(request.options.headers.Authorization).toBe("Bearer token-A");
+        expect(run("getToken()")).toBe("token-A");
+        expect(run("isCurrentUserVerified()")).toBe(false);
+        expectPreference(context, false);
+        expect(login.button.disabled).toBe(false);
+        expect(context.document.getElementById("login-message").textContent)
+          .toBe(expectedError);
+
+        oldVerification.resolve(currentUserResponse(42, false));
+        await firstLogin;
+        expect(run("authUser")).toBeNull();
+        expectPreference(context, false);
+        expect(context.window.dispatchEvent).not.toHaveBeenCalled();
+
+        recovery.resolve(currentUserResponse(42, true));
+        await failedLogin;
+        expect(run("getToken()")).toBe("token-A");
+        expect(run("authUser.id")).toBe(42);
+        expect(run("isCurrentUserVerified()")).toBe(true);
+        expectPreference(context, true, false);
+        expect(context.document.getElementById("auth-user-email").textContent)
+          .toBe("user42@example.com");
+        expect(context.document.getElementById("login-message").textContent)
+          .toBe(expectedError);
+        expect(context.window.dispatchEvent).toHaveBeenCalledTimes(1);
+        expect(context.window.dispatchEvent).toHaveBeenCalledWith(
+          expect.objectContaining({ type: "auth-changed" }),
+        );
+        expect(login.button.disabled).toBe(false);
+      },
+    );
+
+    test.each([
+      ["account change", 200],
+      ["account change", 401],
+      ["logout", 200],
+      ["logout", 401],
+    ])(
+      "ignores recovery after %s with status %i",
+      async (change, status) => {
+        const browser = createBrowser();
+        const { context, run } = browser;
+        const login = setupLogin(browser);
+        const { firstLogin, oldVerification, recovery, failedLogin } =
+          await beginLoginRecovery(browser, login);
+        expect(login.button.disabled).toBe(false);
+
+        if (change === "account change") {
+          await login.switchAccount("token-B", 43, false);
+        } else {
+          run("logout()");
+        }
+        const feedback = context.document.getElementById("login-message");
+        feedback.textContent = "Current session feedback";
+        const dispatchCount = context.window.dispatchEvent.mock.calls.length;
+
+        recovery.resolve(
+          status === 200 ? currentUserResponse(42, true) : { ok: false, status },
+        );
+        oldVerification.resolve(currentUserResponse(42, true));
+        await failedLogin;
+        await firstLogin;
+
+        expect(run("getToken()")).toBe(change === "logout" ? null : "token-B");
+        expect(run("authUser?.id ?? null")).toBe(change === "logout" ? null : 43);
+        expectPreference(context, false, change === "logout");
+        expect(feedback.textContent).toBe("Current session feedback");
+        expect(context.window.dispatchEvent).toHaveBeenCalledTimes(dispatchCount);
+        expect(login.button.disabled).toBe(false);
+      },
+    );
+
+    test.each([200, 401])(
+      "ignores recovery status %i after a newer login starts",
+      async (status) => {
+        const browser = createBrowser();
+        const { context, run } = browser;
+        const login = setupLogin(browser);
+        const { firstLogin, oldVerification, recovery, failedLogin } =
+          await beginLoginRecovery(browser, login);
+        const newerResponse = deferred();
+        context.fetch
+          .mockImplementationOnce(() => newerResponse.promise)
+          .mockResolvedValueOnce(currentUserResponse(43, false));
+        const newerLogin = login.submit();
+        expect(login.button.disabled).toBe(true);
+
+        recovery.resolve(
+          status === 200 ? currentUserResponse(42, true) : { ok: false, status },
+        );
+        oldVerification.resolve(currentUserResponse(42, true));
+        await failedLogin;
+        await firstLogin;
+
+        expect(run("getToken()")).toBe("token-A");
+        expect(run("authUser")).toBeNull();
+        expectPreference(context, false);
+        expect(context.window.dispatchEvent).not.toHaveBeenCalled();
+        expect(login.button.disabled).toBe(true);
+
+        newerResponse.resolve(loginResponse("token-B"));
+        await newerLogin;
+        expect(run("getToken()")).toBe("token-B");
+        expect(run("authUser.id")).toBe(43);
+        expectPreference(context, false, false);
+        expect(context.document.getElementById("login-message").textContent)
+          .toBe("");
+        expect(login.button.disabled).toBe(false);
+      },
+    );
+
+    test("retains the recovery requirement across overlapping login attempts", async () => {
+      const browser = createBrowser();
+      const { context, run } = browser;
+      const login = setupLogin(browser);
+      const { firstLogin, oldVerification } = await beginInterruptedLogin(
+        browser,
+        login,
+      );
+      const secondResponse = deferred();
+      const thirdResponse = deferred();
+      const recovery = deferred();
+      const recoveryStarted = deferred();
+      context.fetch
+        .mockImplementationOnce(() => secondResponse.promise)
+        .mockImplementationOnce(() => thirdResponse.promise)
+        .mockImplementationOnce(() => {
+          recoveryStarted.resolve();
+          return recovery.promise;
+        });
+
+      const secondLogin = login.submit();
+      const thirdLogin = login.submit();
+      secondResponse.resolve(loginResponse("token-B"));
+      const secondOutcome = await Promise.race([
+        secondLogin.then(() => "older login completed"),
+        recoveryStarted.promise.then(() => "unexpected GET before newer login failed"),
+      ]);
+      expect(secondOutcome).toBe("older login completed");
+      expect(login.button.disabled).toBe(true);
+      expect(run("getToken()")).toBe("token-A");
+
+      thirdResponse.resolve(rejectedLoginResponse());
+      await expectRecoveryStarted(recoveryStarted, thirdLogin);
+      expect(login.button.disabled).toBe(false);
+      oldVerification.resolve(currentUserResponse(42, false));
+      await firstLogin;
+      expectPreference(context, false);
+      recovery.resolve(currentUserResponse(42, true));
+      await thirdLogin;
+
+      expect(run("getToken()")).toBe("token-A");
+      expect(run("authUser.id")).toBe(42);
+      expect(run("isCurrentUserVerified()")).toBe(true);
+      expectPreference(context, true, false);
+      expect(context.document.getElementById("login-message").textContent)
+        .toBe("Invalid credentials");
+      expect(login.button.disabled).toBe(false);
+    });
+
+    test("revalidates after a newer failed login interrupts recovery", async () => {
+      const browser = createBrowser();
+      const { context, run } = browser;
+      const login = setupLogin(browser);
+      const { firstLogin, oldVerification, recovery, failedLogin } =
+        await beginLoginRecovery(browser, login);
+      const newerResponse = deferred();
+      const newerRecovery = deferred();
+      const newerRecoveryStarted = deferred();
+      context.fetch
+        .mockImplementationOnce(() => newerResponse.promise)
+        .mockImplementationOnce((url, options) => {
+          newerRecoveryStarted.resolve({ url, options });
+          return newerRecovery.promise;
+        });
+
+      const newerLogin = login.submit();
+      expect(login.button.disabled).toBe(true);
+      newerResponse.resolve({
+        ok: false,
+        status: 401,
+        json: async () => ({ message: "New login failed" }),
+      });
+      const request = await expectRecoveryStarted(newerRecoveryStarted, newerLogin);
+      expect(request.url).toBe("/api/auth/me");
+      expect(request.options.headers.Authorization).toBe("Bearer token-A");
+      expect(run("isCurrentUserVerified()")).toBe(false);
+      expectPreference(context, false);
+      expect(context.document.getElementById("login-message").textContent)
+        .toBe("New login failed");
+      expect(login.button.disabled).toBe(false);
+
+      recovery.resolve(currentUserResponse(42, false));
+      oldVerification.resolve(currentUserResponse(42, false));
+      await failedLogin;
+      await firstLogin;
+      expect(run("getToken()")).toBe("token-A");
+      expect(run("authUser")).toBeNull();
+      expectPreference(context, false);
+      expect(context.document.getElementById("login-message").textContent)
+        .toBe("New login failed");
+      expect(context.window.dispatchEvent).not.toHaveBeenCalled();
+      expect(login.button.disabled).toBe(false);
+
+      newerRecovery.resolve(currentUserResponse(42, true));
+      await newerLogin;
+      expect(run("getToken()")).toBe("token-A");
+      expect(run("authUser.id")).toBe(42);
+      expect(run("isCurrentUserVerified()")).toBe(true);
+      expectPreference(context, true, false);
+      expect(context.document.getElementById("login-message").textContent)
+        .toBe("New login failed");
+      expect(context.window.dispatchEvent).toHaveBeenCalledTimes(1);
+      expect(login.button.disabled).toBe(false);
+    });
+
+    test.each([401, 500])(
+      "handles status %i from recovery verification",
+      async (status) => {
+        const browser = createBrowser();
+        const { context, run } = browser;
+        const login = setupLogin(browser);
+        const { firstLogin, oldVerification, recovery, failedLogin } =
+          await beginLoginRecovery(browser, login);
+        recovery.resolve({ ok: false, status });
+        await failedLogin;
+        oldVerification.resolve(currentUserResponse(42, true));
+        await firstLogin;
+
+        expect(run("getToken()")).toBe(status === 401 ? null : "token-A");
+        expect(run("authUser")).toBeNull();
+        expectPreference(context, false);
+        expect(context.document.getElementById("login-message").textContent)
+          .toBe("Invalid credentials");
+        if (status === 401) {
+          expect(context.document.getElementById("search-validation-error").textContent)
+            .toContain("session has expired");
+          expect(context.window.dispatchEvent).toHaveBeenCalledWith(
+            expect.objectContaining({ type: "auth-changed" }),
+          );
+        } else {
+          expect(run("isCurrentUserVerified()")).toBe(false);
+          expect(context.document.getElementById("search-access-status").textContent)
+            .toContain("session could not be verified");
+        }
+        expect(login.button.disabled).toBe(false);
+      },
+    );
+
+    test("completes an ordinary successful login", async () => {
+      const browser = createBrowser();
+      const { context, run } = browser;
+      const login = setupLogin(browser);
+      context.fetch
+        .mockResolvedValueOnce(loginResponse("token-A"))
+        .mockResolvedValueOnce(currentUserResponse(42, true));
+
+      await login.submit();
+
+      expect(run("getToken()")).toBe("token-A");
+      expect(run("authUser.id")).toBe(42);
+      expect(run("isCurrentUserVerified()")).toBe(true);
+      expectPreference(context, true, false);
+      expect(context.document.getElementById("auth-user-email").textContent)
+        .toBe("user42@example.com");
+      expect(context.document.getElementById("login-message").textContent).toBe("");
+      expect(context.document.getElementById("auth-modal").classList.add)
+        .toHaveBeenCalledWith("hidden");
+      expect(context.window.dispatchEvent).toHaveBeenCalledWith(
+        expect.objectContaining({ type: "auth-changed" }),
+      );
+      expect(login.button.disabled).toBe(false);
+    });
+  });
+
   test.each([
     ["registered", true],
     ["registered", false],
