@@ -112,6 +112,8 @@ currently no dedicated lint script in `package.json`.
   relevant layout condition before measuring.
 - Preserve the existing test isolation, fixtures, and setup
   conventions.
+- Distinguish unit-level coverage from browser-level integration coverage.
+- Mocked browser events and stubbed application dependencies do not prove actual browser event propagation or rendered UI behavior.
 
 ### Test assertions and responsive layout
 
@@ -158,6 +160,9 @@ currently no dedicated lint script in `package.json`.
 - Add regression tests for bug fixes.
 - Do not change production code solely to satisfy an incorrect test
   expectation.
+- For asynchronous race-condition tests, use deferred promises and explicit request-start signals to control execution order.
+- Assert that expected requests have started before resolving their responses.
+- Missing requests should produce clear assertion failures rather than relying on test timeouts.
 
 ## 6. Implementation and UI changes
 
