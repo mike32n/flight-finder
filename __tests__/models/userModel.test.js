@@ -266,7 +266,7 @@ describe("userModel", () => {
     });
   });
 
-  test("updates Smart Flex preference without affecting another user", async () => {
+  test("updates Smart Flex preference with a matching version", async () => {
     const first = await createUser({
       email: "flex-first@example.com",
       passwordHash: "hashed-password",
@@ -278,24 +278,80 @@ describe("userModel", () => {
       verificationToken: null,
     });
 
-    expect(await updateSmartFlexPreference(first.id, false)).toBe(true);
-    expect((await findUserById(first.id)).smart_flex_preference).toBe(false);
+    await expect(updateSmartFlexPreference(first.id, false, 0)).resolves.toEqual({
+      status: "updated",
+      smartFlexPreferenceVersion: 1,
+    });
+    expect(await findUserById(first.id)).toEqual(
+      expect.objectContaining({
+        smart_flex_preference: false,
+        smart_flex_preference_version: 1,
+      }),
+    );
     expect((await findUserById(second.id)).smart_flex_preference).toBe(true);
 
-    expect(await updateSmartFlexPreference(first.id, true)).toBe(true);
-    expect((await findUserById(first.id)).smart_flex_preference).toBe(true);
-    expect((await findUserById(second.id)).smart_flex_preference).toBe(true);
+    await expect(updateSmartFlexPreference(first.id, true, 1)).resolves.toEqual({
+      status: "updated",
+      smartFlexPreferenceVersion: 2,
+    });
+    expect(await findUserById(first.id)).toEqual(
+      expect.objectContaining({
+        smart_flex_preference: true,
+        smart_flex_preference_version: 2,
+      }),
+    );
+    await expect(updateSmartFlexPreference(second.id, false, 0)).resolves.toEqual(
+      {
+        status: "updated",
+        smartFlexPreferenceVersion: 1,
+      },
+    );
   });
 
-  test("returns false when updating a missing user's Smart Flex preference", async () => {
-    expect(await updateSmartFlexPreference(-1, false)).toBe(false);
+  test("rejects a stale Smart Flex preference version without overwriting it", async () => {
+    const created = await createUser({
+      email: "flex-conflict@example.com",
+      passwordHash: "hashed-password",
+      verificationToken: null,
+    });
+
+    await expect(updateSmartFlexPreference(created.id, false, 0)).resolves.toEqual(
+      {
+        status: "updated",
+        smartFlexPreferenceVersion: 1,
+      },
+    );
+    await expect(updateSmartFlexPreference(created.id, true, 0)).resolves.toEqual({
+      status: "conflict",
+    });
+    expect(await findUserById(created.id)).toEqual(
+      expect.objectContaining({
+        smart_flex_preference: false,
+        smart_flex_preference_version: 1,
+      }),
+    );
+  });
+
+  test("returns missing when updating a missing user's Smart Flex preference", async () => {
+    await expect(updateSmartFlexPreference(-1, false, 0)).resolves.toEqual({
+      status: "missing",
+    });
   });
 
   test.each([0, 1, "false", null, undefined])(
     "rejects a non-Boolean Smart Flex preference: %p",
     async (preference) => {
-      await expect(updateSmartFlexPreference(-1, preference)).rejects.toThrow(
+      await expect(updateSmartFlexPreference(-1, preference, 0)).rejects.toThrow(
         "Smart Flex preference must be a boolean.",
+      );
+    },
+  );
+
+  test.each([-1, 0.5, "0", null, undefined])(
+    "rejects an invalid Smart Flex preference version: %p",
+    async (version) => {
+      await expect(updateSmartFlexPreference(-1, false, version)).rejects.toThrow(
+        "Smart Flex preference version must be a non-negative integer.",
       );
     },
   );

@@ -72,27 +72,59 @@ function findUserById(userId) {
   });
 }
 
-function updateSmartFlexPreference(userId, preference) {
+function updateSmartFlexPreference(userId, preference, expectedVersion) {
   if (typeof preference !== "boolean") {
     return Promise.reject(
       new TypeError("Smart Flex preference must be a boolean."),
     );
   }
 
+  if (!Number.isSafeInteger(expectedVersion) || expectedVersion < 0) {
+    return Promise.reject(
+      new TypeError(
+        "Smart Flex preference version must be a non-negative integer.",
+      ),
+    );
+  }
+
   return new Promise((resolve, reject) => {
-    getDb().run(
+    getDb().get(
       `
         UPDATE users
-        SET smart_flex_preference = ?
+        SET
+          smart_flex_preference = ?,
+          smart_flex_preference_version = smart_flex_preference_version + 1
         WHERE id = ?
+          AND smart_flex_preference_version = ?
+        RETURNING smart_flex_preference_version
       `,
-      [preference ? 1 : 0, userId],
-      function (error) {
+      [preference ? 1 : 0, userId, expectedVersion],
+      (error, updatedUser) => {
         if (error) {
           return reject(error);
         }
 
-        resolve(this.changes === 1);
+        if (updatedUser) {
+          return resolve({
+            status: "updated",
+            smartFlexPreferenceVersion:
+              updatedUser.smart_flex_preference_version,
+          });
+        }
+
+        getDb().get(
+          "SELECT 1 FROM users WHERE id = ?",
+          [userId],
+          (lookupError, user) => {
+            if (lookupError) {
+              return reject(lookupError);
+            }
+
+            resolve({
+              status: user ? "conflict" : "missing",
+            });
+          },
+        );
       },
     );
   });

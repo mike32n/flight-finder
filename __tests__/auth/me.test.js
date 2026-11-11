@@ -268,15 +268,22 @@ describe("PATCH /api/auth/me", () => {
       plan: "registered",
       is_admin: 0,
       smart_flex_preference: true,
+      smart_flex_preference_version: 0,
     });
     updateSmartFlexPreference.mockReset();
-    updateSmartFlexPreference.mockResolvedValue(true);
+    updateSmartFlexPreference.mockResolvedValue({
+      status: "updated",
+      smartFlexPreferenceVersion: 1,
+    });
   });
 
   test("returns 401 without a token and does not query or update the database", async () => {
     const response = await request(app)
       .patch("/api/auth/me")
-      .send({ smartFlexPreference: false });
+      .send({
+        smartFlexPreference: false,
+        expectedSmartFlexPreferenceVersion: 0,
+      });
 
     expect(response.status).toBe(401);
     expect(response.body).toEqual({
@@ -291,7 +298,10 @@ describe("PATCH /api/auth/me", () => {
     const response = await request(app)
       .patch("/api/auth/me")
       .set("Authorization", "Bearer invalid-token")
-      .send({ smartFlexPreference: false });
+      .send({
+        smartFlexPreference: false,
+        expectedSmartFlexPreferenceVersion: 0,
+      });
 
     expect(response.status).toBe(401);
     expect(findUserById).not.toHaveBeenCalled();
@@ -314,28 +324,42 @@ describe("PATCH /api/auth/me", () => {
       const response = await request(app)
         .patch("/api/auth/me")
         .set("Authorization", `Bearer ${createToken()}`)
-        .send({ smartFlexPreference: preference });
+        .send({
+          smartFlexPreference: preference,
+          expectedSmartFlexPreferenceVersion: 0,
+        });
 
       expect(response.status).toBe(200);
       expect(response.body).toEqual({
         success: true,
         smartFlexPreference: preference,
+        smartFlexPreferenceVersion: 1,
       });
       expect(response.headers["cache-control"]).toBe("no-store");
-      expect(updateSmartFlexPreference).toHaveBeenCalledWith(1, preference);
+      expect(updateSmartFlexPreference).toHaveBeenCalledWith(1, preference, 0);
     },
   );
 
   test.each([
     {},
+    { smartFlexPreference: true },
+    { expectedSmartFlexPreferenceVersion: 0 },
     { smartFlexPreference: null },
     { smartFlexPreference: 0 },
     { smartFlexPreference: 1 },
     { smartFlexPreference: "false" },
     { smartFlexPreference: [] },
     { smartFlexPreference: {} },
-    { smartFlexPreference: true, userId: 2 },
-    { smartFlexPreference: false, extra: true },
+    {
+      smartFlexPreference: true,
+      expectedSmartFlexPreferenceVersion: 0,
+      userId: 2,
+    },
+    {
+      smartFlexPreference: false,
+      expectedSmartFlexPreferenceVersion: 0,
+      extra: true,
+    },
     [],
   ])("rejects an invalid body: %p", async (body) => {
     const response = await request(app)
@@ -348,6 +372,23 @@ describe("PATCH /api/auth/me", () => {
     expect(updateSmartFlexPreference).not.toHaveBeenCalled();
   });
 
+  test.each([-1, 0.5, "0", null, undefined, {}, []])(
+    "rejects an invalid expected version: %p",
+    async (expectedSmartFlexPreferenceVersion) => {
+      const response = await request(app)
+        .patch("/api/auth/me")
+        .set("Authorization", `Bearer ${createToken()}`)
+        .send({
+          smartFlexPreference: true,
+          expectedSmartFlexPreferenceVersion,
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.success).toBe(false);
+      expect(updateSmartFlexPreference).not.toHaveBeenCalled();
+    },
+  );
+
   test("updates the database user identified by the authenticated token", async () => {
     findUserById.mockResolvedValue({
       id: 2,
@@ -356,16 +397,20 @@ describe("PATCH /api/auth/me", () => {
       plan: "registered",
       is_admin: 0,
       smart_flex_preference: true,
+      smart_flex_preference_version: 0,
     });
 
     const response = await request(app)
       .patch("/api/auth/me")
       .set("Authorization", `Bearer ${createToken({ userId: 2 })}`)
-      .send({ smartFlexPreference: false });
+      .send({
+        smartFlexPreference: false,
+        expectedSmartFlexPreferenceVersion: 0,
+      });
 
     expect(response.status).toBe(200);
     expect(findUserById).toHaveBeenCalledWith(2);
-    expect(updateSmartFlexPreference).toHaveBeenCalledWith(2, false);
+    expect(updateSmartFlexPreference).toHaveBeenCalledWith(2, false, 0);
   });
 
   test("returns 401 if the user was deleted before loading", async () => {
@@ -374,7 +419,10 @@ describe("PATCH /api/auth/me", () => {
     const response = await request(app)
       .patch("/api/auth/me")
       .set("Authorization", `Bearer ${createToken()}`)
-      .send({ smartFlexPreference: false });
+      .send({
+        smartFlexPreference: false,
+        expectedSmartFlexPreferenceVersion: 0,
+      });
 
     expect(response.status).toBe(401);
     expect(response.body).toEqual({
@@ -385,17 +433,40 @@ describe("PATCH /api/auth/me", () => {
   });
 
   test("returns 401 if the user is deleted before the update", async () => {
-    updateSmartFlexPreference.mockResolvedValue(false);
+    updateSmartFlexPreference.mockResolvedValue({ status: "missing" });
 
     const response = await request(app)
       .patch("/api/auth/me")
       .set("Authorization", `Bearer ${createToken()}`)
-      .send({ smartFlexPreference: false });
+      .send({
+        smartFlexPreference: false,
+        expectedSmartFlexPreferenceVersion: 0,
+      });
 
     expect(response.status).toBe(401);
     expect(response.body).toEqual({
       success: false,
       message: "User not found.",
+    });
+  });
+
+  test("returns 409 when the expected version is stale", async () => {
+    updateSmartFlexPreference.mockResolvedValue({ status: "conflict" });
+
+    const response = await request(app)
+      .patch("/api/auth/me")
+      .set("Authorization", `Bearer ${createToken()}`)
+      .send({
+        smartFlexPreference: false,
+        expectedSmartFlexPreferenceVersion: 0,
+      });
+
+    expect(response.status).toBe(409);
+    expect(response.body).toEqual({
+      success: false,
+      code: "SMART_FLEX_PREFERENCE_VERSION_CONFLICT",
+      message:
+        "Smart Flex preference was updated by another request. Refresh and try again.",
     });
   });
 
@@ -416,7 +487,10 @@ describe("PATCH /api/auth/me", () => {
         const response = await request(app)
           .patch("/api/auth/me")
           .set("Authorization", `Bearer ${createToken()}`)
-          .send({ smartFlexPreference: false });
+          .send({
+            smartFlexPreference: false,
+            expectedSmartFlexPreferenceVersion: 0,
+          });
 
         expect(response.status).toBe(500);
         expect(response.body).toEqual({

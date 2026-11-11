@@ -421,31 +421,45 @@ async function updateCurrentUser(req, res) {
   res.set("Cache-Control", "no-store");
 
   if (
-    Object.keys(req.body).length !== 1 ||
-    typeof req.body.smartFlexPreference !== "boolean"
+    Object.keys(req.body).length !== 2 ||
+    typeof req.body.smartFlexPreference !== "boolean" ||
+    !Number.isSafeInteger(req.body.expectedSmartFlexPreferenceVersion) ||
+    req.body.expectedSmartFlexPreferenceVersion < 0
   ) {
     return res.status(400).json({
       success: false,
-      message: "A Boolean smartFlexPreference is required with no other fields.",
+      message:
+        "A Boolean smartFlexPreference and a non-negative integer expectedSmartFlexPreferenceVersion are required with no other fields.",
     });
   }
 
   try {
-    const updated = await updateSmartFlexPreference(
+    const result = await updateSmartFlexPreference(
       req.currentUser.id,
       req.body.smartFlexPreference,
+      req.body.expectedSmartFlexPreferenceVersion,
     );
 
-    if (!updated) {
+    if (result.status === "missing") {
       return res.status(401).json({
         success: false,
         message: "User not found.",
       });
     }
 
+    if (result.status === "conflict") {
+      return res.status(409).json({
+        success: false,
+        code: "SMART_FLEX_PREFERENCE_VERSION_CONFLICT",
+        message:
+          "Smart Flex preference was updated by another request. Refresh and try again.",
+      });
+    }
+
     return res.status(200).json({
       success: true,
       smartFlexPreference: req.body.smartFlexPreference,
+      smartFlexPreferenceVersion: result.smartFlexPreferenceVersion,
     });
   } catch (error) {
     console.error(error);

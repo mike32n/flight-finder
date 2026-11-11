@@ -74,7 +74,12 @@ describe.each(["/search", "/search-stream"])(
         passwordHash: "hash",
         verificationToken: null,
       });
-      expect(await updateSmartFlexPreference(offUser.id, false)).toBe(true);
+      await expect(
+        updateSmartFlexPreference(offUser.id, false, 0),
+      ).resolves.toEqual({
+        status: "updated",
+        smartFlexPreferenceVersion: 1,
+      });
 
       const onToken = jwt.sign({ userId: onUser.id }, process.env.JWT_SECRET);
       const offToken = jwt.sign({ userId: offUser.id }, process.env.JWT_SECRET);
