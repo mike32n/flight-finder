@@ -59,6 +59,7 @@ describe("user access migration", () => {
         email_verified: 1,
         plan: "registered",
         is_admin: 0,
+        smart_flex_preference_version: 0,
       }),
     );
     expect((await findUserById(user.id)).smart_flex_preference).toBe(true);
@@ -80,6 +81,7 @@ describe("user access migration", () => {
 
     expect(user.plan).toBe("registered");
     expect(user.is_admin).toBe(0);
+    expect(user.smart_flex_preference_version).toBe(0);
     expect((await findUserById(created.id)).smart_flex_preference).toBe(true);
   });
 
@@ -121,10 +123,14 @@ describe("user access migration", () => {
     await runSql(
       `
         UPDATE users
-        SET plan = ?, is_admin = ?, smart_flex_preference = ?
+        SET
+          plan = ?,
+          is_admin = ?,
+          smart_flex_preference = ?,
+          smart_flex_preference_version = ?
         WHERE email = ?
       `,
-      ["premium", 1, 0, "existing@example.com"],
+      ["premium", 1, 0, 3, "existing@example.com"],
     );
 
     await initDb();
@@ -133,6 +139,7 @@ describe("user access migration", () => {
 
     expect(user.plan).toBe("premium");
     expect(user.is_admin).toBe(1);
+    expect(user.smart_flex_preference_version).toBe(3);
     expect((await findUserById(user.id)).smart_flex_preference).toBe(false);
   });
 

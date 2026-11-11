@@ -64,6 +64,7 @@ async function initDb() {
       verification_token TEXT,
       password_reset_token TEXT,
       password_reset_expires DATETIME,
+      smart_flex_preference_version INTEGER NOT NULL DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
     `,

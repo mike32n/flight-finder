@@ -58,6 +58,16 @@ async function migrateUserAccess(db) {
       `,
     );
   }
+
+  if (!columnNames.has("smart_flex_preference_version")) {
+    await run(
+      db,
+      `
+        ALTER TABLE users
+        ADD COLUMN smart_flex_preference_version INTEGER NOT NULL DEFAULT 0
+      `,
+    );
+  }
 }
 
 module.exports = migrateUserAccess;
