@@ -262,6 +262,7 @@ describe("userModel", () => {
       plan: "registered",
       is_admin: 0,
       smart_flex_preference: true,
+      smart_flex_preference_version: 0,
     });
   });
 

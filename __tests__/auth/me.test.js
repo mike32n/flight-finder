@@ -44,6 +44,7 @@ describe("GET /api/auth/me", () => {
       plan: "registered",
       is_admin: 0,
       smart_flex_preference: true,
+      smart_flex_preference_version: 0,
       password_hash: "must-not-be-returned",
       verification_token: "must-not-be-returned",
     });
@@ -95,6 +96,7 @@ describe("GET /api/auth/me", () => {
         plan: "registered",
         isAdmin: false,
         smartFlexPreference: true,
+        smartFlexPreferenceVersion: 0,
       },
     });
 
@@ -110,6 +112,7 @@ describe("GET /api/auth/me", () => {
       plan: "registered",
       is_admin: 0,
       smart_flex_preference: false,
+      smart_flex_preference_version: 7,
     });
 
     const response = await request(app)
@@ -118,6 +121,7 @@ describe("GET /api/auth/me", () => {
 
     expect(response.status).toBe(200);
     expect(response.body.user.smartFlexPreference).toBe(false);
+    expect(response.body.user.smartFlexPreferenceVersion).toBe(7);
   });
 
   test.each([undefined, null, 0, 1])(

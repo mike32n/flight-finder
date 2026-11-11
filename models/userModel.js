@@ -42,7 +42,14 @@ function findUserById(userId) {
   return new Promise((resolve, reject) => {
     getDb().get(
       `
-        SELECT id, email, email_verified, plan, is_admin, smart_flex_preference
+        SELECT
+          id,
+          email,
+          email_verified,
+          plan,
+          is_admin,
+          smart_flex_preference,
+          smart_flex_preference_version
         FROM users
         WHERE id = ?
       `,

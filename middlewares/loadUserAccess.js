@@ -27,6 +27,7 @@ async function loadUserAccess(req, res, next) {
       plan: user.plan,
       isAdmin: user.is_admin === 1,
       smartFlexPreference: user.smart_flex_preference,
+      smartFlexPreferenceVersion: user.smart_flex_preference_version,
     };
   } catch (error) {
     console.error(error);

@@ -3,13 +3,25 @@ process.env.DB_PATH = ":memory:";
 const express = require("express");
 const request = require("supertest");
 const jwt = require("jsonwebtoken");
-const { initDb, closeDb } = require("../../db");
+const { getDb, initDb, closeDb } = require("../../db");
 const { createUser } = require("../../models/userModel");
 const authRoutes = require("../../routes/authRoutes");
 
 const app = express();
 app.use(express.json());
 app.use("/api/auth", authRoutes);
+
+function runSql(sql, parameters = []) {
+  return new Promise((resolve, reject) => {
+    getDb().run(sql, parameters, (error) => {
+      if (error) {
+        return reject(error);
+      }
+
+      resolve();
+    });
+  });
+}
 
 describe("current user preference persistence", () => {
   beforeAll(async () => {
@@ -50,6 +62,8 @@ describe("current user preference persistence", () => {
       .set("Authorization", `Bearer ${secondToken}`);
     expect(firstRead.body.user.smartFlexPreference).toBe(false);
     expect(secondRead.body.user.smartFlexPreference).toBe(true);
+    expect(firstRead.body.user.smartFlexPreferenceVersion).toBe(0);
+    expect(secondRead.body.user.smartFlexPreferenceVersion).toBe(0);
 
     const secondUpdate = await request(app)
       .patch("/api/auth/me")
@@ -64,6 +78,15 @@ describe("current user preference persistence", () => {
     expect(firstRestore.status).toBe(200);
     expect(firstRestore.body.smartFlexPreference).toBe(true);
 
+    await runSql(
+      `
+        UPDATE users
+        SET smart_flex_preference_version = ?
+        WHERE id = ?
+      `,
+      [4, first.id],
+    );
+
     const firstRestoredRead = await request(app)
       .get("/api/auth/me")
       .set("Authorization", `Bearer ${firstToken}`);
@@ -71,6 +94,7 @@ describe("current user preference persistence", () => {
       .get("/api/auth/me")
       .set("Authorization", `Bearer ${secondToken}`);
     expect(firstRestoredRead.body.user.smartFlexPreference).toBe(true);
+    expect(firstRestoredRead.body.user.smartFlexPreferenceVersion).toBe(4);
     expect(secondUpdatedRead.body.user.smartFlexPreference).toBe(false);
   });
 });
