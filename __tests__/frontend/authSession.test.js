@@ -1297,6 +1297,11 @@ describe("frontend session handling", () => {
     expect(run("authUser.smartFlexPreference")).toBe(true);
     expect(run("authUser.smartFlexPreferenceVersion")).toBe(7);
     expectPreference(context, true, false);
+    const feedback = context.document.getElementById(
+      "smart-flex-preference-error",
+    );
+    expect(feedback.textContent).toBe("");
+    expect(feedback.hidden).toBe(true);
   });
 
   test.each([
