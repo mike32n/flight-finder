@@ -76,6 +76,7 @@ function createBrowser() {
           email: "session@example.com",
           plan: "registered",
           smartFlexPreference: true,
+          smartFlexPreferenceVersion: 0,
         },
       }),
     }),
@@ -150,7 +151,7 @@ async function expectRecoveryStarted(recoveryStarted, failedLogin) {
   return result.request;
 }
 
-function currentUserResponse(id, preference) {
+function currentUserResponse(id, preference, version = 0) {
   return {
     ok: true,
     status: 200,
@@ -160,6 +161,7 @@ function currentUserResponse(id, preference) {
         email: `user${id}@example.com`,
         plan: "registered",
         smartFlexPreference: preference,
+        smartFlexPreferenceVersion: version,
       },
     }),
   };
@@ -713,7 +715,12 @@ describe("frontend session handling", () => {
       ok: true,
       status: 200,
       json: async () => ({
-        user: { id: 42, plan, smartFlexPreference: preference },
+        user: {
+          id: 42,
+          plan,
+          smartFlexPreference: preference,
+          smartFlexPreferenceVersion: 0,
+        },
       }),
     });
 
@@ -722,6 +729,38 @@ describe("frontend session handling", () => {
     ).resolves.toBe("authenticated");
 
     expectPreference(context, preference, false);
+    expect(run("authUser.smartFlexPreferenceVersion")).toBe(0);
+  });
+
+  test.each([
+    ["missing", undefined],
+    ["negative", -1],
+    ["fractional", 0.5],
+    ["unsafe", Number.MAX_SAFE_INTEGER + 1],
+    ["string", "0"],
+  ])("rejects a %s Smart Flex preference version", async (_, version) => {
+    const { context, run } = createBrowser();
+    context.fetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        user: {
+          id: 42,
+          plan: "registered",
+          smartFlexPreference: true,
+          ...(version === undefined ? {} : { smartFlexPreferenceVersion: version }),
+        },
+      }),
+    });
+
+    await expect(
+      run('saveToken("valid-token"); loadCurrentUser()'),
+    ).resolves.toBe("authenticated");
+
+    expectPreference(context, false);
+    expect(context.console.error).toHaveBeenCalledWith(
+      "Invalid Smart Flex preference or plan for current user.",
+    );
   });
 
   test.each([
@@ -737,7 +776,12 @@ describe("frontend session handling", () => {
       ok: true,
       status: 200,
       json: async () => ({
-        user: { id: 42, plan, smartFlexPreference: preference },
+        user: {
+          id: 42,
+          plan,
+          smartFlexPreference: preference,
+          smartFlexPreferenceVersion: 0,
+        },
       }),
     });
 
@@ -907,7 +951,12 @@ describe("frontend session handling", () => {
       ok: true,
       status: 200,
       json: async () => ({
-        user: { id: 43, plan: "registered", smartFlexPreference: false },
+        user: {
+          id: 43,
+          plan: "registered",
+          smartFlexPreference: false,
+          smartFlexPreferenceVersion: 0,
+        },
       }),
     });
     await run("loadCurrentUser()");
@@ -916,7 +965,12 @@ describe("frontend session handling", () => {
       ok: true,
       status: 200,
       json: async () => ({
-        user: { id: 42, plan: "registered", smartFlexPreference: true },
+        user: {
+          id: 42,
+          plan: "registered",
+          smartFlexPreference: true,
+          smartFlexPreferenceVersion: 0,
+        },
       }),
     });
     await expect(oldRequest).resolves.toBe("stale");
@@ -949,7 +1003,12 @@ describe("frontend session handling", () => {
       ok: true,
       status: 200,
       json: async () => ({
-        user: { id: 42, plan: "registered", smartFlexPreference: false },
+        user: {
+          id: 42,
+          plan: "registered",
+          smartFlexPreference: false,
+          smartFlexPreferenceVersion: 0,
+        },
       }),
     });
     await run('saveToken("valid-token"); loadCurrentUser()');
@@ -976,6 +1035,7 @@ describe("frontend session handling", () => {
           plan: "registered",
           isAdmin: true,
           smartFlexPreference: true,
+          smartFlexPreferenceVersion: 0,
         },
       }),
     });
@@ -1019,7 +1079,12 @@ describe("frontend session handling", () => {
       ok: true,
       status: 200,
       json: async () => ({
-        user: { id: 42, plan, smartFlexPreference: !preference },
+        user: {
+          id: 42,
+          plan,
+          smartFlexPreference: !preference,
+          smartFlexPreferenceVersion: 0,
+        },
       }),
     });
     await run('saveToken("valid-token"); loadCurrentUser()');
@@ -1037,7 +1102,10 @@ describe("frontend session handling", () => {
         Authorization: "Bearer valid-token",
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ smartFlexPreference: preference }),
+      body: JSON.stringify({
+        smartFlexPreference: preference,
+        expectedSmartFlexPreferenceVersion: 0,
+      }),
       signal: expect.any(AbortSignal),
     });
 
@@ -1048,7 +1116,11 @@ describe("frontend session handling", () => {
     resolveSave({
       ok: true,
       status: 200,
-      json: async () => ({ success: true, smartFlexPreference: preference }),
+      json: async () => ({
+        success: true,
+        smartFlexPreference: preference,
+        smartFlexPreferenceVersion: 1,
+      }),
     });
     await pending;
     expectPreference(context, preference, false);
@@ -1093,18 +1165,160 @@ describe("frontend session handling", () => {
       .toContain("session has expired");
   });
 
+  test("stores a successful PATCH version and uses it for the next save", async () => {
+    const { context, run } = createBrowser();
+    context.fetch.mockResolvedValueOnce(currentUserResponse(42, true, 4));
+    await run('saveToken("valid-token"); loadCurrentUser()');
+
+    context.fetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        success: true,
+        smartFlexPreference: false,
+        smartFlexPreferenceVersion: 5,
+      }),
+    });
+    await changePreference(context, false);
+
+    expect(run("authUser.smartFlexPreferenceVersion")).toBe(5);
+
+    context.fetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        success: true,
+        smartFlexPreference: true,
+        smartFlexPreferenceVersion: 6,
+      }),
+    });
+    await changePreference(context, true);
+
+    expect(context.fetch).toHaveBeenLastCalledWith("/api/auth/me", {
+      method: "PATCH",
+      headers: {
+        Authorization: "Bearer valid-token",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        smartFlexPreference: true,
+        expectedSmartFlexPreferenceVersion: 5,
+      }),
+      signal: expect.any(AbortSignal),
+    });
+    expect(run("authUser.smartFlexPreferenceVersion")).toBe(6);
+  });
+
+  test.each([
+    ["missing", undefined],
+    ["negative", -1],
+    ["fractional", 1.5],
+    ["unsafe", Number.MAX_SAFE_INTEGER + 1],
+    ["wrong increment", 2],
+  ])("reconciles an invalid %s PATCH version", async (_, version) => {
+    const { context, run } = createBrowser();
+    await run('saveToken("valid-token"); loadCurrentUser()');
+    context.fetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        success: true,
+        smartFlexPreference: false,
+        ...(version === undefined ? {} : { smartFlexPreferenceVersion: version }),
+      }),
+    });
+    context.fetch.mockResolvedValueOnce(currentUserResponse(42, true, 0));
+
+    await changePreference(context, false);
+
+    expect(context.fetch).toHaveBeenCalledTimes(3);
+    expect(run("authUser.smartFlexPreference")).toBe(true);
+    expect(run("authUser.smartFlexPreferenceVersion")).toBe(0);
+    expect(context.document.getElementById("smart-flex-preference-error").textContent)
+      .toContain("could not be confirmed");
+  });
+
+  test("reconciles a conflict once without retrying the PATCH", async () => {
+    const { context, run } = createBrowser();
+    context.fetch.mockResolvedValueOnce(currentUserResponse(42, true, 3));
+    await run('saveToken("valid-token"); loadCurrentUser()');
+    context.fetch.mockResolvedValueOnce({ ok: false, status: 409 });
+    context.fetch.mockResolvedValueOnce(currentUserResponse(42, false, 4));
+
+    await changePreference(context, false);
+
+    expect(context.fetch).toHaveBeenCalledTimes(3);
+    expect(context.fetch.mock.calls.filter(([url, options]) =>
+      url === "/api/auth/me" && options.method === "PATCH",
+    )).toHaveLength(1);
+    expect(run("authUser.smartFlexPreference")).toBe(false);
+    expect(run("authUser.smartFlexPreferenceVersion")).toBe(4);
+    expectPreference(context, false, false);
+    expect(context.document.getElementById("smart-flex-preference-error").textContent)
+      .toContain("could not be saved");
+  });
+
+  test("keeps safe session behavior when conflict reconciliation fails", async () => {
+    const { context, run } = createBrowser();
+    await run('saveToken("valid-token"); loadCurrentUser()');
+    context.fetch.mockResolvedValueOnce({ ok: false, status: 409 });
+    context.fetch.mockResolvedValueOnce({ ok: false, status: 500 });
+
+    await changePreference(context, false);
+
+    expect(context.fetch).toHaveBeenCalledTimes(3);
+    expect(run("getToken()")).toBe("valid-token");
+    expect(run("isCurrentUserVerified()")).toBe(false);
+    expectPreference(context, false);
+    expect(context.document.getElementById("smart-flex-preference-error").textContent)
+      .toContain("could not be saved");
+  });
+
+  test("ignores a stale conflict response after switching sessions", async () => {
+    const { context, run } = createBrowser();
+    await run('saveToken("old-token"); loadCurrentUser()');
+    const conflictStarted = deferred();
+    const conflictResponse = deferred();
+    context.fetch.mockImplementationOnce(() => {
+      conflictStarted.resolve();
+      return conflictResponse.promise;
+    });
+
+    const save = changePreference(context, false);
+    await conflictStarted.promise;
+    run('endSession(); saveToken("new-token")');
+    context.fetch.mockResolvedValueOnce(currentUserResponse(43, true, 7));
+    await run("loadCurrentUser()");
+    conflictResponse.resolve({ ok: false, status: 409 });
+    await save;
+
+    expect(context.fetch).toHaveBeenCalledTimes(3);
+    expect(run("authUser.id")).toBe(43);
+    expect(run("authUser.smartFlexPreference")).toBe(true);
+    expect(run("authUser.smartFlexPreferenceVersion")).toBe(7);
+    expectPreference(context, true, false);
+  });
+
   test.each([
     ["500", () => Promise.resolve({ ok: false, status: 500 })],
     ["network failure", () => Promise.reject(new Error("network failure"))],
     ["malformed response", () => Promise.resolve({
       ok: true,
       status: 200,
-      json: async () => ({ success: true, smartFlexPreference: "false" }),
+      json: async () => ({
+        success: true,
+        smartFlexPreference: "false",
+        smartFlexPreferenceVersion: 1,
+      }),
     })],
     ["mismatched response", () => Promise.resolve({
       ok: true,
       status: 200,
-      json: async () => ({ success: true, smartFlexPreference: true }),
+      json: async () => ({
+        success: true,
+        smartFlexPreference: true,
+        smartFlexPreferenceVersion: 1,
+      }),
     })],
   ])("reconciles an uncertain save after %s", async (_, saveResponse) => {
     const { context, run } = createBrowser();
@@ -1114,7 +1328,12 @@ describe("frontend session handling", () => {
       ok: true,
       status: 200,
       json: async () => ({
-        user: { id: 42, plan: "registered", smartFlexPreference: false },
+        user: {
+          id: 42,
+          plan: "registered",
+          smartFlexPreference: false,
+          smartFlexPreferenceVersion: 1,
+        },
       }),
     });
 
@@ -1193,13 +1412,22 @@ describe("frontend session handling", () => {
       ok: true,
       status: 200,
       json: async () => ({
-        user: { id: 42, plan: "registered", smartFlexPreference: false },
+        user: {
+          id: 42,
+          plan: "registered",
+          smartFlexPreference: false,
+          smartFlexPreferenceVersion: 1,
+        },
       }),
     });
     resolveSave({
       ok: true,
       status: 200,
-      json: async () => ({ success: true, smartFlexPreference: false }),
+      json: async () => ({
+        success: true,
+        smartFlexPreference: false,
+        smartFlexPreferenceVersion: 1,
+      }),
     });
     await save;
     await expect(verification).resolves.toBe("authenticated");
@@ -1272,7 +1500,11 @@ describe("frontend session handling", () => {
           context.fetch.mockResolvedValueOnce({
             ok: outcome === "success",
             status: outcome === "success" ? 200 : Number(outcome),
-            json: async () => ({ success: true, smartFlexPreference: false }),
+            json: async () => ({
+              success: true,
+              smartFlexPreference: false,
+              smartFlexPreferenceVersion: 1,
+            }),
           });
         }
 
@@ -1321,12 +1553,20 @@ describe("frontend session handling", () => {
         if (outcome.endsWith("rejection")) {
           rejectOperation(new Error("late rejection"));
         } else if (outcome === "body success") {
-          resolveOperation({ success: true, smartFlexPreference: false });
+          resolveOperation({
+            success: true,
+            smartFlexPreference: false,
+            smartFlexPreferenceVersion: 1,
+          });
         } else {
           resolveOperation({
             ok: outcome === "200",
             status: Number(outcome),
-            json: async () => ({ success: true, smartFlexPreference: false }),
+            json: async () => ({
+              success: true,
+              smartFlexPreference: false,
+              smartFlexPreferenceVersion: 1,
+            }),
           });
         }
         await jest.advanceTimersByTimeAsync(0);
@@ -1358,7 +1598,12 @@ describe("frontend session handling", () => {
             ok: true,
             status: 200,
             json: async () => ({
-              user: { id: 43, plan: "premium", smartFlexPreference: true },
+              user: {
+                id: 43,
+                plan: "premium",
+                smartFlexPreference: true,
+                smartFlexPreferenceVersion: 0,
+              },
             }),
           });
           await run("loadCurrentUser()");
@@ -1455,7 +1700,12 @@ describe("frontend session handling", () => {
         ok: true,
         status: 200,
         json: async () => ({
-          user: { id: 42, plan: "registered", smartFlexPreference: true },
+          user: {
+            id: 42,
+            plan: "registered",
+            smartFlexPreference: true,
+            smartFlexPreferenceVersion: 1,
+          },
         }),
       });
       if (failure === "network") {
@@ -1464,7 +1714,11 @@ describe("frontend session handling", () => {
         resolveSave({
           ok: failure === "malformed",
           status: failure === "malformed" ? 200 : Number(failure),
-          json: async () => ({ success: true, smartFlexPreference: "false" }),
+          json: async () => ({
+            success: true,
+            smartFlexPreference: "false",
+            smartFlexPreferenceVersion: 1,
+          }),
         });
       }
 
@@ -1504,7 +1758,11 @@ describe("frontend session handling", () => {
     context.fetch.mockResolvedValueOnce({
       ok: true,
       status: 200,
-      json: async () => ({ success: true, smartFlexPreference: false }),
+      json: async () => ({
+        success: true,
+        smartFlexPreference: false,
+        smartFlexPreferenceVersion: 1,
+      }),
     });
     await changePreference(context, false);
 
@@ -1543,7 +1801,11 @@ describe("frontend session handling", () => {
     resolveSave({
       ok: true,
       status: 200,
-      json: async () => ({ success: true, smartFlexPreference: false }),
+      json: async () => ({
+        success: true,
+        smartFlexPreference: false,
+        smartFlexPreferenceVersion: 1,
+      }),
     });
     await save;
 
@@ -1559,7 +1821,12 @@ describe("frontend session handling", () => {
       ok: true,
       status: 200,
       json: async () => ({
-        user: { id: 42, plan: "registered", smartFlexPreference: false },
+        user: {
+          id: 42,
+          plan: "registered",
+          smartFlexPreference: false,
+          smartFlexPreferenceVersion: 1,
+        },
       }),
     });
     await expect(verification).resolves.toBe("authenticated");
@@ -1635,7 +1902,12 @@ describe("frontend session handling", () => {
         ok: true,
         status: 200,
         json: async () => ({
-          user: { id: 42, plan: "registered", smartFlexPreference: false },
+          user: {
+            id: 42,
+            plan: "registered",
+            smartFlexPreference: false,
+            smartFlexPreferenceVersion: 0,
+          },
         }),
       });
       await run('saveToken("valid-token"); loadCurrentUser()');
@@ -1674,7 +1946,11 @@ describe("frontend session handling", () => {
       resolveSave({
         ok: status === 200,
         status,
-        json: async () => ({ success: true, smartFlexPreference: true }),
+        json: async () => ({
+          success: true,
+          smartFlexPreference: true,
+          smartFlexPreferenceVersion: 1,
+        }),
       });
       await save;
       await verificationStarted;
@@ -1697,6 +1973,7 @@ describe("frontend session handling", () => {
             email: "session@example.com",
             plan: "registered",
             smartFlexPreference: confirmedPreference,
+            smartFlexPreferenceVersion: 1,
           },
         }),
       });
@@ -1732,14 +2009,23 @@ describe("frontend session handling", () => {
         ok: true,
         status: 200,
         json: async () => ({
-          user: { id: 43, plan: "premium", smartFlexPreference: true },
+          user: {
+            id: 43,
+            plan: "premium",
+            smartFlexPreference: true,
+            smartFlexPreferenceVersion: 0,
+          },
         }),
       });
       await run("loadCurrentUser()");
       resolveSave({
         ok: status === 200,
         status,
-        json: async () => ({ success: true, smartFlexPreference: false }),
+        json: async () => ({
+          success: true,
+          smartFlexPreference: false,
+          smartFlexPreferenceVersion: 1,
+        }),
       });
       await save;
 
@@ -1767,7 +2053,11 @@ describe("frontend session handling", () => {
       resolveSave({
         ok: status === 200,
         status,
-        json: async () => ({ success: true, smartFlexPreference: false }),
+        json: async () => ({
+          success: true,
+          smartFlexPreference: false,
+          smartFlexPreferenceVersion: 1,
+        }),
       });
       await save;
       expect(run("authUser")).toBeNull();
@@ -1800,7 +2090,12 @@ describe("frontend session handling", () => {
       ok: true,
       status: 200,
       json: async () => ({
-        user: { id: 43, plan: "premium", smartFlexPreference: true },
+        user: {
+          id: 43,
+          plan: "premium",
+          smartFlexPreference: true,
+          smartFlexPreferenceVersion: 0,
+        },
       }),
     });
     await run("loadCurrentUser()");
@@ -1810,7 +2105,11 @@ describe("frontend session handling", () => {
       "smart-flex-preference-error",
     );
     expect(feedback.hidden).toBe(false);
-    resolveBody({ success: true, smartFlexPreference: false });
+    resolveBody({
+      success: true,
+      smartFlexPreference: false,
+      smartFlexPreferenceVersion: 1,
+    });
     await save;
 
     expect(run("authUser.id")).toBe(43);

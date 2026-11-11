@@ -184,7 +184,9 @@ async function loadCurrentUser() {
 
     if (
       ["registered", "premium"].includes(authUser.plan) &&
-      typeof authUser.smartFlexPreference === "boolean"
+      typeof authUser.smartFlexPreference === "boolean" &&
+      Number.isSafeInteger(authUser.smartFlexPreferenceVersion) &&
+      authUser.smartFlexPreferenceVersion >= 0
     ) {
       const checkbox = document.getElementById("smart-flex-preference");
       checkbox.checked = authUser.smartFlexPreference;
@@ -217,7 +219,9 @@ async function saveSmartFlexPreference() {
     !context.token ||
     !isCurrentUserVerified() ||
     !["registered", "premium"].includes(user?.plan) ||
-    typeof user.smartFlexPreference !== "boolean"
+    typeof user.smartFlexPreference !== "boolean" ||
+    !Number.isSafeInteger(user.smartFlexPreferenceVersion) ||
+    user.smartFlexPreferenceVersion < 0
   ) {
     if (
       user &&
@@ -232,6 +236,7 @@ async function saveSmartFlexPreference() {
   }
 
   const preference = checkbox.checked;
+  const expectedVersion = user.smartFlexPreferenceVersion;
   checkbox.checked = user.smartFlexPreference;
   checkbox.disabled = true;
 
@@ -272,7 +277,10 @@ async function saveSmartFlexPreference() {
           Authorization: `Bearer ${context.token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ smartFlexPreference: preference }),
+        body: JSON.stringify({
+          smartFlexPreference: preference,
+          expectedSmartFlexPreferenceVersion: expectedVersion,
+        }),
         signal: controller.signal,
       });
 
@@ -307,19 +315,31 @@ async function saveSmartFlexPreference() {
       return;
     }
 
-    if (!response.ok) {
-      throw new Error(`Smart Flex preference request failed: ${response.status}`);
-    }
+    if (response.status === 409) {
+      reportFailure("Smart Flex preference could not be saved. Please try again.");
+      reconcile = isCurrent();
+    } else {
+      if (!response.ok) {
+        throw new Error(`Smart Flex preference request failed: ${response.status}`);
+      }
 
-    if (!isOriginalSession()) return;
-    if (data?.success !== true || data.smartFlexPreference !== preference) {
-      throw new Error("Invalid Smart Flex preference response");
-    }
+      if (!isOriginalSession()) return;
+      if (
+        data?.success !== true ||
+        data.smartFlexPreference !== preference ||
+        !Number.isSafeInteger(data.smartFlexPreferenceVersion) ||
+        data.smartFlexPreferenceVersion < 0 ||
+        data.smartFlexPreferenceVersion !== expectedVersion + 1
+      ) {
+        throw new Error("Invalid Smart Flex preference response");
+      }
 
-    clearSmartFlexError();
-    if (!isCurrent()) return;
-    user.smartFlexPreference = data.smartFlexPreference;
-    checkbox.checked = user.smartFlexPreference;
+      clearSmartFlexError();
+      if (!isCurrent()) return;
+      user.smartFlexPreference = data.smartFlexPreference;
+      user.smartFlexPreferenceVersion = data.smartFlexPreferenceVersion;
+      checkbox.checked = user.smartFlexPreference;
+    }
   } catch (error) {
     if (
       reportFailure(

@@ -163,6 +163,7 @@ currently no dedicated lint script in `package.json`.
 - For asynchronous race-condition tests, use deferred promises and explicit request-start signals to control execution order.
 - Assert that expected requests have started before resolving their responses.
 - Missing requests should produce clear assertion failures rather than relying on test timeouts.
+- Database compare-and-swap behavior should be tested with competing requests using the same expected version; assert exactly one succeeds and the others conflict.
 
 ## 6. Implementation and UI changes
 

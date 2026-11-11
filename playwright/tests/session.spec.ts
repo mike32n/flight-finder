@@ -251,7 +251,7 @@ test.describe("Session lifecycle", () => {
   test("TC-SESSION-10 | should display only the current user's saved Smart Flex preference", async () => {
     const firstUser = await createVerifiedTestUser();
     const secondUser = await createVerifiedTestUser();
-    await updateSmartFlexPreference(secondUser.userId, false);
+    await updateSmartFlexPreference(secondUser.userId, false, 0);
 
     await flightFinder.expectSmartFlexPreference(false);
     await auth.login(firstUser.email, firstUser.password);
@@ -273,7 +273,7 @@ test.describe("Session lifecycle", () => {
     await common.click(flightFinder.logoutButton);
     await auth.login(firstUser.email, firstUser.password);
     await flightFinder.expectSmartFlexPreference(false, true);
-    await updateSmartFlexPreference(firstUser.userId, true);
+    await updateSmartFlexPreference(firstUser.userId, true, 1);
     await common.simulateCachedPageRestore();
     await flightFinder.expectSmartFlexPreference(true, true);
 
@@ -338,7 +338,7 @@ test.describe("Session lifecycle", () => {
   test("TC-SESSION-14 | should retain a newer cross-tab session after a delayed login resolves", async () => {
     const firstUser = await createVerifiedTestUser();
     const secondUser = await createVerifiedTestUser();
-    await updateSmartFlexPreference(secondUser.userId, false);
+    await updateSmartFlexPreference(secondUser.userId, false, 0);
     const heldLogin = await auth.holdNextLoginResponse();
 
     let secondAuth: AuthPage | undefined;
