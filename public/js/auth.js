@@ -131,12 +131,14 @@ function endSession({ expired = false } = {}) {
   if (expired) showSessionExpirationError();
 }
 
-async function loadCurrentUser() {
+async function loadCurrentUser({ signal } = {}) {
   const requestId = ++currentUserRequestId;
   const context = getSessionContext();
 
   const isCurrent = () =>
-    requestId === currentUserRequestId && isSessionContextCurrent(context);
+    !signal?.aborted &&
+    requestId === currentUserRequestId &&
+    isSessionContextCurrent(context);
 
   resetSmartFlexPreference();
   verifiedAuthToken = null;
@@ -158,6 +160,7 @@ async function loadCurrentUser() {
       headers: {
         Authorization: `Bearer ${context.token}`,
       },
+      signal,
     });
 
     if (!isCurrent()) return "stale";

@@ -80,6 +80,57 @@ export default class NavigationPage {
     expect(this.documentLoadCount).toBe(loadCount);
   }
 
+  async beginReturnToSearchView(): Promise<void> {
+    await this.adminLink.click();
+    await expect(this.adminLink.page()).toHaveURL(/#search$/);
+  }
+
+  async goBackWhileSearchRefreshPending(): Promise<void> {
+    await this.adminLink.page().goBack();
+    await expect(this.adminLink.page()).toHaveURL(/#admin$/);
+    await this.expectAdminViewActive();
+  }
+
+  async holdNextAdminRevalidation(): Promise<{
+    waitUntilRequested: () => Promise<void>;
+    release: () => void;
+  }> {
+    let release!: () => void;
+    let requested = false;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+
+    await this.adminLink.page().route("**/api/auth/me", async (route) => {
+      if (requested || route.request().method() !== "GET") {
+        await route.fallback();
+        return;
+      }
+      requested = true;
+      await gate;
+      await route.continue();
+    });
+
+    return {
+      waitUntilRequested: async () => {
+        await expect.poll(() => requested).toBe(true);
+      },
+      release,
+    };
+  }
+
+  async beginBackToAdmin(): Promise<void> {
+    await this.adminLink.page().goBack();
+    await expect(this.adminLink.page()).toHaveURL(/#admin$/);
+  }
+
+  async goForwardWhileSearchRefreshPending(): Promise<void> {
+    await this.adminLink.page().goForward();
+    await expect(this.adminLink.page()).toHaveURL(/#search$/);
+    await expect(this.searchView).toBeVisible();
+    await expect(this.adminView).toBeHidden();
+  }
+
   async goBackToSearchView(): Promise<void> {
     const loadCount = this.documentLoadCount;
     await this.adminLink.page().goBack();
@@ -391,6 +442,7 @@ export default class NavigationPage {
 
     await page.evaluate(() => window.scrollTo(0, 0));
     await this.returnToSearchView();
+    await expect(this.results).toBeVisible();
 
     const restoredSearchLayout = await page.evaluate(() => ({
       documentWidth: document.documentElement.scrollWidth,

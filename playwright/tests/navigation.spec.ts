@@ -72,6 +72,16 @@ test.describe("Admin navigation", () => {
   test("TC-NAV-02 | should navigate between in-page views while keeping the shared header", async () => {
     await loginAsAdmin();
     await mockAdminPolicies();
+    const searchAccess = await flightFinder.mockSearchAccessSequence(
+      "registered",
+      [{ maxDestinations: 3 }, { maxDestinations: 1 }],
+    );
+    await flightFinder.refreshSearchAccess();
+    await searchAccess.expectRequestCount(1);
+    await common.expectText(
+      flightFinder.searchAccessStatus,
+      "Registered · Up to 3 destinations · Smart Flex: on",
+    );
 
     for (const width of [320, 360, 390, 440, 768, 769, 800, 900, 1024, 1280]) {
       await flightFinder.expectHeaderLayoutAtWidth(
@@ -90,6 +100,14 @@ test.describe("Admin navigation", () => {
     await common.expectURL(/#admin$/);
 
     await navigation.returnToSearchView();
+    await searchAccess.expectRequestCount(2);
+    await common.expectText(
+      flightFinder.searchAccessStatus,
+      "Registered · Up to 1 destination · Smart Flex: on",
+    );
+    await flightFinder.expectDestinationPlaceholder(
+      "Type city or IATA code (1 left)",
+    );
     await common.expectVisible(flightFinder.heading);
     await common.expectVisible(navigation.adminLink);
     await admin.expectRequestCount(1);
@@ -127,17 +145,36 @@ test.describe("Admin navigation", () => {
   test("TC-NAV-04 | should support browser Back and Forward without duplicate policy loads", async () => {
     await loginAsAdmin();
     await mockAdminPolicies();
+    const searchAccess = await flightFinder.mockSearchAccessSequence(
+      "registered",
+      [{ maxDestinations: 3 }, { maxDestinations: 1 }],
+    );
+    await flightFinder.refreshSearchAccess();
+    await searchAccess.expectRequestCount(1);
+    await common.expectText(
+      flightFinder.searchAccessStatus,
+      "Registered · Up to 3 destinations · Smart Flex: on",
+    );
 
     await navigation.openAdminView();
     await common.expectVisible(admin.content);
 
     await navigation.goBackToSearchView();
     await common.expectURL(Env.test);
+    await searchAccess.expectRequestCount(2);
+    await common.expectText(
+      flightFinder.searchAccessStatus,
+      "Registered · Up to 1 destination · Smart Flex: on",
+    );
+    await flightFinder.expectDestinationPlaceholder(
+      "Type city or IATA code (1 left)",
+    );
 
     await navigation.goForwardToAdminView();
     await common.expectURL(/#admin$/);
     await common.expectVisible(admin.content);
     await admin.expectRequestCount(1);
+    await searchAccess.expectRequestCount(2);
   });
 
   test("TC-NAV-05 | should load and refresh a direct Administration URL", async () => {
@@ -258,5 +295,124 @@ test.describe("Admin navigation", () => {
     await common.expectURL(Env.test);
     await common.expectVisible(auth.loginButton);
     await common.expectHidden(admin.content);
+  });
+
+  test("TC-NAV-12 | should preserve newer navigation while a return refresh is pending", async () => {
+    await loginAsAdmin();
+    await mockAdminPolicies();
+    await navigation.openAdminView();
+    await common.expectVisible(admin.content);
+
+    const held = await flightFinder.holdSearchAccess("registered", {
+      maxDestinations: 2,
+    });
+    try {
+      await navigation.beginReturnToSearchView();
+      await held.waitUntilRequested();
+      await held.expectRequestCount(1);
+
+      await navigation.goBackWhileSearchRefreshPending();
+      await common.expectVisible(admin.content);
+      await held.expectRequestCount(1);
+      await admin.expectRequestCount(1);
+    } finally {
+      held.release();
+    }
+
+    await navigation.expectAdminViewActive();
+    await common.expectURL(/#admin$/);
+    await admin.expectRequestCount(1);
+    await held.expectRequestCount(1);
+
+    await navigation.returnToSearchView();
+    await held.expectRequestCount(2);
+    await common.expectText(
+      flightFinder.searchAccessStatus,
+      "Registered · Up to 2 destinations · Smart Flex: on",
+    );
+  });
+
+  test("TC-NAV-13 | should keep Search active when history changes again during a refresh", async () => {
+    await loginAsAdmin();
+    await mockAdminPolicies();
+    await navigation.openAdminView();
+    await common.expectVisible(admin.content);
+
+    const held = await flightFinder.holdSearchAccess("registered", {
+      maxDestinations: 2,
+    });
+    try {
+      await navigation.beginReturnToSearchView();
+      await held.waitUntilRequested();
+      await navigation.goBackWhileSearchRefreshPending();
+      await navigation.goForwardWhileSearchRefreshPending();
+      await held.expectRequestCount(2);
+    } finally {
+      held.release();
+    }
+
+    await common.expectText(
+      flightFinder.searchAccessStatus,
+      "Registered · Up to 2 destinations · Smart Flex: on",
+    );
+    await navigation.expectSearchViewActive();
+    await common.expectVisible(flightFinder.logoutButton);
+    await held.expectRequestCount(2);
+    await admin.expectRequestCount(1);
+  });
+
+  test("TC-NAV-14 | should leave Search unavailable when a return refresh fails", async () => {
+    await loginAsAdmin();
+    await mockAdminPolicies();
+    await navigation.openAdminView();
+    await common.expectVisible(admin.content);
+    await flightFinder.mockSearchAccessResponse(500, {});
+
+    await navigation.returnToSearchView();
+    await common.expectContainsText(
+      flightFinder.searchAccessStatus,
+      "Search settings could not be loaded.",
+    );
+    await common.expectDisabled(flightFinder.searchButton);
+    await flightFinder.expectDestinationPlaceholder(
+      "Type city or IATA code...",
+    );
+    await common.expectVisible(flightFinder.logoutButton);
+    await admin.expectRequestCount(1);
+  });
+
+  test("TC-NAV-15 | should resume Search when Admin revalidation is superseded", async () => {
+    await loginAsAdmin();
+    await mockAdminPolicies();
+    await navigation.openAdminView();
+    await common.expectVisible(admin.content);
+
+    const access = await flightFinder.holdSearchAccess("registered", {
+      maxDestinations: 2,
+    });
+    try {
+      await navigation.beginReturnToSearchView();
+      await access.waitUntilRequested();
+      const revalidation = await navigation.holdNextAdminRevalidation();
+      try {
+        await navigation.beginBackToAdmin();
+        await revalidation.waitUntilRequested();
+        await navigation.goForwardWhileSearchRefreshPending();
+        await access.expectRequestCount(2);
+      } finally {
+        revalidation.release();
+      }
+    } finally {
+      access.release();
+    }
+
+    await common.expectText(
+      flightFinder.searchAccessStatus,
+      "Registered · Up to 2 destinations · Smart Flex: on",
+    );
+    await navigation.expectSearchViewActive();
+    await common.expectVisible(flightFinder.logoutButton);
+    await access.expectRequestCount(2);
+    await admin.expectRequestCount(1);
   });
 });

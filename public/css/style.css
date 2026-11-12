@@ -900,6 +900,22 @@ body.dark #start-date {
   padding-left: 3px;
 }
 
+.result-card:not([data-layout="desktop"]) .result-route {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.result-card:not([data-layout="desktop"]) .result-route strong {
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.result-card:not([data-layout="desktop"]) .result-route .flex-badge {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
 .result-dates {
   grid-area: dates;
   margin-top: 0;

@@ -250,7 +250,7 @@ test.describe("Result rendering", () => {
     );
   });
 
-  test("TC-RESULT-10 | should scale only an overwide unit to fit the mobile card", async () => {
+  test("TC-RESULT-10 | should scale and wrap an overwide route to fit the mobile card", async () => {
     await flightFinder.mockSearchSequence([
       {
         city: "Palma de Mallorca",
@@ -267,6 +267,7 @@ test.describe("Result rendering", () => {
     const card = flightFinder.resultCardForDestination("Palma de Mallorca");
     await flightFinder.setResultCardWidth(400, card);
     await flightFinder.expectResultCardLayoutMode("mobile", card);
+    await flightFinder.expectResultRouteWrapped(card);
     await flightFinder.expectResultUnitScaling(
       { route: true, dates: false, price: false, insight: false },
       card,

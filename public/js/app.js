@@ -27,6 +27,8 @@ let searchOwnerUserId = null;
 let searchPageInitialized = false;
 let searchPageActive = true;
 let searchSessionRequestId = 0;
+let searchSessionRefreshController = null;
+let searchRefreshInterrupted = false;
 let viewNavigationRequestId = 0;
 let configuredMaxDestinations = 3;
 let sessionExpirationErrorActive = false;
@@ -448,13 +450,15 @@ function applySearchAccessToForm() {
   }
 }
 
-async function refreshSearchAccess() {
+async function refreshSearchAccess({ signal } = {}) {
   const requestId = ++searchAccessRequestId;
   const context = getSessionContext();
   const token = context.token;
 
   const isCurrent = () =>
-    requestId === searchAccessRequestId && isSessionContextCurrent(context);
+    !signal?.aborted &&
+    requestId === searchAccessRequestId &&
+    isSessionContextCurrent(context);
 
   searchAccess = null;
   searchAccessLoading = true;
@@ -470,6 +474,7 @@ async function refreshSearchAccess() {
     const response = await fetch("/api/search-access", {
       cache: "no-store",
       headers: token ? { Authorization: `Bearer ${token}` } : {},
+      signal,
     });
 
     if (!isCurrent()) return;
@@ -574,6 +579,7 @@ function abortActiveSearch() {
 
 async function activateAdminView({ updateHistory = true } = {}) {
   const requestId = ++viewNavigationRequestId;
+  const interruptedRefresh = cancelSearchSessionRefresh();
   const context = getSessionContext();
   const authState = await loadCurrentUser();
 
@@ -588,7 +594,13 @@ async function activateAdminView({ updateHistory = true } = {}) {
   ) {
     navigateToSearch({ replace: true });
     renderAuthUI();
+    if (searchRefreshInterrupted) void refreshSessionAndRoute();
     return;
+  }
+
+  if (interruptedRefresh) {
+    renderAuthUI();
+    document.getElementById("auth-container").hidden = false;
   }
 
   abortActiveSearch();
@@ -611,6 +623,7 @@ async function activateAdminView({ updateHistory = true } = {}) {
   if (!initialized) {
     navigateToSearch({ replace: true });
     renderAuthUI();
+    if (searchRefreshInterrupted) void refreshSessionAndRoute();
   }
 }
 
@@ -631,6 +644,7 @@ function initializeAppViewNavigation() {
       void activateAdminView();
     } else {
       navigateToSearch();
+      void refreshSessionAndRoute();
     }
   });
 
@@ -638,23 +652,54 @@ function initializeAppViewNavigation() {
     if (location.hash === "#admin") {
       void activateAdminView({ updateHistory: false });
     } else {
+      const returningFromAdmin = !document.getElementById("admin-view").hidden;
       viewNavigationRequestId++;
       setAppView("search");
+      if (returningFromAdmin || searchRefreshInterrupted) {
+        void refreshSessionAndRoute();
+      }
     }
   });
 }
 
-async function refreshSearchSession() {
+function cancelSearchSessionRefresh() {
+  if (!searchSessionRefreshController) return false;
+
+  searchSessionRequestId++;
+  invalidateCurrentUserVerification();
+  setSearchAccessUnavailable("Verifying your session...");
+  searchSessionRefreshController.abort();
+  searchSessionRefreshController = null;
+  searchRefreshInterrupted = true;
+  return true;
+}
+
+function refreshSearchSession() {
+  cancelSearchSessionRefresh();
+  searchRefreshInterrupted = false;
+  const controller = new AbortController();
+  searchSessionRefreshController = controller;
+  const refresh = runSearchSessionRefresh(controller.signal);
+  const clearRefresh = () => {
+    if (searchSessionRefreshController === controller) {
+      searchSessionRefreshController = null;
+    }
+  };
+  refresh.then(clearRefresh, clearRefresh);
+  return refresh;
+}
+
+async function runSearchSessionRefresh(signal) {
   if (!searchPageInitialized || !searchPageActive) return;
 
   const requestId = ++searchSessionRequestId;
 
   const isCurrent = () =>
-    requestId === searchSessionRequestId && searchPageActive;
+    !signal.aborted && requestId === searchSessionRequestId && searchPageActive;
 
   pauseSearchPage();
 
-  const authState = await loadCurrentUser();
+  const authState = await loadCurrentUser({ signal });
 
   if (!isCurrent() || authState === "stale") return;
 
@@ -672,7 +717,7 @@ async function refreshSearchSession() {
   }
 
   restoreSearchState();
-  await refreshSearchAccess();
+  await refreshSearchAccess({ signal });
 
   if (!isCurrent() || !isSessionContextCurrent(context)) return;
 
@@ -714,6 +759,7 @@ window.addEventListener("auth-changed", async () => {
 
 window.addEventListener("pagehide", () => {
   searchPageActive = false;
+  cancelSearchSessionRefresh();
   searchSessionRequestId++;
   pauseSearchPage();
 });

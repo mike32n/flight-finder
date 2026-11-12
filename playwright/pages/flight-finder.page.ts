@@ -973,6 +973,8 @@ export default class MainPage {
 
   private async expectResultCardGeometry(card: Locator): Promise<void> {
     const layout = await card.evaluate((element) => {
+      const routeText = element.querySelector(".result-route strong");
+      if (!routeText) throw new Error("Result route is missing");
       const cardRect = element.getBoundingClientRect();
       const cardStyle = getComputedStyle(element);
       const innerLeft =
@@ -1033,6 +1035,7 @@ export default class MainPage {
         primaryRow: row(".result-row-primary"),
         secondaryRow: row(".result-row-secondary"),
         route: unit(".result-route"),
+        routeTextWhiteSpace: getComputedStyle(routeText).whiteSpace,
         dates: unit(".result-dates"),
         price: unit(".result-price"),
         insight: element.querySelector(".price-insight")
@@ -1051,7 +1054,9 @@ export default class MainPage {
     ].filter((entry) => entry !== null);
     units.forEach((entry) => {
       expect(entry.scrollWidth).toBeLessThanOrEqual(entry.clientWidth + 1);
-      if (entry.wrapped) {
+      if (entry === layout.route && layout.mode === "mobile") {
+        expect(layout.routeTextWhiteSpace).toBe("normal");
+      } else if (entry.wrapped) {
         expect(entry.whiteSpace).toBe("normal");
         expect(entry.lineCount).toBeGreaterThan(1);
       } else {
@@ -1148,28 +1153,46 @@ export default class MainPage {
         throw new Error("Result route badge is missing");
       }
 
-      const range = document.createRange();
-      range.selectNodeContents(title);
-      const firstLine = range.getClientRects()[0];
+      const titleBox = title.getBoundingClientRect();
       const badgeBox = badge.getBoundingClientRect();
 
       return {
         badgeText: badge.textContent,
         badgeCenter: badgeBox.top + badgeBox.height / 2,
-        routeLineCenter: firstLine
-          ? firstLine.top + firstLine.height / 2
-          : null,
-        routeRight: title.getBoundingClientRect().right,
+        routeCenter: titleBox.top + titleBox.height / 2,
+        routeRight: titleBox.right,
         badgeLeft: badgeBox.left,
+        badgeWhiteSpace: getComputedStyle(badge).whiteSpace,
+        badgeScrollWidth: badge.scrollWidth,
+        badgeClientWidth: badge.clientWidth,
       };
     }, label);
 
     expect(layout.badgeText).toBe(label);
-    expect(layout.routeLineCenter).not.toBeNull();
-    expect(
-      Math.abs(layout.badgeCenter - (layout.routeLineCenter ?? 0)),
-    ).toBeLessThanOrEqual(8);
+    expect(Math.abs(layout.badgeCenter - layout.routeCenter)).toBeLessThanOrEqual(
+      8,
+    );
     expect(layout.badgeLeft).toBeGreaterThanOrEqual(layout.routeRight);
+    expect(layout.badgeWhiteSpace).toBe("nowrap");
+    expect(layout.badgeScrollWidth).toBeLessThanOrEqual(
+      layout.badgeClientWidth + 1,
+    );
+  }
+
+  async expectResultRouteWrapped(
+    card: Locator = this.firstResult,
+  ): Promise<void> {
+    const lineCount = await card.evaluate((element) => {
+      const title = element.querySelector(".result-route strong");
+      if (!title) throw new Error("Result route is missing");
+      const range = document.createRange();
+      range.selectNodeContents(title);
+      return new Set(
+        Array.from(range.getClientRects()).map((rect) => Math.round(rect.top)),
+      ).size;
+    });
+
+    expect(lineCount).toBeGreaterThan(1);
   }
 
   async expectResultRouteLineCount(
@@ -1453,25 +1476,50 @@ export default class MainPage {
     await this.mockSearchAccessResponse(200, getSearchAccess(plan, overrides));
   }
 
+  async mockSearchAccessSequence(
+    plan: SearchPlan,
+    policies: Partial<SearchPolicy>[],
+  ): Promise<{ expectRequestCount: (count: number) => Promise<void> }> {
+    let requestCount = 0;
+    await this.page.route("**/api/search-access", async (route) => {
+      const policy = policies[Math.min(requestCount, policies.length - 1)];
+      requestCount++;
+      await route.fulfill({ json: getSearchAccess(plan, policy) });
+    });
+
+    return {
+      expectRequestCount: async (count) => {
+        await expect.poll(() => requestCount).toBe(count);
+      },
+    };
+  }
+
   async holdSearchAccess(
     plan: SearchPlan,
     overrides: Partial<SearchPolicy> = {},
-  ): Promise<{ waitUntilRequested: () => Promise<void>; release: () => void }> {
+  ): Promise<{
+    waitUntilRequested: () => Promise<void>;
+    expectRequestCount: (count: number) => Promise<void>;
+    release: () => void;
+  }> {
     let release!: () => void;
-    let requested = false;
+    let requestCount = 0;
     const gate = new Promise<void>((resolve) => {
       release = resolve;
     });
 
     await this.page.route("**/api/search-access", async (route) => {
-      requested = true;
+      requestCount++;
       await gate;
       await route.fulfill({ json: getSearchAccess(plan, overrides) });
     });
 
     return {
       waitUntilRequested: async () => {
-        await expect.poll(() => requested).toBe(true);
+        await expect.poll(() => requestCount).toBeGreaterThan(0);
+      },
+      expectRequestCount: async (count) => {
+        await expect.poll(() => requestCount).toBe(count);
       },
       release,
     };

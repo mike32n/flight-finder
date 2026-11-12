@@ -1187,6 +1187,109 @@ describe("frontend session handling", () => {
     expect(context.window.initializeAdminView).toHaveBeenCalledTimes(1);
   });
 
+  test.each([
+    ["current user", 200],
+    ["current user", 401],
+    ["search access", 200],
+    ["search access", 401],
+  ])(
+    "cancels a stalled %s refresh before opening admin and ignores its late %i response",
+    async (stage, status) => {
+      const { context, run } = createBrowser();
+      const response = deferred();
+      const started = deferred();
+      let held = false;
+      const userResponse = {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          user: {
+            id: 42,
+            email: "session@example.com",
+            plan: "registered",
+            isAdmin: true,
+            smartFlexPreference: true,
+            smartFlexPreferenceVersion: 0,
+          },
+        }),
+      };
+
+      context.location = { hash: "#admin" };
+      context.document.getElementById("admin-link").querySelector = () => ({});
+      context.document.getElementById("auth-container").querySelector = () => ({});
+      context.window.initializeAdminView = jest.fn().mockResolvedValue(true);
+      context.fetch.mockImplementation((url, options) => {
+        const target =
+          stage === "current user"
+            ? "/api/auth/me"
+            : "/api/search-access";
+        if (url === target && !held) {
+          held = true;
+          started.resolve({ url, signal: options.signal });
+          return response.promise;
+        }
+        return Promise.resolve(userResponse);
+      });
+
+      run('saveToken("valid-token"); searchPageInitialized = true');
+      const pending = run("refreshSearchSession()");
+      const outcome = await Promise.race([
+        started.promise.then((request) => ({ event: "started", request })),
+        pending.then(() => ({ event: "finished without starting request" })),
+      ]);
+      expect(outcome.event).toBe("started");
+      expect(outcome.request.url).toBe(
+        stage === "current user" ? "/api/auth/me" : "/api/search-access",
+      );
+      expect(outcome.request.signal.aborted).toBe(false);
+
+      const admin = run("activateAdminView({ updateHistory: false })");
+      expect(outcome.request.signal.aborted).toBe(true);
+      await admin;
+      expect(context.document.getElementById("admin-view").hidden).toBe(false);
+      expect(context.document.getElementById("auth-container").hidden).toBe(false);
+      expect(context.window.initializeAdminView).toHaveBeenCalledTimes(1);
+
+      response.resolve({
+        ok: status === 200,
+        status,
+        json: async () =>
+          stage === "current user"
+            ? {
+                user: {
+                  id: 99,
+                  email: "stale@example.com",
+                  plan: "premium",
+                  isAdmin: false,
+                  smartFlexPreference: false,
+                  smartFlexPreferenceVersion: 0,
+                },
+              }
+            : {
+                success: true,
+                plan: "premium",
+                policy: {
+                  canSelectOrigin: true,
+                  canSelectWeekday: true,
+                  canSelectNights: true,
+                  canSelectStartDate: true,
+                  smartFlexEnabled: true,
+                  maxDestinations: 3,
+                  fixedWeekday: 6,
+                  fixedNights: 1,
+                },
+              },
+      });
+      await pending;
+
+      expect(context.document.getElementById("admin-view").hidden).toBe(false);
+      expect(run("getToken()")).toBe("valid-token");
+      expect(run("authUser.plan")).toBe("registered");
+      expect(context.document.getElementById("search-access-status").textContent)
+        .toBe("Verifying your session...");
+    },
+  );
+
   test("retains the token but blocks search after verification returns 500", async () => {
     const { context, run } = createBrowser();
 
