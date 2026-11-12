@@ -308,6 +308,9 @@ function updateSearchControls() {
   const policy = searchAccess?.policy;
   const airportsAvailable = destinationsData.length > 0;
 
+  document.getElementById("premium-badge").hidden =
+    searchAccess?.plan !== "premium";
+
   document.getElementById("origin-input").disabled =
     !ready || !airportsAvailable || !policy.canSelectOrigin;
 

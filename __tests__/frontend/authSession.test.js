@@ -840,6 +840,45 @@ describe("frontend session handling", () => {
     expectPreference(context, false);
   });
 
+  test("hides the premium badge during refresh and ignores invalidated responses", async () => {
+    const { context, run } = createBrowser();
+    const response = deferred();
+    context.fetch.mockImplementationOnce(() => response.promise);
+
+    run('searchAccess = { plan: "premium", policy: {} }; updateSearchControls()');
+    const badge = context.document.getElementById("premium-badge");
+    expect(badge.hidden).toBe(false);
+
+    const pending = run("refreshSearchAccess()");
+    expect(context.fetch).toHaveBeenCalledTimes(1);
+    expect(badge.hidden).toBe(true);
+
+    run('setSearchAccessUnavailable("Verifying your session...")');
+    response.resolve({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        success: true,
+        plan: "premium",
+        policy: {
+          canSelectOrigin: true,
+          canSelectWeekday: true,
+          canSelectNights: true,
+          canSelectStartDate: true,
+          smartFlexEnabled: true,
+          maxDestinations: 3,
+          fixedWeekday: 6,
+          fixedNights: 1,
+        },
+      }),
+    });
+    await pending;
+
+    expect(badge.hidden).toBe(true);
+    expect(context.document.getElementById("search-access-status").textContent)
+      .toBe("Verifying your session...");
+  });
+
   test.each([
     ["current user", "loadCurrentUser()"],
     ["search access", "refreshSearchAccess()"],

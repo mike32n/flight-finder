@@ -184,6 +184,21 @@ h1 {
   min-height: 82px;
 }
 
+#search-heading {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+#premium-badge {
+  padding: 2px 7px;
+  background: var(--flex-badge-bg);
+  color: var(--flex-badge-text);
+  border-radius: 10px;
+  font-size: 0.4em;
+  font-weight: 600;
+  text-shadow: none;
+}
+
 .meta-info {
   margin-top: 10px;
   color: var(--muted);

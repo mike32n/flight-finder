@@ -54,6 +54,7 @@ export default class MainPage {
   readonly searchView: Locator;
   readonly adminView: Locator;
   readonly searchAccessStatus: Locator;
+  readonly premiumBadge: Locator;
   readonly smartFlexPreference: Locator;
   readonly smartFlexPreferenceError: Locator;
   readonly sessionMessage: Locator;
@@ -111,6 +112,7 @@ export default class MainPage {
     this.searchView = page.locator("#search-view");
     this.adminView = page.locator("#admin-view");
     this.searchAccessStatus = page.locator("#search-access-status");
+    this.premiumBadge = page.locator("#premium-badge");
     this.smartFlexPreference = this.appHeader.getByRole("checkbox", {
       name: "Smart Flex",
       exact: true,
@@ -248,6 +250,53 @@ export default class MainPage {
   async expectRegisteredSearchAccessReady(): Promise<void> {
     await expect(this.searchAccessStatus).toContainText("Registered");
     await expect(this.searchButton).toBeEnabled();
+  }
+
+  async expectPremiumBadge(visible: boolean): Promise<void> {
+    if (visible) {
+      await expect(this.premiumBadge).toBeVisible();
+      await expect(this.premiumBadge).toHaveText("PREMIUM");
+    } else {
+      await expect(this.premiumBadge).toBeHidden();
+    }
+  }
+
+  async expectPremiumHeadingLayoutAtWidth(width: number): Promise<void> {
+    await this.page.setViewportSize({ width, height: 900 });
+    await expect
+      .poll(() => this.page.evaluate(() => window.innerWidth))
+      .toBe(width);
+    await this.expectPremiumBadge(true);
+
+    const layout = await this.page
+      .locator("#search-heading")
+      .evaluate((heading) => {
+        const title = heading.querySelector("span");
+        const badge = heading.querySelector("#premium-badge");
+        if (!title || !badge) throw new Error("Heading content is missing");
+        const headingBox = heading.getBoundingClientRect();
+        const titleBox = title.getBoundingClientRect();
+        const badgeBox = badge.getBoundingClientRect();
+        return {
+          headingLeft: headingBox.left,
+          headingRight: headingBox.right,
+          titleLeft: titleBox.left,
+          titleRight: titleBox.right,
+          titleBottom: titleBox.bottom,
+          badgeLeft: badgeBox.left,
+          badgeRight: badgeBox.right,
+          badgeTop: badgeBox.top,
+        };
+      });
+
+    expect(layout.titleLeft).toBeGreaterThanOrEqual(layout.headingLeft - 1);
+    expect(layout.titleRight).toBeLessThanOrEqual(layout.headingRight + 1);
+    expect(layout.badgeLeft).toBeGreaterThanOrEqual(layout.headingLeft - 1);
+    expect(layout.badgeRight).toBeLessThanOrEqual(layout.headingRight + 1);
+    expect(
+      layout.badgeLeft >= layout.titleRight - 1 ||
+        layout.badgeTop >= layout.titleBottom - 1,
+    ).toBe(true);
   }
 
   async toggleSmartFlexPreference(): Promise<void> {

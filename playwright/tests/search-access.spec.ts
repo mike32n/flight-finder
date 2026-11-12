@@ -31,6 +31,7 @@ test.describe("Search access", () => {
             : "Premium";
 
       await common.expectContainsText(flightFinder.searchAccessStatus, label);
+      await flightFinder.expectPremiumBadge(plan === "premium");
       await common.expectNotPresent(flightFinder.searchValidationError);
 
       if (plan === "anonymous") {
@@ -127,6 +128,7 @@ test.describe("Search access", () => {
         flightFinder.searchAccessStatus,
         "Search settings could not be loaded.",
       );
+      await flightFinder.expectPremiumBadge(false);
 
       await common.expectDisabled(flightFinder.searchButton);
       await common.expectDisabled(flightFinder.originInput);
@@ -189,6 +191,7 @@ test.describe("Search access", () => {
     await common.openPage(Env.test);
 
     await common.expectContainsText(flightFinder.searchAccessStatus, "Guest");
+    await flightFinder.expectPremiumBadge(false);
     await flightFinder.expectHeaderLayoutAtWidth(390);
 
     await flightFinder.selectAirportByEnter("ams");
@@ -199,6 +202,7 @@ test.describe("Search access", () => {
     await common.click(auth.loginSubmitButton);
 
     await common.expectContainsText(flightFinder.searchAccessStatus, "Premium");
+    await flightFinder.expectPremiumBadge(true);
     await common.expectText(
       flightFinder.searchAccessStatus,
       "Premium · Up to 3 destinations · Smart Flex: on",
@@ -220,6 +224,7 @@ test.describe("Search access", () => {
       flightFinder.searchAccessStatus,
       "Guest · Up to 1 destination · Smart Flex: off",
     );
+    await flightFinder.expectPremiumBadge(false);
     await flightFinder.expectClearedDestinationWarning();
 
     await flightFinder.expectSelectedDestinationCount(0);
@@ -251,5 +256,42 @@ test.describe("Search access", () => {
       "Search settings could not be loaded. Please reload the page to try again.",
     );
     await flightFinder.expectHeaderControlsMatch(shortStatusLayout);
+  });
+
+  test("TC-SEARCH-ACCESS-07 | should update the badge on access refresh and fit narrow headings", async () => {
+    await flightFinder.mockSearchAccess("premium");
+    await common.openPage(Env.test);
+    await common.expectContainsText(flightFinder.searchAccessStatus, "Premium");
+    await flightFinder.expectPremiumBadge(true);
+
+    for (const width of [320, 360, 390, 1280]) {
+      await flightFinder.expectPremiumHeadingLayoutAtWidth(width);
+    }
+
+    for (const plan of [
+      "registered",
+      "premium",
+      "anonymous",
+      "premium",
+    ] as const) {
+      await flightFinder.mockSearchAccess(plan);
+      await flightFinder.refreshSearchAccess();
+      const label =
+        plan === "anonymous"
+          ? "Guest"
+          : plan === "registered"
+            ? "Registered"
+            : "Premium";
+      await common.expectContainsText(flightFinder.searchAccessStatus, label);
+      await flightFinder.expectPremiumBadge(plan === "premium");
+    }
+
+    await flightFinder.mockSearchAccessResponse(500, {});
+    await flightFinder.refreshSearchAccess();
+    await common.expectContainsText(
+      flightFinder.searchAccessStatus,
+      "Search settings could not be loaded.",
+    );
+    await flightFinder.expectPremiumBadge(false);
   });
 });
