@@ -104,8 +104,7 @@ test.describe("Session lifecycle", () => {
       await auth.mockCurrentUserFailure(failure);
       await common.reloadPage();
 
-      await common.expectContainsText(
-        flightFinder.searchAccessStatus,
+      await flightFinder.expectSearchAccessStatusMessage(
         "Your session could not be verified.",
       );
 
@@ -182,8 +181,7 @@ test.describe("Session lifecycle", () => {
     await auth.mockCurrentUserFailure(500);
     await common.simulateCachedPageRestore();
 
-    await common.expectContainsText(
-      flightFinder.searchAccessStatus,
+    await flightFinder.expectSearchAccessStatusMessage(
       "Your session could not be verified.",
     );
 
@@ -216,10 +214,7 @@ test.describe("Session lifecycle", () => {
     await auth.login("search@example.com", "password");
     await common.expectVisible(flightFinder.logoutButton);
     await common.expectVisible(navigation.adminLink);
-    await common.expectContainsText(
-      flightFinder.searchAccessStatus,
-      "Premium",
-    );
+    await flightFinder.expectSearchAccessStatusHidden();
 
     await flightFinder.selectAirportByEnter("ams");
     await flightFinder.selectAirportByEnter("bcn");
@@ -236,7 +231,7 @@ test.describe("Session lifecycle", () => {
     await auth.expectAuthTokenRemoved();
     await flightFinder.expectPrivateSearchDataRemoved();
     await common.expectHidden(navigation.adminLink);
-    await common.expectContainsText(flightFinder.searchAccessStatus, "Guest");
+    await flightFinder.expectSearchAccessStatusHidden();
     await flightFinder.expectOnlySessionExpirationError();
     await flightFinder.expectSharedErrorElementReused();
     await flightFinder.expectErrorCardLayoutAtWidth(320);
@@ -353,12 +348,12 @@ test.describe("Session lifecycle", () => {
       await secondAuth.login(secondUser.email, secondUser.password);
       await secondAuth.expectAuthenticatedUser(secondUser.email);
       await secondFlightFinder.expectSmartFlexPreference(false, true);
-      await secondFlightFinder.expectRegisteredSearchAccessReady();
+      await secondFlightFinder.expectSearchAccessReady();
 
       await auth.expectAuthenticatedUser(secondUser.email);
       await auth.expectSameAuthToken(secondAuth);
       await flightFinder.expectSmartFlexPreference(false, true);
-      await flightFinder.expectRegisteredSearchAccessReady();
+      await flightFinder.expectSearchAccessReady();
 
       heldLogin.release();
       await heldLogin.waitUntilProcessed();
@@ -368,7 +363,7 @@ test.describe("Session lifecycle", () => {
       await auth.expectLoginFormOpen();
       await auth.expectLoginSubmitEnabled();
       await flightFinder.expectSmartFlexPreference(false, true);
-      await flightFinder.expectRegisteredSearchAccessReady();
+      await flightFinder.expectSearchAccessReady();
     } finally {
       heldLogin.release();
       if (secondAuth) await secondAuth.closePage();

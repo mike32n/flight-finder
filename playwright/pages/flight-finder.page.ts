@@ -247,9 +247,21 @@ export default class MainPage {
     await expect(this.smartFlexPreference).toBeChecked({ checked });
   }
 
-  async expectRegisteredSearchAccessReady(): Promise<void> {
-    await expect(this.searchAccessStatus).toContainText("Registered");
+  async expectSearchAccessReady(): Promise<void> {
+    await this.expectSearchAccessStatusHidden();
     await expect(this.searchButton).toBeEnabled();
+  }
+
+  async expectSearchAccessStatusHidden(): Promise<void> {
+    await expect(this.searchAccessStatus).toBeHidden();
+    await expect(this.searchAccessStatus).toHaveText("");
+  }
+
+  async expectSearchAccessStatusMessage(
+    message: string | RegExp,
+  ): Promise<void> {
+    await expect(this.searchAccessStatus).toBeVisible();
+    await expect(this.searchAccessStatus).toContainText(message);
   }
 
   async expectDestinationPlaceholder(value: string): Promise<void> {
@@ -426,15 +438,21 @@ export default class MainPage {
     if (statusText !== undefined) {
       await this.searchAccessStatus.evaluate((element, text) => {
         element.textContent = text;
+        (element as HTMLElement).hidden = false;
       }, statusText);
     }
 
     await expect(this.authContainer.locator(":scope > *")).toBeVisible();
     await expect(this.smartFlexPreference).toBeVisible();
-    await expect(this.appHeader.getByRole("status")).toHaveCount(1);
-    await expect(this.searchAccessStatus).toBeVisible();
+    await expect(this.searchAccessStatus).toHaveCount(1);
     await expect(this.searchAccessStatus).toHaveRole("status");
-    await expect(this.searchAccessStatus).toHaveText(statusText ?? /\S/);
+    if (statusText === undefined) {
+      await expect(this.searchAccessStatus).toBeHidden();
+      await expect(this.searchAccessStatus).toHaveText("");
+    } else {
+      await expect(this.searchAccessStatus).toBeVisible();
+      await expect(this.searchAccessStatus).toHaveText(statusText);
+    }
 
     const layout = await this.appHeader.evaluate((header) => {
       const admin = header.querySelector("#admin-link");
@@ -640,19 +658,23 @@ export default class MainPage {
         viewportWidth: document.documentElement.clientWidth,
       };
     });
-    expect(layout.statusWhiteSpace).toBe("nowrap");
-    expect(layout.statusOverflowX).toBe("hidden");
-    expect(layout.statusTextOverflow).toBe("ellipsis");
-    expect(layout.statusSingleLine).toBe(true);
-    expect(layout.statusPosition).toBe("static");
-    expect(layout.statusLeft).toBeGreaterThanOrEqual(layout.headerLeft);
-    expect(layout.statusRight).toBeLessThanOrEqual(layout.preferenceLeft);
+    if (statusText !== undefined) {
+      expect(layout.statusWhiteSpace).toBe("nowrap");
+      expect(layout.statusOverflowX).toBe("hidden");
+      expect(layout.statusTextOverflow).toBe("ellipsis");
+      expect(layout.statusSingleLine).toBe(true);
+      expect(layout.statusPosition).toBe("static");
+      expect(layout.statusLeft).toBeGreaterThanOrEqual(layout.headerLeft);
+      expect(layout.statusRight).toBeLessThanOrEqual(layout.preferenceLeft);
+    }
     expect(layout.preferenceRight).toBeLessThanOrEqual(layout.headerRight);
     expect(layout.preferenceCenter).toBeCloseTo(
       (layout.headerLeft + layout.headerRight) / 2,
       0,
     );
-    expect(layout.preferenceOverlapsStatus).toBe(false);
+    if (statusText !== undefined) {
+      expect(layout.preferenceOverlapsStatus).toBe(false);
+    }
     expect(layout.preferenceOverlapsAdmin).toBe(false);
     expect(layout.preferenceOverlapsTheme).toBe(false);
     expect(layout.preferenceOverlapsAuth).toBe(false);
@@ -715,10 +737,12 @@ export default class MainPage {
         expect(layout.authRightClearance).toBeGreaterThanOrEqual(20);
       }
       expect(layout.authCenter).toBeCloseTo(layout.containerCenter, 0);
-      expect(layout.statusLeft).toBeCloseTo(layout.headerLeft, 0);
-      expect(layout.authTop + layout.authHeight).toBeLessThanOrEqual(
-        layout.statusTop,
-      );
+      if (statusText !== undefined) {
+        expect(layout.statusLeft).toBeCloseTo(layout.headerLeft, 0);
+        expect(layout.authTop + layout.authHeight).toBeLessThanOrEqual(
+          layout.statusTop,
+        );
+      }
       if (layout.adminVisible) {
         const availableBetweenCorners =
           layout.headerClientWidth - layout.adminWidth - layout.themeWidth;
@@ -737,16 +761,20 @@ export default class MainPage {
         expect(layout.authRight).toBeLessThanOrEqual(layout.themeLeft);
       }
     } else {
-      expect(layout.statusCenter).toBeCloseTo(
-        layout.authTop + layout.authHeight / 2,
-        0,
-      );
-      expect(layout.adminRight).toBeLessThanOrEqual(layout.statusLeft);
-      expect(layout.statusRight).toBeLessThanOrEqual(layout.authLeft);
+      if (statusText !== undefined) {
+        expect(layout.statusCenter).toBeCloseTo(
+          layout.authTop + layout.authHeight / 2,
+          0,
+        );
+        expect(layout.adminRight).toBeLessThanOrEqual(layout.statusLeft);
+        expect(layout.statusRight).toBeLessThanOrEqual(layout.authLeft);
+      }
       expect(layout.authThemeGap).toBeCloseTo(layout.headerColumnGap, 1);
-      expect(layout.statusFontSize).toBeGreaterThanOrEqual(12);
-      expect(layout.statusFontSize).toBeLessThanOrEqual(14.4);
-      expect(layout.statusFontSize).toBeCloseTo(14.4, 2);
+      if (statusText !== undefined) {
+        expect(layout.statusFontSize).toBeGreaterThanOrEqual(12);
+        expect(layout.statusFontSize).toBeLessThanOrEqual(14.4);
+        expect(layout.statusFontSize).toBeCloseTo(14.4, 2);
+      }
     }
 
     if (layout.logoutWidth > 0) {

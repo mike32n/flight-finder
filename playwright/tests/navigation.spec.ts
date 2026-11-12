@@ -78,16 +78,10 @@ test.describe("Admin navigation", () => {
     );
     await flightFinder.refreshSearchAccess();
     await searchAccess.expectRequestCount(1);
-    await common.expectText(
-      flightFinder.searchAccessStatus,
-      "Registered · Up to 3 destinations · Smart Flex: on",
-    );
+    await flightFinder.expectSearchAccessStatusHidden();
 
     for (const width of [320, 360, 390, 440, 768, 769, 800, 900, 1024, 1280]) {
-      await flightFinder.expectHeaderLayoutAtWidth(
-        width,
-        "Registered plan · Up to 3 destinations · Smart Flex: on",
-      );
+      await flightFinder.expectHeaderLayoutAtWidth(width);
     }
 
     await common.expectLightThemeIsActive();
@@ -101,10 +95,7 @@ test.describe("Admin navigation", () => {
 
     await navigation.returnToSearchView();
     await searchAccess.expectRequestCount(2);
-    await common.expectText(
-      flightFinder.searchAccessStatus,
-      "Registered · Up to 1 destination · Smart Flex: on",
-    );
+    await flightFinder.expectSearchAccessStatusHidden();
     await flightFinder.expectDestinationPlaceholder(
       "Type city or IATA code (1 left)",
     );
@@ -151,10 +142,7 @@ test.describe("Admin navigation", () => {
     );
     await flightFinder.refreshSearchAccess();
     await searchAccess.expectRequestCount(1);
-    await common.expectText(
-      flightFinder.searchAccessStatus,
-      "Registered · Up to 3 destinations · Smart Flex: on",
-    );
+    await flightFinder.expectSearchAccessStatusHidden();
 
     await navigation.openAdminView();
     await common.expectVisible(admin.content);
@@ -162,10 +150,7 @@ test.describe("Admin navigation", () => {
     await navigation.goBackToSearchView();
     await common.expectURL(Env.test);
     await searchAccess.expectRequestCount(2);
-    await common.expectText(
-      flightFinder.searchAccessStatus,
-      "Registered · Up to 1 destination · Smart Flex: on",
-    );
+    await flightFinder.expectSearchAccessStatusHidden();
     await flightFinder.expectDestinationPlaceholder(
       "Type city or IATA code (1 left)",
     );
@@ -326,10 +311,7 @@ test.describe("Admin navigation", () => {
 
     await navigation.returnToSearchView();
     await held.expectRequestCount(2);
-    await common.expectText(
-      flightFinder.searchAccessStatus,
-      "Registered · Up to 2 destinations · Smart Flex: on",
-    );
+    await flightFinder.expectSearchAccessStatusHidden();
   });
 
   test("TC-NAV-13 | should keep Search active when history changes again during a refresh", async () => {
@@ -351,10 +333,7 @@ test.describe("Admin navigation", () => {
       held.release();
     }
 
-    await common.expectText(
-      flightFinder.searchAccessStatus,
-      "Registered · Up to 2 destinations · Smart Flex: on",
-    );
+    await flightFinder.expectSearchAccessStatusHidden();
     await navigation.expectSearchViewActive();
     await common.expectVisible(flightFinder.logoutButton);
     await held.expectRequestCount(2);
@@ -369,8 +348,7 @@ test.describe("Admin navigation", () => {
     await flightFinder.mockSearchAccessResponse(500, {});
 
     await navigation.returnToSearchView();
-    await common.expectContainsText(
-      flightFinder.searchAccessStatus,
+    await flightFinder.expectSearchAccessStatusMessage(
       "Search settings could not be loaded.",
     );
     await common.expectDisabled(flightFinder.searchButton);
@@ -406,10 +384,7 @@ test.describe("Admin navigation", () => {
       access.release();
     }
 
-    await common.expectText(
-      flightFinder.searchAccessStatus,
-      "Registered · Up to 2 destinations · Smart Flex: on",
-    );
+    await flightFinder.expectSearchAccessStatusHidden();
     await navigation.expectSearchViewActive();
     await common.expectVisible(flightFinder.logoutButton);
     await access.expectRequestCount(2);

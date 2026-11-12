@@ -296,6 +296,7 @@ describe("frontend session handling", () => {
     test("restores the static placeholder during refresh and applies the new limit", async () => {
       const { context, run } = createBrowser();
       const input = context.document.getElementById("destination-input");
+      const status = context.document.getElementById("search-access-status");
       const response = deferred();
       context.fetch.mockImplementationOnce(() => response.promise);
       run(`
@@ -311,6 +312,8 @@ describe("frontend session handling", () => {
       const pending = run("refreshSearchAccess()");
       expect(context.fetch).toHaveBeenCalledTimes(1);
       expect(input.placeholder).toBe("Type city or IATA code...");
+      expect(status.textContent).toBe("Loading search settings...");
+      expect(status.hidden).toBe(false);
       response.resolve({
         ok: true,
         status: 200,
@@ -331,9 +334,26 @@ describe("frontend session handling", () => {
       });
       await pending;
       expect(input.placeholder).toBe("Type city or IATA code (1 left)");
+      expect(status.textContent).toBe("");
+      expect(status.hidden).toBe(true);
 
       run('setSearchAccessUnavailable("Search settings unavailable")');
       expect(input.placeholder).toBe("Type city or IATA code...");
+      expect(status.textContent).toBe("Search settings unavailable");
+      expect(status.hidden).toBe(false);
+    });
+
+    test("shows the search access loading failure", async () => {
+      const { context, run } = createBrowser();
+      const status = context.document.getElementById("search-access-status");
+      context.fetch.mockResolvedValueOnce({ ok: false, status: 500 });
+
+      await run("refreshSearchAccess()");
+
+      expect(status.textContent).toBe(
+        "Search settings could not be loaded. Please reload the page to try again.",
+      );
+      expect(status.hidden).toBe(false);
     });
 
     test("clamps remaining destinations to zero", () => {
@@ -978,8 +998,9 @@ describe("frontend session handling", () => {
     await pending;
 
     expect(badge.hidden).toBe(true);
-    expect(context.document.getElementById("search-access-status").textContent)
-      .toBe("Verifying your session...");
+    const status = context.document.getElementById("search-access-status");
+    expect(status.textContent).toBe("Verifying your session...");
+    expect(status.hidden).toBe(false);
   });
 
   test.each([

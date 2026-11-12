@@ -23,14 +23,7 @@ test.describe("Search access", () => {
       await flightFinder.mockSearchAccess(plan);
       await common.openPage(Env.test);
 
-      const label =
-        plan === "anonymous"
-          ? "Guest"
-          : plan === "registered"
-            ? "Registered"
-            : "Premium";
-
-      await common.expectContainsText(flightFinder.searchAccessStatus, label);
+      await flightFinder.expectSearchAccessStatusHidden();
       await flightFinder.expectPremiumBadge(plan === "premium");
       await common.expectNotPresent(flightFinder.searchValidationError);
 
@@ -78,15 +71,6 @@ test.describe("Search access", () => {
       await common.expectNotPresent(flightFinder.searchValidationError);
       await common.expectDisabled(flightFinder.airportInput);
 
-      await common.expectContainsText(
-        flightFinder.searchAccessStatus,
-        `Up to ${destinations.length} destination`,
-      );
-      await common.expectContainsText(
-        flightFinder.searchAccessStatus,
-        `Smart Flex: ${plan === "anonymous" ? "off" : "on"}`,
-      );
-
       await flightFinder.clickSelectedContainer("AMS");
 
       await common.expectEnabled(flightFinder.airportInput);
@@ -110,10 +94,7 @@ test.describe("Search access", () => {
 
     await common.openPage(Env.test);
 
-    await common.expectContainsText(
-      flightFinder.searchAccessStatus,
-      "Premium · Up to 2 destinations · Smart Flex: off",
-    );
+    await flightFinder.expectSearchAccessStatusHidden();
 
     await common.expectDisabled(flightFinder.originInput);
     await common.expectDisabled(flightFinder.weekdaySelect);
@@ -136,8 +117,7 @@ test.describe("Search access", () => {
       await flightFinder.mockSearchAccessResponse(status, {});
       await common.openPage(Env.test);
 
-      await common.expectContainsText(
-        flightFinder.searchAccessStatus,
+      await flightFinder.expectSearchAccessStatusMessage(
         "Search settings could not be loaded.",
       );
       await flightFinder.expectPremiumBadge(false);
@@ -172,10 +152,7 @@ test.describe("Search access", () => {
     await flightFinder.mockSearchAccess("anonymous");
     await common.reloadPage();
 
-    await common.expectText(
-      flightFinder.searchAccessStatus,
-      "Guest · Up to 1 destination · Smart Flex: off",
-    );
+    await flightFinder.expectSearchAccessStatusHidden();
     await flightFinder.expectClearedDestinationWarning();
 
     await flightFinder.expectOriginSelected("BUD");
@@ -187,10 +164,7 @@ test.describe("Search access", () => {
     await flightFinder.expectErrorCardLayoutAtWidth(360);
     await common.click(flightFinder.searchValidationError);
     await common.expectNotPresent(flightFinder.searchValidationError);
-    await common.expectText(
-      flightFinder.searchAccessStatus,
-      "Guest · Up to 1 destination · Smart Flex: off",
-    );
+    await flightFinder.expectSearchAccessStatusHidden();
     await flightFinder.expectSelectedDestinationCount(0);
 
     await common.expectValue(flightFinder.weekdaySelect, "6");
@@ -199,7 +173,7 @@ test.describe("Search access", () => {
 
     await common.reloadPage();
 
-    await common.expectContainsText(flightFinder.searchAccessStatus, "Guest");
+    await flightFinder.expectSearchAccessStatusHidden();
     await common.expectNotPresent(flightFinder.searchValidationError);
     await flightFinder.expectSelectedDestinationCount(0);
   });
@@ -208,7 +182,7 @@ test.describe("Search access", () => {
     await flightFinder.mockSearchSession("premium");
     await common.openPage(Env.test);
 
-    await common.expectContainsText(flightFinder.searchAccessStatus, "Guest");
+    await flightFinder.expectSearchAccessStatusHidden();
     await flightFinder.expectPremiumBadge(false);
     await flightFinder.expectHeaderLayoutAtWidth(390);
 
@@ -219,12 +193,9 @@ test.describe("Search access", () => {
     await auth.fillLoginForm("search@example.com", "TestPassword1");
     await common.click(auth.loginSubmitButton);
 
-    await common.expectContainsText(flightFinder.searchAccessStatus, "Premium");
+    await flightFinder.expectSearchAccessStatusHidden();
     await flightFinder.expectPremiumBadge(true);
-    await common.expectText(
-      flightFinder.searchAccessStatus,
-      "Premium · Up to 3 destinations · Smart Flex: on",
-    );
+    await flightFinder.expectSearchAccessStatusHidden();
 
     await common.expectEnabled(flightFinder.originInput);
     await common.expectEnabled(flightFinder.weekdaySelect);
@@ -238,20 +209,14 @@ test.describe("Search access", () => {
 
     await common.click(flightFinder.logoutButton);
 
-    await common.expectText(
-      flightFinder.searchAccessStatus,
-      "Guest · Up to 1 destination · Smart Flex: off",
-    );
+    await flightFinder.expectSearchAccessStatusHidden();
     await flightFinder.expectPremiumBadge(false);
     await flightFinder.expectClearedDestinationWarning();
 
     await flightFinder.expectSelectedDestinationCount(0);
     await common.click(flightFinder.searchValidationError);
     await common.expectNotPresent(flightFinder.searchValidationError);
-    await common.expectText(
-      flightFinder.searchAccessStatus,
-      "Guest · Up to 1 destination · Smart Flex: off",
-    );
+    await flightFinder.expectSearchAccessStatusHidden();
     await flightFinder.expectSelectedDestinationCount(0);
     await common.expectDisabled(flightFinder.originInput);
     await common.expectDisabled(flightFinder.weekdaySelect);
@@ -260,7 +225,7 @@ test.describe("Search access", () => {
     await common.expectEnabled(flightFinder.airportInput);
   });
 
-  test("TC-SEARCH-ACCESS-06 | should center Smart Flex and truncate long header status", async () => {
+  test("TC-SEARCH-ACCESS-06 | should center Smart Flex and fit operational header feedback", async () => {
     await flightFinder.mockSearchAccess("premium");
     await common.openPage(Env.test);
 
@@ -279,7 +244,7 @@ test.describe("Search access", () => {
   test("TC-SEARCH-ACCESS-07 | should update the badge on access refresh and fit narrow headings", async () => {
     await flightFinder.mockSearchAccess("premium");
     await common.openPage(Env.test);
-    await common.expectContainsText(flightFinder.searchAccessStatus, "Premium");
+    await flightFinder.expectSearchAccessStatusHidden();
     await flightFinder.expectPremiumBadge(true);
 
     for (const width of [320, 360, 390, 1280]) {
@@ -294,20 +259,13 @@ test.describe("Search access", () => {
     ] as const) {
       await flightFinder.mockSearchAccess(plan);
       await flightFinder.refreshSearchAccess();
-      const label =
-        plan === "anonymous"
-          ? "Guest"
-          : plan === "registered"
-            ? "Registered"
-            : "Premium";
-      await common.expectContainsText(flightFinder.searchAccessStatus, label);
+      await flightFinder.expectSearchAccessStatusHidden();
       await flightFinder.expectPremiumBadge(plan === "premium");
     }
 
     await flightFinder.mockSearchAccessResponse(500, {});
     await flightFinder.refreshSearchAccess();
-    await common.expectContainsText(
-      flightFinder.searchAccessStatus,
+    await flightFinder.expectSearchAccessStatusMessage(
       "Search settings could not be loaded.",
     );
     await flightFinder.expectPremiumBadge(false);
@@ -316,7 +274,7 @@ test.describe("Search access", () => {
   test("TC-SEARCH-ACCESS-08 | should update remaining destinations after policy refresh", async () => {
     await flightFinder.mockSearchAccess("premium");
     await common.openPage(Env.test);
-    await common.expectContainsText(flightFinder.searchAccessStatus, "Premium");
+    await flightFinder.expectSearchAccessStatusHidden();
     await flightFinder.selectAirportByEnter("ams");
     await flightFinder.expectDestinationPlaceholder(
       "Type city or IATA code (2 left)",
@@ -331,14 +289,14 @@ test.describe("Search access", () => {
       await flightFinder.expectDestinationPlaceholder(
         "Type city or IATA code...",
       );
+      await flightFinder.expectSearchAccessStatusMessage(
+        "Loading search settings...",
+      );
     } finally {
       held.release();
     }
 
-    await common.expectContainsText(
-      flightFinder.searchAccessStatus,
-      "Up to 2 destinations",
-    );
+    await flightFinder.expectSearchAccessStatusHidden();
     await flightFinder.expectDestinationPlaceholder(
       "Type city or IATA code (1 left)",
     );
@@ -347,18 +305,14 @@ test.describe("Search access", () => {
     await flightFinder.expectDestinationPlaceholder("Max selected");
     await flightFinder.mockSearchAccess("premium", { maxDestinations: 3 });
     await flightFinder.refreshSearchAccess();
-    await common.expectContainsText(
-      flightFinder.searchAccessStatus,
-      "Up to 3 destinations",
-    );
+    await flightFinder.expectSearchAccessStatusHidden();
     await flightFinder.expectDestinationPlaceholder(
       "Type city or IATA code (1 left)",
     );
 
     await flightFinder.mockSearchAccessResponse(500, {});
     await flightFinder.refreshSearchAccess();
-    await common.expectContainsText(
-      flightFinder.searchAccessStatus,
+    await flightFinder.expectSearchAccessStatusMessage(
       "Search settings could not be loaded.",
     );
     await flightFinder.expectDestinationPlaceholder(

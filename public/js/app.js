@@ -300,9 +300,15 @@ function setSearchAccessUnavailable(message) {
   originAutocomplete?.close();
   destinationAutocomplete?.close();
 
-  document.getElementById("search-access-status").textContent = message;
+  setSearchAccessStatus(message);
 
   updateSearchControls();
+}
+
+function setSearchAccessStatus(message) {
+  const status = document.getElementById("search-access-status");
+  status.textContent = message;
+  status.hidden = !message;
 }
 
 function updateDestinationPlaceholder(ready) {
@@ -381,7 +387,7 @@ function isValidSearchAccess(data) {
 }
 
 function applySearchAccessToForm() {
-  const { plan, policy } = searchAccess;
+  const { policy } = searchAccess;
 
   maxDestinations = Math.min(configuredMaxDestinations, policy.maxDestinations);
 
@@ -428,19 +434,7 @@ function applySearchAccessToForm() {
   renderOrigin();
   renderSelected();
 
-  const labels = {
-    anonymous: "Guest",
-    registered: "Registered",
-    premium: "Premium",
-  };
-
-  const noun = maxDestinations === 1 ? "destination" : "destinations";
-
-  const message =
-    `${labels[plan]} · Up to ${maxDestinations} ${noun}` +
-    ` · Smart Flex: ${policy.smartFlexEnabled ? "on" : "off"}`;
-
-  document.getElementById("search-access-status").textContent = message;
+  setSearchAccessStatus("");
 
   if (destinationLimitExceeded) {
     showSearchValidationError(
@@ -467,8 +461,7 @@ async function refreshSearchAccess({ signal } = {}) {
   destinationAutocomplete?.close();
   updateSearchControls();
 
-  const status = document.getElementById("search-access-status");
-  status.textContent = "Loading search settings...";
+  setSearchAccessStatus("Loading search settings...");
 
   try {
     const response = await fetch("/api/search-access", {
@@ -502,8 +495,9 @@ async function refreshSearchAccess({ signal } = {}) {
     searchAccess = null;
     searchAccessLoading = false;
 
-    status.textContent =
-      "Search settings could not be loaded. Please reload the page to try again.";
+    setSearchAccessStatus(
+      "Search settings could not be loaded. Please reload the page to try again.",
+    );
 
     console.error("Failed to load search access:", error);
   } finally {

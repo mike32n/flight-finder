@@ -92,7 +92,7 @@ test.describe("Administration", () => {
     await auth.expectAuthTokenRemoved();
     await common.expectHidden(admin.content);
     await flightFinder.expectPrivateSearchDataRemoved();
-    await common.expectContainsText(flightFinder.searchAccessStatus, "Guest");
+    await flightFinder.expectSearchAccessStatusHidden();
     await flightFinder.expectOnlySessionExpirationError();
 
     await admin.expectRequestCount(1);
@@ -285,7 +285,7 @@ test.describe("Administration", () => {
     await common.expectVisible(auth.loginButton);
     await auth.expectAuthTokenRemoved();
     await flightFinder.expectOnlySessionExpirationError();
-    await common.expectContainsText(flightFinder.searchAccessStatus, "Guest");
+    await flightFinder.expectSearchAccessStatusHidden();
 
     await admin.expectSaveRequestCount(1);
   });
