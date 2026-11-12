@@ -247,6 +247,109 @@ async function beginLoginRecovery(browser, login) {
 }
 
 describe("frontend session handling", () => {
+  describe("destination placeholder", () => {
+    test.each([
+      ["anonymous", 1],
+      ["registered", 3],
+      ["premium", 3],
+    ])("updates after selection and removal for %s", (plan, limit) => {
+      const { context, run } = createBrowser();
+      const input = context.document.getElementById("destination-input");
+      const origin = context.document.getElementById("origin-input");
+      origin.placeholder = "Type city or IATA code...";
+      const container = context.document.getElementById("selected-container");
+      const append = jest.spyOn(container, "appendChild");
+
+      run(`
+        searchAccess = { plan: "${plan}", policy: {} };
+        searchAccessLoading = false;
+        maxDestinations = ${limit};
+        destinationsData = [{ value: "AMS" }, { value: "BCN" }, { value: "LCA" }];
+        document.getElementById("origin").value = "BUD";
+        updateSearchControls();
+      `);
+      expect(input.placeholder).toBe(`Type city or IATA code (${limit} left)`);
+
+      const codes = ["AMS", "BCN", "LCA"].slice(0, limit);
+      codes.forEach((code, index) => {
+        run(`selectDestination({ value: "${code}" })`);
+        const remaining = limit - index - 1;
+        expect(input.placeholder).toBe(
+          remaining
+            ? `Type city or IATA code (${remaining} left)`
+            : "Max selected",
+        );
+      });
+
+      const firstBadge = append.mock.calls
+        .map(([element]) => element)
+        .filter((element) => element.textContent === "AMS")
+        .pop();
+      const click = firstBadge.addEventListener.mock.calls.find(
+        ([event]) => event === "click",
+      )[1];
+      click();
+      expect(input.placeholder).toBe("Type city or IATA code (1 left)");
+      expect(origin.placeholder).toBe("Type city or IATA code...");
+    });
+
+    test("restores the static placeholder during refresh and applies the new limit", async () => {
+      const { context, run } = createBrowser();
+      const input = context.document.getElementById("destination-input");
+      const response = deferred();
+      context.fetch.mockImplementationOnce(() => response.promise);
+      run(`
+        searchAccess = { plan: "premium", policy: {} };
+        searchAccessLoading = false;
+        selectedDestinations = ["AMS"];
+        maxDestinations = 3;
+        document.getElementById("origin").value = "BUD";
+        updateSearchControls();
+      `);
+      expect(input.placeholder).toBe("Type city or IATA code (2 left)");
+
+      const pending = run("refreshSearchAccess()");
+      expect(context.fetch).toHaveBeenCalledTimes(1);
+      expect(input.placeholder).toBe("Type city or IATA code...");
+      response.resolve({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          success: true,
+          plan: "premium",
+          policy: {
+            canSelectOrigin: true,
+            canSelectWeekday: true,
+            canSelectNights: true,
+            canSelectStartDate: true,
+            smartFlexEnabled: true,
+            maxDestinations: 2,
+            fixedWeekday: 6,
+            fixedNights: 1,
+          },
+        }),
+      });
+      await pending;
+      expect(input.placeholder).toBe("Type city or IATA code (1 left)");
+
+      run('setSearchAccessUnavailable("Search settings unavailable")');
+      expect(input.placeholder).toBe("Type city or IATA code...");
+    });
+
+    test("clamps remaining destinations to zero", () => {
+      const { context, run } = createBrowser();
+      run(`
+        searchAccess = { plan: "registered", policy: {} };
+        searchAccessLoading = false;
+        maxDestinations = 1;
+        selectedDestinations = ["AMS", "BCN"];
+        updateSearchControls();
+      `);
+      expect(context.document.getElementById("destination-input").placeholder)
+        .toBe("Max selected");
+    });
+  });
+
   describe("login freshness", () => {
     test.each([
       ["successful", "response"],

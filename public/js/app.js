@@ -303,10 +303,25 @@ function setSearchAccessUnavailable(message) {
   updateSearchControls();
 }
 
+function updateDestinationPlaceholder(ready) {
+  const input = document.getElementById("destination-input");
+  if (!ready) {
+    input.placeholder = "Type city or IATA code...";
+    return;
+  }
+
+  const remaining = Math.max(0, maxDestinations - selectedDestinations.length);
+  input.placeholder = remaining
+    ? `Type city or IATA code (${remaining} left)`
+    : "Max selected";
+}
+
 function updateSearchControls() {
   const ready = isSearchAccessReady();
   const policy = searchAccess?.policy;
   const airportsAvailable = destinationsData.length > 0;
+
+  updateDestinationPlaceholder(ready);
 
   document.getElementById("premium-badge").hidden =
     searchAccess?.plan !== "premium";

@@ -252,6 +252,16 @@ export default class MainPage {
     await expect(this.searchButton).toBeEnabled();
   }
 
+  async expectDestinationPlaceholder(value: string): Promise<void> {
+    await expect(this.airportInput).toBeVisible();
+    await expect(this.airportInput).toHaveValue("");
+    await expect(this.airportInput).toHaveAttribute("placeholder", value);
+    await expect(this.originInput).toHaveAttribute(
+      "placeholder",
+      "Type city or IATA code...",
+    );
+  }
+
   async expectPremiumBadge(visible: boolean): Promise<void> {
     if (visible) {
       await expect(this.premiumBadge).toBeVisible();
@@ -1441,6 +1451,30 @@ export default class MainPage {
     overrides: Partial<SearchPolicy> = {},
   ): Promise<void> {
     await this.mockSearchAccessResponse(200, getSearchAccess(plan, overrides));
+  }
+
+  async holdSearchAccess(
+    plan: SearchPlan,
+    overrides: Partial<SearchPolicy> = {},
+  ): Promise<{ waitUntilRequested: () => Promise<void>; release: () => void }> {
+    let release!: () => void;
+    let requested = false;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+
+    await this.page.route("**/api/search-access", async (route) => {
+      requested = true;
+      await gate;
+      await route.fulfill({ json: getSearchAccess(plan, overrides) });
+    });
+
+    return {
+      waitUntilRequested: async () => {
+        await expect.poll(() => requested).toBe(true);
+      },
+      release,
+    };
   }
 
   async mockSearchSession(

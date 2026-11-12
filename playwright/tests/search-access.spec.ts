@@ -61,8 +61,17 @@ test.describe("Search access", () => {
       const destinations =
         plan === "anonymous" ? ["ams"] : ["ams", "lca", "bcn"];
 
-      for (const destination of destinations) {
+      await flightFinder.expectDestinationPlaceholder(
+        `Type city or IATA code (${destinations.length} left)`,
+      );
+      for (const [index, destination] of destinations.entries()) {
         await flightFinder.selectAirportByEnter(destination);
+        const remaining = destinations.length - index - 1;
+        await flightFinder.expectDestinationPlaceholder(
+          remaining
+            ? `Type city or IATA code (${remaining} left)`
+            : "Max selected",
+        );
       }
 
       await flightFinder.expectSelectedDestinationCount(destinations.length);
@@ -81,6 +90,9 @@ test.describe("Search access", () => {
       await flightFinder.clickSelectedContainer("AMS");
 
       await common.expectEnabled(flightFinder.airportInput);
+      await flightFinder.expectDestinationPlaceholder(
+        "Type city or IATA code (1 left)",
+      );
     });
   }
 
@@ -129,6 +141,9 @@ test.describe("Search access", () => {
         "Search settings could not be loaded.",
       );
       await flightFinder.expectPremiumBadge(false);
+      await flightFinder.expectDestinationPlaceholder(
+        "Type city or IATA code...",
+      );
 
       await common.expectDisabled(flightFinder.searchButton);
       await common.expectDisabled(flightFinder.originInput);
@@ -165,6 +180,9 @@ test.describe("Search access", () => {
 
     await flightFinder.expectOriginSelected("BUD");
     await flightFinder.expectSelectedDestinationCount(0);
+    await flightFinder.expectDestinationPlaceholder(
+      "Type city or IATA code (1 left)",
+    );
     await flightFinder.expectErrorCardLayoutAtWidth(320);
     await flightFinder.expectErrorCardLayoutAtWidth(360);
     await common.click(flightFinder.searchValidationError);
@@ -293,5 +311,58 @@ test.describe("Search access", () => {
       "Search settings could not be loaded.",
     );
     await flightFinder.expectPremiumBadge(false);
+  });
+
+  test("TC-SEARCH-ACCESS-08 | should update remaining destinations after policy refresh", async () => {
+    await flightFinder.mockSearchAccess("premium");
+    await common.openPage(Env.test);
+    await common.expectContainsText(flightFinder.searchAccessStatus, "Premium");
+    await flightFinder.selectAirportByEnter("ams");
+    await flightFinder.expectDestinationPlaceholder(
+      "Type city or IATA code (2 left)",
+    );
+
+    const held = await flightFinder.holdSearchAccess("premium", {
+      maxDestinations: 2,
+    });
+    try {
+      await flightFinder.refreshSearchAccess();
+      await held.waitUntilRequested();
+      await flightFinder.expectDestinationPlaceholder(
+        "Type city or IATA code...",
+      );
+    } finally {
+      held.release();
+    }
+
+    await common.expectContainsText(
+      flightFinder.searchAccessStatus,
+      "Up to 2 destinations",
+    );
+    await flightFinder.expectDestinationPlaceholder(
+      "Type city or IATA code (1 left)",
+    );
+
+    await flightFinder.selectAirportByEnter("bcn");
+    await flightFinder.expectDestinationPlaceholder("Max selected");
+    await flightFinder.mockSearchAccess("premium", { maxDestinations: 3 });
+    await flightFinder.refreshSearchAccess();
+    await common.expectContainsText(
+      flightFinder.searchAccessStatus,
+      "Up to 3 destinations",
+    );
+    await flightFinder.expectDestinationPlaceholder(
+      "Type city or IATA code (1 left)",
+    );
+
+    await flightFinder.mockSearchAccessResponse(500, {});
+    await flightFinder.refreshSearchAccess();
+    await common.expectContainsText(
+      flightFinder.searchAccessStatus,
+      "Search settings could not be loaded.",
+    );
+    await flightFinder.expectDestinationPlaceholder(
+      "Type city or IATA code...",
+    );
   });
 });
