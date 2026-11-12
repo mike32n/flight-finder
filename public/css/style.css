@@ -535,6 +535,7 @@ button:disabled {
 
 .smart-flex-preference {
   display: flex;
+  flex-direction: row-reverse;
   align-items: center;
   gap: 8px;
   color: var(--muted);
@@ -543,18 +544,65 @@ button:disabled {
   pointer-events: auto;
 }
 
-.smart-flex-preference input {
-  flex: 0 0 18px;
-  width: 18px;
-  height: 18px;
+#smart-flex-preference {
+  position: relative;
+  flex: 0 0 36px;
+  width: 36px;
+  height: 20px;
   padding: 0;
   margin: 0;
-  accent-color: var(--primary);
+  appearance: none;
+  background: var(--muted);
+  border: 1px solid var(--muted);
+  border-radius: 999px;
+  cursor: pointer;
 }
 
-.smart-flex-preference input:disabled {
+#smart-flex-preference::before {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  background: var(--surface);
+  border-radius: 50%;
+  content: "";
+  transition: transform 0.2s ease;
+}
+
+#smart-flex-preference:checked {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+#smart-flex-preference:checked::before {
+  transform: translateX(16px);
+}
+
+#smart-flex-preference:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+}
+
+#smart-flex-preference:disabled {
   cursor: not-allowed;
   opacity: var(--disabled-opacity);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #smart-flex-preference::before {
+    transition: none;
+  }
+}
+
+@media (forced-colors: active) {
+  #smart-flex-preference {
+    appearance: auto;
+  }
+
+  #smart-flex-preference::before {
+    display: none;
+  }
 }
 
 #smart-flex-preference-error {
