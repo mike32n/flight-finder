@@ -708,9 +708,13 @@ body.dark #start-date {
 }
 
 .selected-container .iata-badge {
+  display: flex;
+  justify-content: center;
+  align-items: center;
   flex: 0 0 auto;
   width: fit-content;
   max-width: 100%;
+  text-align: center;
 }
 
 /* =====================================================
@@ -1607,7 +1611,12 @@ body.dark #start-date {
   }
 
   .selected-container {
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+  }
+
+  .selected-container .iata-badge {
+    flex: 0 1 auto;
+    min-width: 0;
   }
 
   /* Authentication */
