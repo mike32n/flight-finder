@@ -382,6 +382,174 @@ describe("flightSearchService", () => {
     expect(result.results[1]).not.toHaveProperty("priceInsight");
   });
 
+  test.each(["json", "stream"])(
+    "%s deduplicates results across base and Flex searches",
+    async (mode) => {
+      const baseTrip = { departure: "2026-10-09", return: "2026-10-11" };
+      const earlierTrip = { departure: "2026-10-08", return: "2026-10-11" };
+      const laterReturn = { departure: "2026-10-09", return: "2026-10-12" };
+      const callsByTrip = new Map();
+
+      generateTrips.mockReturnValue([baseTrip, earlierTrip]);
+      expandControlledFlexibility.mockImplementation((trip) =>
+        trip.departure === baseTrip.departure
+          ? [trip, earlierTrip, laterReturn]
+          : [trip],
+      );
+      analyzeFlexResult.mockReturnValue({ reason: "return later" });
+      searchFlightsMock.mockImplementation(
+        async (destination, departure, returnDate) => {
+          const key = `${destination}-${departure}-${returnDate}`;
+          const count = (callsByTrip.get(key) || 0) + 1;
+          callsByTrip.set(key, count);
+
+          if (destination === "AMS" && returnDate === laterReturn.return) {
+            return { success: false, reason: "no_results" };
+          }
+
+          let price;
+          if (count > 1) {
+            price = 10000;
+          } else if (returnDate === laterReturn.return) {
+            price = 20000;
+          } else if (departure === earlierTrip.departure) {
+            price = destination === "CFU" ? 26000 : 27000;
+          } else {
+            price = destination === "CFU" ? 30000 : 31000;
+          }
+
+          return {
+            success: true,
+            data: {
+              destination,
+              departure,
+              return: returnDate,
+              price,
+              currency: "HUF",
+            },
+          };
+        },
+      );
+
+      const executeTasks = async (tasks, limit, onResult) => {
+        const results = await Promise.all(tasks.map((task) => task()));
+        if (onResult) results.forEach(onResult);
+        return results;
+      };
+      runWithConcurrencyLimit
+        .mockImplementationOnce(executeTasks)
+        .mockImplementationOnce(executeTasks);
+
+      const options = {
+        origin: "VIE",
+        destinations: ["CFU", "AMS"],
+        weekday: 5,
+        nights: 2,
+        enrichAirport: (code) => ({ code }),
+      };
+
+      try {
+        let results;
+        if (mode === "json") {
+          results = (await searchFlights(options)).results;
+        } else {
+          const events = [];
+          await searchFlightsStream({
+            ...options,
+            onResult: (event) => events.push(event),
+          });
+          results = events
+            .filter((event) => event.type === "data")
+            .map((event) => event.data)
+            .sort((a, b) => a.price - b.price);
+        }
+
+        expect(searchFlightsMock).toHaveBeenCalledTimes(8);
+        expect(results.map((result) => ({
+          origin: result.origin.code,
+          destination: result.destination.code,
+          departure: result.departure,
+          return: result.return,
+          price: result.price,
+          resultType: result.resultType,
+        }))).toEqual([
+          { origin: "VIE", destination: "CFU", ...laterReturn, price: 20000, resultType: "flex" },
+          { origin: "VIE", destination: "CFU", ...earlierTrip, price: 26000, resultType: "base" },
+          { origin: "VIE", destination: "AMS", ...earlierTrip, price: 27000, resultType: "base" },
+          { origin: "VIE", destination: "CFU", ...baseTrip, price: 30000, resultType: "base" },
+          { origin: "VIE", destination: "AMS", ...baseTrip, price: 31000, resultType: "base" },
+        ]);
+      } finally {
+        searchFlightsMock.mockReset();
+      }
+    },
+  );
+
+  test("returns the five cheapest distinct valid results in price order", async () => {
+    const candidates = [
+      ["2027-03-06", "2027-03-08", 70000],
+      ["2027-03-13", "2027-03-15", 60000],
+      ["2027-03-20", "2027-03-22", 10000],
+      ["2027-03-06", "2027-03-08", 1000],
+      ["2027-05-01", "2027-05-03", -1],
+      ["2027-03-27", "2027-03-29", 50000],
+      ["2027-04-03", "2027-04-05", 20000],
+      ["2027-04-10", "2027-04-12", 40000],
+      ["2027-04-17", "2027-04-19", 30000],
+    ];
+    runWithConcurrencyLimit.mockResolvedValueOnce(
+      candidates.map(([departure, returnDate, price]) => ({
+        success: true,
+        data: {
+          destination: "CFU",
+          departure,
+          return: returnDate,
+          price,
+          currency: "HUF",
+        },
+      })),
+    );
+
+    const result = await searchFlights({
+      origin: "VIE",
+      destinations: ["CFU"],
+      weekday: 5,
+      nights: 2,
+      allowFlexSearch: false,
+      enrichAirport: (code) => ({ code }),
+    });
+
+    expect(result.failedRequests).toBe(1);
+    expect(result.results.map((item) => ({
+      origin: item.origin.code,
+      destination: item.destination.code,
+      departure: item.departure,
+      return: item.return,
+      price: item.price,
+    }))).toEqual([
+      {
+        origin: "VIE", destination: "CFU",
+        departure: "2027-03-20", return: "2027-03-22", price: 10000,
+      },
+      {
+        origin: "VIE", destination: "CFU",
+        departure: "2027-04-03", return: "2027-04-05", price: 20000,
+      },
+      {
+        origin: "VIE", destination: "CFU",
+        departure: "2027-04-17", return: "2027-04-19", price: 30000,
+      },
+      {
+        origin: "VIE", destination: "CFU",
+        departure: "2027-04-10", return: "2027-04-12", price: 40000,
+      },
+      {
+        origin: "VIE", destination: "CFU",
+        departure: "2027-03-27", return: "2027-03-29", price: 50000,
+      },
+    ]);
+  });
+
   test("streams fallback flex results when Smart Flex is disabled and base search has no results", async () => {
     appConfig.smartFlex.enabled = false;
     shouldRunFallbackFlex.mockReturnValue(true);
