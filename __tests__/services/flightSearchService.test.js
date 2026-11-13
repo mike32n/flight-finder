@@ -187,51 +187,59 @@ describe("flightSearchService", () => {
   test("runs fallback flex search when Smart Flex is disabled and base search has no results", async () => {
     appConfig.smartFlex.enabled = false;
 
-    shouldRunFallbackFlex.mockReturnValue(true);
-
+    shouldRunFallbackFlex.mockImplementation(
+      jest.requireActual("../../services/smartFlexService").shouldRunFallbackFlex,
+    );
+    searchFlightsMock
+      .mockResolvedValueOnce({ success: false, reason: "no_results" })
+      .mockResolvedValueOnce({ success: false, reason: "no_results" })
+      .mockResolvedValueOnce({
+        success: true,
+        data: {
+          destination: "CFU",
+          departure: "2026-10-09",
+          return: "2026-10-12",
+          price: 22966,
+          currency: "HUF",
+          bookingUrl: "https://example.com/flex-flight",
+        },
+      });
+    const executeTasks = async (tasks) =>
+      Promise.all(tasks.map((task) => task()));
     runWithConcurrencyLimit
-      .mockResolvedValueOnce([
-        {
-          success: false,
-          reason: "no_results",
-        },
-      ])
-      .mockResolvedValueOnce([
-        {
-          success: true,
-          data: {
-            destination: "CFU",
-            departure: "2026-10-09",
-            return: "2026-10-12",
-            price: 22966,
-            currency: "HUF",
-            bookingUrl: "https://example.com/flex-flight",
-          },
-        },
+      .mockImplementationOnce(executeTasks)
+      .mockImplementationOnce(executeTasks);
+
+    try {
+      const result = await searchFlights({
+        destinations: ["CFU"],
+        weekday: 5,
+        nights: 2,
+        enrichAirport: (code) => ({ code }),
+      });
+
+      expect(shouldRunFallbackFlex).toHaveBeenCalledWith([
+        { success: false, reason: "no_results" },
+      ]);
+      expect(runWithConcurrencyLimit).toHaveBeenCalledTimes(2);
+      expect(searchFlightsMock).toHaveBeenCalledTimes(3);
+
+      expect(result.results).toEqual([
+        expect.objectContaining({
+          destination: { code: "CFU" },
+          departure: "2026-10-09",
+          return: "2026-10-12",
+          price: 22966,
+          currency: "HUF",
+          bookingUrl: "https://example.com/flex-flight",
+          resultType: "fallback-flex",
+        }),
       ]);
 
-    const result = await searchFlights({
-      destinations: ["CFU"],
-      weekday: 5,
-      nights: 2,
-      enrichAirport: (code) => ({ code }),
-    });
-
-    expect(runWithConcurrencyLimit).toHaveBeenCalledTimes(2);
-
-    expect(result.results).toEqual([
-      expect.objectContaining({
-        destination: { code: "CFU" },
-        departure: "2026-10-09",
-        return: "2026-10-12",
-        price: 22966,
-        currency: "HUF",
-        bookingUrl: "https://example.com/flex-flight",
-        resultType: "fallback-flex",
-      }),
-    ]);
-
-    expect(result.results[0]).not.toHaveProperty("priceInsight");
+      expect(result.results[0]).not.toHaveProperty("priceInsight");
+    } finally {
+      searchFlightsMock.mockReset();
+    }
   });
 
   test("does not run fallback flex search when Smart Flex is disabled and base search fails with provider error", async () => {
@@ -262,27 +270,79 @@ describe("flightSearchService", () => {
   test("does not run fallback flex search when base results contain both no results and provider errors", async () => {
     appConfig.smartFlex.enabled = false;
 
-    runWithConcurrencyLimit.mockResolvedValueOnce([
-      {
-        success: false,
-        reason: "no_results",
-      },
-      {
-        success: false,
-        reason: "provider_error",
-        error: "SerpApi unavailable",
-      },
-    ]);
+    shouldRunFallbackFlex.mockImplementation(
+      jest.requireActual("../../services/smartFlexService").shouldRunFallbackFlex,
+    );
+    const baseResults = [
+      { success: false, reason: "no_results" },
+      { success: false, reason: "provider_error", error: "SerpApi unavailable" },
+    ];
+    searchFlightsMock
+      .mockResolvedValueOnce(baseResults[0])
+      .mockResolvedValueOnce(baseResults[1]);
+    runWithConcurrencyLimit.mockImplementationOnce(async (tasks) =>
+      Promise.all(tasks.map((task) => task())),
+    );
 
-    await searchFlights({
+    try {
+      const result = await searchFlights({
+        destinations: ["CFU", "LCA"],
+        weekday: 5,
+        nights: 2,
+        enrichAirport: (code) => ({ code }),
+      });
+
+      expect(shouldRunFallbackFlex).toHaveBeenCalledWith(baseResults);
+      expect(runWithConcurrencyLimit).toHaveBeenCalledTimes(1);
+      expect(searchFlightsMock).toHaveBeenCalledTimes(2);
+      expect(expandControlledFlexibility).not.toHaveBeenCalled();
+      expect(result.results).toEqual([]);
+      expect(result.failedRequests).toBe(1);
+    } finally {
+      searchFlightsMock.mockReset();
+    }
+  });
+
+  test("keeps successful base results without fallback when another request fails", async () => {
+    appConfig.smartFlex.enabled = false;
+    shouldRunFallbackFlex.mockImplementation(
+      jest.requireActual("../../services/smartFlexService").shouldRunFallbackFlex,
+    );
+    const baseResults = [
+      {
+        success: true,
+        data: {
+          destination: "CFU",
+          departure: "2026-10-09",
+          return: "2026-10-11",
+          price: 30000,
+          currency: "HUF",
+        },
+      },
+      { success: false, reason: "provider_error", error: "Provider unavailable" },
+    ];
+    runWithConcurrencyLimit.mockResolvedValueOnce(baseResults);
+
+    const result = await searchFlights({
       destinations: ["CFU", "LCA"],
       weekday: 5,
       nights: 2,
       enrichAirport: (code) => ({ code }),
     });
 
+    expect(shouldRunFallbackFlex).toHaveBeenCalledWith(baseResults);
     expect(runWithConcurrencyLimit).toHaveBeenCalledTimes(1);
     expect(expandControlledFlexibility).not.toHaveBeenCalled();
+    expect(result.failedRequests).toBe(1);
+    expect(result.results).toEqual([
+      expect.objectContaining({
+        destination: { code: "CFU" },
+        departure: "2026-10-09",
+        return: "2026-10-11",
+        price: 30000,
+        resultType: "base",
+      }),
+    ]);
   });
 
   test("returns cheaper flex result before the base result", async () => {
@@ -380,6 +440,76 @@ describe("flightSearchService", () => {
     );
 
     expect(result.results[1]).not.toHaveProperty("priceInsight");
+  });
+
+  test("retains equal-priced cheaper Flex trips in their original order", async () => {
+    analyzeFlexResult.mockImplementation(
+      jest.requireActual("../../services/smartFlexService").analyzeFlexResult,
+    );
+    const base = {
+      success: true,
+      data: {
+        destination: "CFU",
+        departure: "2026-10-09",
+        return: "2026-10-11",
+        price: 30000,
+        currency: "HUF",
+      },
+    };
+    const flex = [
+      { departure: "2026-10-08", return: "2026-10-11" },
+      { departure: "2026-10-09", return: "2026-10-12" },
+    ].map((trip) => ({
+      success: true,
+      data: {
+        ...trip,
+        destination: "CFU",
+        price: 20000,
+        currency: "HUF",
+        baseDeparture: base.data.departure,
+        baseReturn: base.data.return,
+      },
+    }));
+    runWithConcurrencyLimit
+      .mockResolvedValueOnce([base])
+      .mockResolvedValueOnce(flex);
+
+    const result = await searchFlights({
+      destinations: ["CFU"],
+      weekday: 5,
+      nights: 2,
+      enrichAirport: (code) => ({ code }),
+    });
+
+    expect(result.results.map((item) => ({
+      destination: item.destination.code,
+      departure: item.departure,
+      return: item.return,
+      price: item.price,
+      resultType: item.resultType,
+    }))).toEqual([
+      {
+        destination: "CFU",
+        departure: "2026-10-08",
+        return: "2026-10-11",
+        price: 20000,
+        resultType: "flex",
+      },
+      {
+        destination: "CFU",
+        departure: "2026-10-09",
+        return: "2026-10-12",
+        price: 20000,
+        resultType: "flex",
+      },
+      {
+        destination: "CFU",
+        departure: "2026-10-09",
+        return: "2026-10-11",
+        price: 30000,
+        resultType: "base",
+      },
+    ]);
   });
 
   test.each(["json", "stream"])(

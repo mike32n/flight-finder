@@ -169,6 +169,63 @@ describe("analyzeFlexResult", () => {
     expect(analyzeFlexResult(baseResults, flexResult)).toBeNull();
   });
 
+  test("returns null when flex and base prices are equal", () => {
+    const flexResult = {
+      success: true,
+      data: {
+        destination: "CFU",
+        departure: "2026-10-09",
+        return: "2026-10-12",
+        price: 30000,
+        baseDeparture: "2026-10-09",
+        baseReturn: "2026-10-11",
+      },
+    };
+
+    expect(analyzeFlexResult(baseResults, flexResult)).toBeNull();
+  });
+
+  test("matches the destination as well as the base trip dates", () => {
+    const bases = [
+      ...baseResults,
+      {
+        success: true,
+        data: {
+          destination: "AMS",
+          departure: "2026-10-09",
+          return: "2026-10-11",
+          price: 50000,
+        },
+      },
+    ];
+    const flexResult = {
+      success: true,
+      data: {
+        destination: "AMS",
+        departure: "2026-10-09",
+        return: "2026-10-12",
+        price: 40000,
+        baseDeparture: "2026-10-09",
+        baseReturn: "2026-10-11",
+      },
+    };
+
+    expect(analyzeFlexResult(bases, flexResult)).toEqual({
+      percent: 20,
+      diff: 10000,
+      reason: "return later",
+      type: "return_shift",
+      basePrice: 50000,
+      flexPrice: 40000,
+    });
+    expect(
+      analyzeFlexResult(bases, {
+        ...flexResult,
+        data: { ...flexResult.data, destination: "BCN" },
+      }),
+    ).toBeNull();
+  });
+
   test("returns null when matching base trip does not exist", () => {
     const flexResult = {
       success: true,
