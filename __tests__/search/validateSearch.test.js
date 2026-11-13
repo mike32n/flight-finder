@@ -79,11 +79,8 @@ describe("validateSearch", () => {
     expect(res.status).toHaveBeenCalledWith(400);
   });
 
-  test("rejects too many destinations", () => {
-    req.body.destinations = destinationCodes.slice(
-      0,
-      appConfig.destinations.maxSelected + 1,
-    );
+  test("rejects 6 destinations above the global maximum", () => {
+    req.body.destinations = destinationCodes.slice(0, 6);
 
     validateSearch(req, res, next);
 
@@ -94,11 +91,8 @@ describe("validateSearch", () => {
     expect(next).not.toHaveBeenCalled();
   });
 
-  test("accepts maximum allowed destinations", () => {
-    req.body.destinations = destinationCodes.slice(
-      0,
-      appConfig.destinations.maxSelected,
-    );
+  test("accepts the global maximum of 5 destinations", () => {
+    req.body.destinations = destinationCodes.slice(0, 5);
 
     validateSearch(req, res, next);
 

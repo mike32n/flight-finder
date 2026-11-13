@@ -3,7 +3,7 @@ module.exports = {
     default: "BUD",
   },
   destinations: {
-    maxSelected: 3,
+    maxSelected: 5,
   },
   search: {
     weeksToGenerate: 8,

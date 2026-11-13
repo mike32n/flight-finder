@@ -11,9 +11,14 @@ describe("getPlanPolicyError", () => {
     };
   });
 
-  test.each(Object.keys(planDefaults))(
+  test.each([
+    ["anonymous", 1],
+    ["registered", 3],
+    ["premium", 3],
+  ])(
     "accepts the default policy for %s",
-    (plan) => {
+    (plan, maxDestinations) => {
+      expect(planDefaults[plan].maxDestinations).toBe(maxDestinations);
       expect(getPlanPolicyError(planDefaults[plan])).toBeNull();
     },
   );
@@ -70,8 +75,8 @@ describe("getPlanPolicyError", () => {
     },
   );
 
-  test("rejects a destination limit above the global maximum", () => {
-    policy.maxDestinations = appConfig.destinations.maxSelected + 1;
+  test("rejects a destination limit of 6 above the global maximum", () => {
+    policy.maxDestinations = 6;
 
     expect(getPlanPolicyError(policy)).toBe("Invalid maxDestinations");
   });
@@ -109,7 +114,7 @@ describe("getPlanPolicyError", () => {
   });
 
   test("accepts the upper numeric boundaries", () => {
-    policy.maxDestinations = appConfig.destinations.maxSelected;
+    policy.maxDestinations = 5;
     policy.fixedWeekday = 6;
     policy.fixedNights = appConfig.search.maxNights;
 

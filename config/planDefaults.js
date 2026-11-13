@@ -1,5 +1,3 @@
-const appConfig = require("./appConfig");
-
 module.exports = {
   anonymous: {
     canSelectOrigin: false,
@@ -17,7 +15,7 @@ module.exports = {
 
   registered: {
     canSelectOrigin: true,
-    maxDestinations: appConfig.destinations.maxSelected,
+    maxDestinations: 3,
     canSelectWeekday: false,
     fixedWeekday: 6,
     canSelectNights: false,
@@ -31,7 +29,7 @@ module.exports = {
 
   premium: {
     canSelectOrigin: true,
-    maxDestinations: appConfig.destinations.maxSelected,
+    maxDestinations: 3,
     canSelectWeekday: true,
     fixedWeekday: 6,
     canSelectNights: true,

@@ -17,7 +17,7 @@ describe("GET /config", () => {
     expect(response.body).toEqual({
       departureAirports: config.departureAirports,
       destinations: {
-        maxSelected: config.destinations.maxSelected,
+        maxSelected: 5,
       },
       search: {
         maxNights: config.search.maxNights,
