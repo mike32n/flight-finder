@@ -1554,6 +1554,21 @@ body.dark #start-date {
     border-radius: 0;
   }
 
+  #search-heading {
+    flex-wrap: nowrap;
+    margin-inline: -30px;
+  }
+
+  #search-heading > span:first-child {
+    white-space: nowrap;
+  }
+
+  #premium-badge {
+    padding: 1px 2px;
+    font-size: 0.3em;
+    white-space: nowrap;
+  }
+
   /* Search form */
 
   .form,
