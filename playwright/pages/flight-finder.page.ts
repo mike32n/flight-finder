@@ -8,6 +8,8 @@ import {
 declare global {
   interface Window {
     refreshSearchAccess: () => Promise<void>;
+    releaseProgressiveSearch?: () => void;
+    progressiveSearchOpen?: boolean;
   }
 }
 
@@ -1657,6 +1659,68 @@ export default class MainPage {
     return {
       expectRequestCount: async (expected: number): Promise<void> => {
         expect(requestCount).toBe(expected);
+      },
+    };
+  }
+
+  async mockProgressiveSearch(results: MockSearchResult[]): Promise<{
+    expectOpen: () => Promise<void>;
+    complete: () => Promise<void>;
+  }> {
+    await this.page.addInitScript((flights: MockSearchResult[]) => {
+      const originalFetch = window.fetch.bind(window);
+      window.fetch = async (input, init) => {
+        if (input !== "/search-stream") return originalFetch(input, init);
+
+        const originCode = JSON.parse(init?.body as string).origin ?? "BUD";
+        const encoder = new TextEncoder();
+        const event = (result: MockSearchResult) =>
+          `data: ${JSON.stringify({
+            origin: { code: originCode },
+            destination: { city: result.city, code: result.code },
+            departure: "2026-10-09",
+            return: "2026-10-11",
+            price: result.price,
+            currency: "HUF",
+            resultType: "base",
+          })}\n\n`;
+
+        const body = new ReadableStream<Uint8Array>({
+          start(controller) {
+            window.progressiveSearchOpen = true;
+            controller.enqueue(encoder.encode(event(flights[0])));
+            window.releaseProgressiveSearch = () => {
+              for (const flight of flights.slice(1)) {
+                controller.enqueue(encoder.encode(event(flight)));
+              }
+              controller.enqueue(encoder.encode("event: end\ndata: done\n\n"));
+              window.progressiveSearchOpen = false;
+              controller.close();
+            };
+          },
+        });
+
+        return new Response(body, {
+          status: 200,
+          headers: { "Content-Type": "text/event-stream" },
+        });
+      };
+    }, results);
+
+    return {
+      expectOpen: async (): Promise<void> => {
+        await expect(this.searchButton).toBeDisabled();
+        await expect(this.resultsFooter).not.toContainText("Finished");
+        expect(await this.page.evaluate(() => window.progressiveSearchOpen))
+          .toBe(true);
+      },
+      complete: async (): Promise<void> => {
+        await this.page.evaluate(() => {
+          if (!window.releaseProgressiveSearch) {
+            throw new Error("Progressive search has not started");
+          }
+          window.releaseProgressiveSearch();
+        });
       },
     };
   }

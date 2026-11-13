@@ -155,6 +155,87 @@ describe("search execution cancellation", () => {
     },
   );
 
+  test.each(["json", "stream"])(
+    "%s isolates a replacement search from an aborted request at startup",
+    async (mode) => {
+      const controller = new AbortController();
+      const abortError = new Error("Search replaced");
+      const staleEvents = jest.fn();
+      const currentEvents = jest.fn();
+      let finishStale;
+      let finishCurrent;
+      let markStaleStarted;
+      let markCurrentStarted;
+      const staleStarted = new Promise((resolve) => (markStaleStarted = resolve));
+      const currentStarted = new Promise(
+        (resolve) => (markCurrentStarted = resolve),
+      );
+      const staleResult = new Promise((resolve) => (finishStale = resolve));
+      const currentResult = new Promise((resolve) => (finishCurrent = resolve));
+
+      searchMock.mockImplementation((destination) => {
+        if (destination === "AMS") {
+          markStaleStarted();
+          return staleResult;
+        }
+        if (destination === "BCN") {
+          markCurrentStarted();
+          return currentResult;
+        }
+        throw new Error(`Unexpected destination: ${destination}`);
+      });
+
+      const stale = execute(mode, {
+        signal: controller.signal,
+        allowFlexSearch: false,
+      }, staleEvents).then(
+        (value) => ({ value }),
+        (error) => ({ error }),
+      );
+      expect(await Promise.race([
+        staleStarted.then(() => "started"),
+        stale.then(() => "completed"),
+      ])).toBe("started");
+      expect(searchMock).toHaveBeenCalledTimes(1);
+      controller.abort(abortError);
+
+      const current = execute(mode, {
+        destinations: ["BCN"],
+        allowFlexSearch: false,
+      }, currentEvents);
+      const currentOutcome = current.then(
+        (value) => ({ value }),
+        (error) => ({ error }),
+      );
+      expect(await Promise.race([
+        currentStarted.then(() => "started"),
+        currentOutcome.then(() => "completed"),
+      ])).toBe("started");
+      expect(searchMock).toHaveBeenCalledTimes(2);
+
+      finishCurrent(flight("BCN", baseTrip.departure, baseTrip.return, 20000));
+      const outcome = await currentOutcome;
+      expect(outcome.error).toBeUndefined();
+      if (mode === "json") {
+        expect(outcome.value.results).toEqual([
+          expect.objectContaining({ destination: { code: "BCN" }, price: 20000 }),
+        ]);
+      } else {
+        expect(currentEvents).toHaveBeenCalledTimes(1);
+        expect(currentEvents).toHaveBeenCalledWith({
+          type: "data",
+          data: expect.objectContaining({ destination: { code: "BCN" }, price: 20000 }),
+        });
+      }
+
+      finishStale(flight("AMS", baseTrip.departure, baseTrip.return, 10000));
+      expect((await stale).error).toBe(abortError);
+      expect(staleEvents).not.toHaveBeenCalled();
+      expect(currentEvents).toHaveBeenCalledTimes(mode === "stream" ? 1 : 0);
+      expect(searchMock).toHaveBeenCalledTimes(2);
+    },
+  );
+
   test("JSON and SSE use the same filtering and provider-failure counting", async () => {
     searchMock.mockImplementation(
       async (destination, departure, returnDate) => {
