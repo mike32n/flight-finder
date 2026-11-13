@@ -59,9 +59,11 @@ describe("POST /api/auth/forgot-password", () => {
       expect.any(Date),
     );
 
+    const [, resetToken] = savePasswordResetToken.mock.calls[0];
+
     expect(sendPasswordResetEmail).toHaveBeenCalledWith(
       "test@example.com",
-      expect.any(String),
+      resetToken,
     );
   });
 

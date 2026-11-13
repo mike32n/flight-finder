@@ -1,5 +1,6 @@
 const request = require("supertest");
 const express = require("express");
+const jwt = require("jsonwebtoken");
 
 jest.mock("../../models/userModel", () => ({
   findUserByEmail: jest.fn(),
@@ -129,6 +130,12 @@ describe("POST /api/auth/login", () => {
     expect(response.body.message).toBe("Login successful.");
     expect(response.body.token).toBeDefined();
     expect(typeof response.body.token).toBe("string");
+    expect(jwt.verify(response.body.token, process.env.JWT_SECRET)).toEqual(
+      expect.objectContaining({
+        userId: mockUser.id,
+        email: mockUser.email,
+      }),
+    );
     expect(bcrypt.compare).toHaveBeenCalledWith(
       "Password1",
       "stored-password-hash",

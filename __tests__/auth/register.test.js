@@ -155,11 +155,13 @@ describe("POST /api/auth/register", () => {
       emailVerified: false,
     });
 
+    const { verificationToken } = createUser.mock.calls[0][0];
+
     expect(sendVerificationEmail).toHaveBeenCalledTimes(1);
 
     expect(sendVerificationEmail).toHaveBeenCalledWith(
       "test@test.com",
-      expect.any(String),
+      verificationToken,
     );
   });
 

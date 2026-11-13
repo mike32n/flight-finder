@@ -1,4 +1,5 @@
 const AmadeusProvider = require("../../providers/amadeusProvider");
+const appConfig = require("../../config/appConfig");
 const { acquireToken } = require("../../services/rateLimiter");
 const { getOrSet } = require("../../services/cacheService");
 
@@ -74,6 +75,14 @@ describe("AmadeusProvider", () => {
       expect(mockAmadeus.shopping.flightOffersSearch.get).toHaveBeenCalledTimes(
         1,
       );
+      expect(mockAmadeus.shopping.flightOffersSearch.get).toHaveBeenCalledWith({
+        originLocationCode: appConfig.departureAirports.default,
+        destinationLocationCode: "BCN",
+        departureDate: "2027-03-06",
+        returnDate: "2027-03-08",
+        adults: 1,
+        max: 1,
+      });
     },
   );
 

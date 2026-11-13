@@ -39,7 +39,9 @@ jest.mock("../../middlewares/resolveSearchAccess", () => ({
 }));
 
 const request = require("supertest");
+const dayjs = require("dayjs");
 const app = require("../../app");
+const appConfig = require("../../config/appConfig");
 const { getProvider } = require("../../providers/providerFactory");
 const { initDestinations } = require("../../routes/searchRoutes");
 
@@ -55,16 +57,49 @@ describe("POST /search", () => {
   });
 
   test("returns results for valid request", async () => {
-    const response = await request(app)
-      .post("/search")
-      .send({
-        destinations: ["BCN"],
-        weekday: 2,
-        nights: 3,
-      });
+    const startDate = dayjs().add(1, "month").day(2).format("YYYY-MM-DD");
+    const providerSpy = jest
+      .spyOn(getProvider(), "searchFlights")
+      .mockImplementation(async (destination, departure, returnDate) => ({
+        success: true,
+        data: {
+          destination,
+          departure,
+          return: returnDate,
+          price: 30000,
+          currency: "HUF",
+          bookingUrl: "https://example.com/booking",
+        },
+      }));
 
-    expect(response.statusCode).toBe(200);
-    expect(response.body.results).toBeDefined();
+    try {
+      const response = await request(app)
+        .post("/search")
+        .send({
+          destinations: ["BCN"],
+          weekday: 2,
+          nights: 3,
+          startDate,
+        });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.body.results).toBeDefined();
+      expect(response.body.results).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            origin: expect.objectContaining({
+              code: appConfig.departureAirports.default,
+            }),
+            destination: expect.objectContaining({ code: "BCN" }),
+            departure: startDate,
+            return: dayjs(startDate).add(3, "day").format("YYYY-MM-DD"),
+            price: 30000,
+          }),
+        ]),
+      );
+    } finally {
+      providerSpy.mockRestore();
+    }
   });
 
   test("returns 400 if destinations is empty", async () => {
