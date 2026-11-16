@@ -1,5 +1,7 @@
 process.env.DB_PATH = ":memory:";
 
+const { spawnSync } = require("node:child_process");
+
 const { getDb, initDb, closeDb } = require("../../db");
 const { createUser, findUserByEmail } = require("../../models/userModel");
 const { grantAdmin } = require("../../scripts/grant-admin");
@@ -15,6 +17,74 @@ function runSql(sql, parameters = []) {
     });
   });
 }
+
+describe("grantAdmin CLI", () => {
+  test.each([
+    {
+      name: "reports usage and exits with status 1 when the email argument is missing",
+      args: [],
+      expectedOutput: ["Usage:", "<email>"],
+    },
+    {
+      name: "reports the operation error and exits with status 1 when granting admin fails",
+      args: ["admin@example.com"],
+      expectedOutput: ["Database update failed."],
+    },
+  ])("$name", ({ args, expectedOutput }) => {
+    const scriptPath = require.resolve("../../scripts/grant-admin");
+    const result = spawnSync(
+      process.execPath,
+      [
+        "--eval",
+        `
+          const fs = require("node:fs");
+          const vm = require("node:vm");
+          const { createRequire } = require("node:module");
+          const scriptPath = ${JSON.stringify(scriptPath)};
+          const scriptRequire = createRequire(scriptPath);
+          const cliModule = { exports: {} };
+          const cliRequire = (id) => {
+            if (id === "../db") {
+              return {
+                initDb: async () => {},
+                closeDb: async () => {},
+              };
+            }
+            if (id === "../models/userModel") {
+              return {
+                grantAdminByEmail: async () => {
+                  throw new Error("Database update failed.");
+                },
+              };
+            }
+            if (id === "dotenv") {
+              return { config: () => {} };
+            }
+            return scriptRequire(id);
+          };
+          cliRequire.main = cliModule;
+          process.argv = [process.execPath, scriptPath, ...process.argv.slice(1)];
+          vm.runInNewContext(fs.readFileSync(scriptPath, "utf8"), {
+            require: cliRequire,
+            module: cliModule,
+            process,
+            console,
+          }, { filename: scriptPath });
+        `,
+        ...args,
+      ],
+      { encoding: "utf8", timeout: 5000 },
+    );
+
+    expect(result.error).toBeUndefined();
+    expect(result.signal).toBeNull();
+    expect(result.status).toBe(1);
+    for (const output of expectedOutput) {
+      expect(result.stderr).toContain(output);
+    }
+    expect(result.stdout).not.toContain("Admin access granted");
+  });
+});
 
 describe("grantAdmin", () => {
   beforeEach(async () => {
