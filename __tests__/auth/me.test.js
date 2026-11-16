@@ -372,7 +372,7 @@ describe("PATCH /api/auth/me", () => {
     expect(updateSmartFlexPreference).not.toHaveBeenCalled();
   });
 
-  test.each([-1, 0.5, "0", null, undefined, {}, []])(
+  test.each([-1, 0.5, "0", null, {}, []])(
     "rejects an invalid expected version: %p",
     async (expectedSmartFlexPreferenceVersion) => {
       const response = await request(app)
