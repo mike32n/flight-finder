@@ -2,10 +2,13 @@ import { test } from "@playwright/test";
 import Env from "../utils/env";
 import CommonPage from "../pages/common.page";
 import AuthPage from "../pages/auth.page";
+import FlightFinderPage from "../pages/flight-finder.page";
+import VerifyPage from "../pages/verify.page";
 import {
   createTestUser,
   createVerifiedTestUser,
   createUniqueTestEmail,
+  getVerificationTokenForTestUser,
 } from "../helpers/user.helper";
 
 test.describe("Authentication - Register", () => {
@@ -74,5 +77,35 @@ test.describe("Authentication - Register", () => {
       auth.loginMessage,
       "Registration successful. Please check your email to verify your account.",
     );
+  });
+
+  test("TC-REGISTER-04 | should register, verify email, and log in with the same account", async ({ page }) => {
+    const email = createUniqueTestEmail("e2e-register-journey");
+    const password = "TestPassword1";
+    const verify = new VerifyPage(page);
+    const flightFinder = new FlightFinderPage(page);
+
+    await common.click(auth.registerButton);
+    await common.expectVisible(auth.registerFormContainer);
+    await auth.fillRegisterForm(email, password);
+    await common.click(auth.registerSubmitButton);
+
+    await common.expectVisible(auth.loginFormContainer);
+    await common.expectContainsText(
+      auth.loginMessage,
+      "Registration successful. Please check your email to verify your account.",
+    );
+
+    const token = await getVerificationTokenForTestUser(email);
+    await common.openPage(`${Env.test}verify/${encodeURIComponent(token)}`);
+    await common.expectContainsText(
+      verify.verificationMessage,
+      "Email verified successfully.",
+    );
+
+    await common.openPage(Env.test);
+    await auth.login(email, password);
+    await auth.expectAuthenticatedUser(email);
+    await common.expectVisible(flightFinder.logoutButton);
   });
 });

@@ -6,12 +6,25 @@ const {
   verifyUser,
   savePasswordResetToken,
   grantAdminByEmail,
+  findUserByEmail,
 } = require("../../models/userModel");
 
 const { auth } = require("../../config/appConfig");
 
 export function createUniqueTestEmail(prefix = "e2e"): string {
   return `${prefix}-${crypto.randomUUID()}@example.com`;
+}
+
+export async function getVerificationTokenForTestUser(
+  email: string,
+): Promise<string> {
+  const user = await findUserByEmail(email);
+
+  if (typeof user?.verification_token !== "string" || !user.verification_token) {
+    throw new Error("No verification token found for the registered test user.");
+  }
+
+  return user.verification_token;
 }
 
 export async function createTestUser(prefix = "e2e-test") {
