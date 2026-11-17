@@ -1,8 +1,10 @@
 import { test } from "../fixtures/search-ui.fixture";
 
 import Env from "../utils/env";
+import AuthPage from "../pages/auth.page";
 import CommonPage from "../pages/common.page";
 import FlightFinderPage from "../pages/flight-finder.page";
+import { createVerifiedTestUser } from "../helpers/user.helper";
 
 test.describe("Flight Finder", () => {
   let common: CommonPage;
@@ -49,7 +51,17 @@ test.describe("Flight Finder", () => {
     await flightFinder.expectAirportSelected(iata);
   });
 
-  test("TC-FLIGHT-03 | should select multiple airports", async () => {
+  test("TC-FLIGHT-03 | should select multiple airports", async ({ page }) => {
+    const auth = new AuthPage(page);
+    const user = await createVerifiedTestUser();
+    await flightFinder.mockSearchAccess("registered", { maxDestinations: 5 });
+    await auth.login(user.email, user.password);
+    await auth.expectAuthenticatedUser(user.email);
+    await flightFinder.expectSearchAccessReady();
+    await flightFinder.expectDestinationPlaceholder(
+      "Type city or IATA code (5 left)",
+    );
+
     await flightFinder.selectAirportByEnter("ein");
     await flightFinder.expectAirportSelected("EIN");
 
@@ -58,6 +70,16 @@ test.describe("Flight Finder", () => {
 
     await flightFinder.selectAirportByEnter("tf");
     await flightFinder.expectAirportSelected("TFS");
+
+    await flightFinder.selectAirportByEnter("ams");
+    await flightFinder.expectAirportSelected("AMS");
+
+    await flightFinder.selectAirportByEnter("bcn");
+    await flightFinder.expectAirportSelected("BCN");
+
+    for (const width of [320, 360, 390]) {
+      await flightFinder.expectSelectedDestinationLayoutAtWidth(width, 5);
+    }
   });
 
   test("TC-FLIGHT-04 | should deselect airport", async () => {

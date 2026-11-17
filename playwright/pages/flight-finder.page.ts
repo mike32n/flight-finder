@@ -2060,6 +2060,124 @@ export default class MainPage {
     await expect(this.selectedDestinationBadges).toHaveCount(count);
   }
 
+  async expectSelectedDestinationLayoutAtWidth(
+    width: number,
+    count: number,
+  ): Promise<void> {
+    await this.page.setViewportSize({ width, height: 900 });
+    await expect
+      .poll(() => this.page.evaluate(() => window.innerWidth))
+      .toBe(width);
+    await this.expectSelectedDestinationCount(count);
+    await this.page.mouse.move(0, 0);
+    await expect
+      .poll(() =>
+        this.selectedDestinationBadges.evaluateAll((badges) =>
+          badges.map((badge) => getComputedStyle(badge).transform),
+        ),
+      )
+      .toEqual(Array(count).fill("none"));
+
+    const naturallyNarrow = await this.expectSelectedDestinationBadgeGeometry(
+      count,
+    );
+    const firstBadge = this.selectedDestinationBadges.first();
+    const originalStyle = await firstBadge.getAttribute("style");
+
+    try {
+      if (!naturallyNarrow) {
+        await firstBadge.evaluate((badge) => {
+          const range = document.createRange();
+          range.selectNodeContents(badge);
+          const textWidth = range.getBoundingClientRect().width;
+
+          // Stress sizing only; leave the production text-centering rules intact.
+          badge.style.paddingLeft = "0px";
+          badge.style.paddingRight = "0px";
+          badge.style.flex = "0 0 auto";
+          badge.style.width = `${textWidth / 2}px`;
+        });
+      }
+
+      await this.expectSelectedDestinationBadgeGeometry(count, true);
+    } finally {
+      if (!naturallyNarrow) {
+        await firstBadge.evaluate((badge, style) => {
+          if (style === null) {
+            badge.removeAttribute("style");
+          } else {
+            badge.setAttribute("style", style);
+          }
+        }, originalStyle);
+      }
+    }
+  }
+
+  private async expectSelectedDestinationBadgeGeometry(
+    count: number,
+    requireNarrowBadge = false,
+  ): Promise<boolean> {
+    await this.expectSelectedDestinationCount(count);
+    const badges = await this.selectedDestinationBadges.evaluateAll((elements) =>
+      elements.map((element) => {
+        const box = element.getBoundingClientRect();
+        const range = document.createRange();
+        range.selectNodeContents(element);
+        const textBox = range.getBoundingClientRect();
+        return {
+          code: element.textContent?.trim(),
+          left: box.left,
+          right: box.right,
+          top: box.top,
+          bottom: box.bottom,
+          width: box.width,
+          textWidth: textBox.width,
+          textCenter: (textBox.left + textBox.right) / 2,
+          textFragments: range.getClientRects().length,
+        };
+      }),
+    );
+
+    // Fractional DOMRects allow a tighter gap tolerance than pixel-rounded sizes.
+    const gapTolerance = 0.05;
+    const alignmentTolerance = 0.5;
+    for (const [index, badge] of badges.entries()) {
+      expect(badge.width, `${badge.code} badge width`).toBeGreaterThan(0);
+      expect(badge.bottom - badge.top).toBeGreaterThan(0);
+      expect(badge.textWidth, `${badge.code} text width`).toBeGreaterThan(0);
+      expect(badge.textFragments, `${badge.code} text row count`).toBe(1);
+      expect(
+        Math.abs(badge.top - badges[0].top),
+        `${badge.code} badge must stay on the first row`,
+      ).toBeLessThanOrEqual(alignmentTolerance);
+      expect(
+        Math.abs(badge.bottom - badges[0].bottom),
+        `${badge.code} badge bottom alignment`,
+      ).toBeLessThanOrEqual(alignmentTolerance);
+      expect(
+        Math.abs(badge.textCenter - (badge.left + badge.right) / 2),
+        `${badge.code} text must be horizontally centered`,
+      ).toBeLessThanOrEqual(alignmentTolerance);
+      if (index > 0) {
+        expect(
+          Math.abs(badge.left - badges[index - 1].right - 15),
+          `Gap before ${badge.code} must be 15px`,
+        ).toBeLessThanOrEqual(gapTolerance);
+      }
+    }
+
+    const narrowCount = badges.filter(
+      (badge) => badge.textWidth - badge.width > alignmentTolerance,
+    ).length;
+    if (requireNarrowBadge) {
+      expect(
+        narrowCount,
+        "At least one badge must be measurably narrower than its rendered text",
+      ).toBeGreaterThan(0);
+    }
+    return narrowCount > 0;
+  }
+
   async expectAutocompleteOpen(): Promise<void> {
     await expect(this.autocompleteList).toHaveClass(/open/);
   }
