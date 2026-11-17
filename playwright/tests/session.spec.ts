@@ -369,4 +369,69 @@ test.describe("Session lifecycle", () => {
       if (secondAuth) await secondAuth.closePage();
     }
   });
+
+  test("TC-SESSION-15 | should propagate logout and subsequent account switching between tabs", async () => {
+    const firstUser = await createVerifiedTestUser();
+    const secondUser = await createVerifiedTestUser();
+
+    await auth.login(firstUser.email, firstUser.password);
+    await flightFinder.expectSearchAccessReady();
+    const secondAuth = await auth.openSharedSessionPage(Env.test);
+
+    try {
+      const secondCommon = new CommonPage(secondAuth.page);
+      const secondFlightFinder = new FlightFinderPage(secondAuth.page);
+      const tabs = [
+        { common, auth, flightFinder },
+        {
+          common: secondCommon,
+          auth: secondAuth,
+          flightFinder: secondFlightFinder,
+        },
+      ];
+
+      for (const tab of tabs) {
+        await tab.flightFinder.expectSearchAccessReady();
+        await tab.common.expectVisible(tab.flightFinder.authContainer);
+        await tab.common.expectVisible(tab.flightFinder.logoutButton);
+        await tab.common.expectHidden(tab.auth.loginButton);
+        await tab.auth.expectAuthenticatedUser(firstUser.email);
+        await tab.auth.expectAuthTokenForUser(firstUser.userId, firstUser.email);
+      }
+      await auth.expectSameAuthToken(secondAuth);
+
+      await secondFlightFinder.mockSearchSequence([amsterdam]);
+      await secondFlightFinder.selectAirportByEnter("ams");
+      await secondCommon.click(secondFlightFinder.searchButton);
+      await secondFlightFinder.expectResultsFooterText("Finished");
+      await secondCommon.expectVisible(secondFlightFinder.firstResult);
+
+      await common.click(flightFinder.logoutButton);
+
+      for (const tab of tabs) {
+        await tab.common.expectVisible(tab.auth.loginButton);
+        await tab.common.expectHidden(tab.flightFinder.logoutButton);
+        await tab.auth.expectAuthTokenRemoved();
+        await tab.flightFinder.expectSearchAccessReady();
+        await tab.flightFinder.expectResultsEmpty();
+        await tab.flightFinder.expectPrivateSearchDataRemoved();
+      }
+
+      await auth.login(secondUser.email, secondUser.password);
+
+      for (const tab of tabs) {
+        await tab.flightFinder.expectSearchAccessReady();
+        await tab.common.expectVisible(tab.flightFinder.authContainer);
+        await tab.common.expectVisible(tab.flightFinder.logoutButton);
+        await tab.common.expectHidden(tab.auth.loginButton);
+        await tab.auth.expectAuthenticatedUser(secondUser.email);
+        await tab.auth.expectAuthTokenForUser(secondUser.userId, secondUser.email);
+        await tab.flightFinder.expectResultsEmpty();
+        await tab.flightFinder.expectPrivateSearchDataRemoved();
+      }
+      await auth.expectSameAuthToken(secondAuth);
+    } finally {
+      await secondAuth.closePage();
+    }
+  });
 });

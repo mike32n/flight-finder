@@ -236,6 +236,24 @@ export default class AuthPage {
     expect(token).toBe(otherToken);
   }
 
+  async expectAuthTokenForUser(userId: number, email: string): Promise<void> {
+    await this.expectAuthTokenPresent();
+    const token = await this.page.evaluate(() =>
+      localStorage.getItem("authToken"),
+    );
+    const response = await this.page.request.get(
+      new URL("/api/auth/me", this.page.url()).href,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      },
+    );
+
+    await expect(response).toBeOK();
+    expect(await response.json()).toMatchObject({
+      user: { id: userId, email },
+    });
+  }
+
   async expectLoginFormOpen(): Promise<void> {
     await expect(this.authModal).toBeVisible();
     await expect(this.loginFormContainer).toBeVisible();
