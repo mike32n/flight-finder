@@ -34,6 +34,7 @@ Object.assign(process.env, e2eEnvironment);
  */
 export default defineConfig({
   testDir: "./playwright/tests",
+  testIgnore: "**/bfcache.spec.ts",
   /* Run tests in files in parallel */
   fullyParallel: true,
   /* Fail the build on CI if you accidentally left test.only in the source code. */
@@ -77,6 +78,25 @@ export default defineConfig({
       name: "webkit",
       use: { ...devices["Desktop Safari"] },
     },
+
+    ...(process.env.RUN_BFCACHE_TESTS === "true"
+      ? [
+          {
+            name: "chromium-bfcache",
+            testMatch: "**/bfcache.spec.ts",
+            testIgnore: [],
+            retries: 0,
+            use: {
+              ...devices["Desktop Chrome"],
+              browserName: "chromium" as const,
+              headless: false,
+              launchOptions: {
+                ignoreDefaultArgs: ["--disable-back-forward-cache"],
+              },
+            },
+          },
+        ]
+      : []),
 
     /* Test against mobile viewports. */
     // {
