@@ -286,41 +286,167 @@ export default class MainPage {
   }
 
   async expectPremiumHeadingLayoutAtWidth(width: number): Promise<void> {
+    const mobile = width <= 768;
     await this.page.setViewportSize({ width, height: 900 });
     await expect
       .poll(() => this.page.evaluate(() => window.innerWidth))
       .toBe(width);
     await this.expectPremiumBadge(true);
+    await expect(this.heading).toHaveCSS("font-size", "32px");
+    await expect(this.premiumBadge).toHaveCSS(
+      "font-size",
+      mobile ? "9.6px" : "12.8px",
+    );
+    await this.page.mouse.move(0, 0);
 
-    const layout = await this.page
-      .locator("#search-heading")
-      .evaluate((heading) => {
-        const title = heading.querySelector("span");
-        const badge = heading.querySelector("#premium-badge");
-        if (!title || !badge) throw new Error("Heading content is missing");
-        const headingBox = heading.getBoundingClientRect();
-        const titleBox = title.getBoundingClientRect();
-        const badgeBox = badge.getBoundingClientRect();
-        return {
-          headingLeft: headingBox.left,
-          headingRight: headingBox.right,
-          titleLeft: titleBox.left,
-          titleRight: titleBox.right,
-          titleBottom: titleBox.bottom,
-          badgeLeft: badgeBox.left,
-          badgeRight: badgeBox.right,
-          badgeTop: badgeBox.top,
-        };
+    const layout = await this.heading.evaluate((heading) => {
+      const title = heading.querySelector("span");
+      const badge = heading.querySelector("#premium-badge");
+      if (!title || !badge) throw new Error("Heading content is missing");
+      const headingBox = heading.getBoundingClientRect();
+      const headingStyle = getComputedStyle(heading);
+      const availableLeft =
+        headingBox.left +
+        parseFloat(headingStyle.borderLeftWidth) +
+        parseFloat(headingStyle.paddingLeft);
+      const availableRight =
+        headingBox.right -
+        parseFloat(headingStyle.borderRightWidth) -
+        parseFloat(headingStyle.paddingRight);
+      const bounds = (rect: DOMRect) => ({
+        left: rect.left,
+        right: rect.right,
+        top: rect.top,
+        bottom: rect.bottom,
       });
+      const measure = (element: Element, name: string) => {
+        const style = getComputedStyle(element);
+        const range = document.createRange();
+        range.selectNodeContents(element);
+        const visibleBounds = {
+          left: Math.max(0, availableLeft),
+          right: Math.min(
+            document.documentElement.clientWidth,
+            availableRight,
+          ),
+          top: Math.max(0, headingBox.top),
+          bottom: Math.min(
+            document.documentElement.clientHeight,
+            headingBox.bottom,
+          ),
+        };
 
-    expect(layout.titleLeft).toBeGreaterThanOrEqual(layout.headingLeft - 1);
-    expect(layout.titleRight).toBeLessThanOrEqual(layout.headingRight + 1);
-    expect(layout.badgeLeft).toBeGreaterThanOrEqual(layout.headingLeft - 1);
-    expect(layout.badgeRight).toBeLessThanOrEqual(layout.headingRight + 1);
+        for (
+          let ancestor: Element | null = element;
+          ancestor;
+          ancestor = ancestor.parentElement
+        ) {
+          const ancestorStyle = getComputedStyle(ancestor);
+          const ancestorBox = ancestor.getBoundingClientRect();
+          if (ancestorStyle.overflowX !== "visible") {
+            const left = ancestorBox.left + ancestor.clientLeft;
+            visibleBounds.left = Math.max(visibleBounds.left, left);
+            visibleBounds.right = Math.min(
+              visibleBounds.right,
+              left + ancestor.clientWidth,
+            );
+          }
+          if (ancestorStyle.overflowY !== "visible") {
+            const top = ancestorBox.top + ancestor.clientTop;
+            visibleBounds.top = Math.max(visibleBounds.top, top);
+            visibleBounds.bottom = Math.min(
+              visibleBounds.bottom,
+              top + ancestor.clientHeight,
+            );
+          }
+        }
+
+        return {
+          name,
+          box: bounds(element.getBoundingClientRect()),
+          textBoxes: Array.from(range.getClientRects(), bounds),
+          visibleBounds,
+          fontSize: parseFloat(style.fontSize),
+          padding: [
+            style.paddingTop,
+            style.paddingRight,
+            style.paddingBottom,
+            style.paddingLeft,
+          ].map(parseFloat),
+        };
+      };
+
+      return {
+        availableCenter: (availableLeft + availableRight) / 2,
+        title: measure(title, "Heading text"),
+        badge: measure(badge, "Premium badge"),
+      };
+    });
+
+    // DOMRect gaps retain subpixels; ancestor client dimensions round to pixels.
+    const gapTolerance = 0.05;
+    const boundsTolerance = 0.5;
+    const titleBox = layout.title.box;
+    const badgeBox = layout.badge.box;
     expect(
-      layout.badgeLeft >= layout.titleRight - 1 ||
-        layout.badgeTop >= layout.titleBottom - 1,
-    ).toBe(true);
+      Math.min(titleBox.bottom, badgeBox.bottom) -
+        Math.max(titleBox.top, badgeBox.top),
+      "Heading and Premium badge must overlap vertically, not wrap",
+    ).toBeGreaterThan(0);
+    expect(
+      Math.abs(
+        (titleBox.top + titleBox.bottom) / 2 -
+          (badgeBox.top + badgeBox.bottom) / 2,
+      ),
+      "Heading and Premium badge vertical centers",
+    ).toBeLessThanOrEqual(boundsTolerance);
+    expect(badgeBox.left).toBeGreaterThan(titleBox.right);
+    expect(
+      Math.abs(badgeBox.left - titleBox.right - 8),
+      "Rendered heading-to-badge gap must be 8px",
+    ).toBeLessThanOrEqual(gapTolerance);
+    expect(
+      Math.abs(
+        (Math.min(titleBox.left, badgeBox.left) +
+          Math.max(titleBox.right, badgeBox.right)) /
+          2 -
+          layout.availableCenter,
+      ),
+      "Combined heading and Premium badge must be centered",
+    ).toBeLessThanOrEqual(boundsTolerance);
+    expect(layout.title.fontSize).toBeCloseTo(32, 2);
+    expect(layout.badge.fontSize).toBeCloseTo(mobile ? 9.6 : 12.8, 2);
+    expect(layout.badge.padding).toEqual(
+      mobile ? [1, 2, 1, 2] : [2, 7, 2, 7],
+    );
+
+    for (const element of [layout.title, layout.badge]) {
+      expect(element.textBoxes.length, `${element.name} text`).toBeGreaterThan(0);
+      expect(
+        Math.min(...element.textBoxes.map((box) => box.bottom)) -
+          Math.max(...element.textBoxes.map((box) => box.top)),
+        `${element.name} text must remain on one visual row`,
+      ).toBeGreaterThan(0);
+      for (const [index, box] of [
+        element.box,
+        ...element.textBoxes,
+      ].entries()) {
+        const description =
+          `${element.name} ${index === 0 ? "element" : `text fragment ${index}`}`;
+        expect(box.left, `${description} left clipping`).toBeGreaterThanOrEqual(
+          element.visibleBounds.left - boundsTolerance,
+        );
+        expect(box.right, `${description} right clipping`).toBeLessThanOrEqual(
+          element.visibleBounds.right + boundsTolerance,
+        );
+        expect(box.top, `${description} top clipping`).toBeGreaterThanOrEqual(
+          element.visibleBounds.top - boundsTolerance,
+        );
+        expect(box.bottom, `${description} bottom clipping`).toBeLessThanOrEqual(
+          element.visibleBounds.bottom + boundsTolerance,
+        );
+      }
+    }
   }
 
   async toggleSmartFlexPreference(): Promise<void> {

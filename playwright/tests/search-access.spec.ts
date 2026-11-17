@@ -247,7 +247,7 @@ test.describe("Search access", () => {
     await flightFinder.expectSearchAccessStatusHidden();
     await flightFinder.expectPremiumBadge(true);
 
-    for (const width of [320, 360, 390, 1280]) {
+    for (const width of [320, 360, 390, 769, 1280]) {
       await flightFinder.expectPremiumHeadingLayoutAtWidth(width);
     }
 
