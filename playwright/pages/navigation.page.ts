@@ -607,9 +607,7 @@ export default class NavigationPage {
 
       const originalChildren = [...results.childNodes];
       results.replaceChildren();
-      await new Promise<void>((resolve) =>
-        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
-      );
+      await Promise.resolve();
       const empty = {
         trackVisibility: getComputedStyle(track).visibility,
         trackHasResults: track.dataset.hasResults,
