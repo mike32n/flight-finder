@@ -403,6 +403,24 @@ test.describe("Flight Finder", () => {
     await flightFinder.selectOriginImmediatelyByEnter("Larnaca");
     await flightFinder.expectOriginSelected("LCA");
   });
+
+  test("TC-FLIGHT-26 | should keep two-digit nights visible with wider mobile buttons and unchanged desktop sizing", async () => {
+    const measurements = [];
+    for (const theme of ["light", "dark"]) {
+      if (theme === "dark") {
+        await common.click(flightFinder.toggleThemeButton);
+        await common.expectDarkThemeIsActive();
+      }
+      for (const width of [320, 360, 390, 768, 769, 1024, 1280]) {
+        const layouts = await flightFinder.expectNightsControlLayoutAtWidth(width);
+        measurements.push({ theme, layouts });
+      }
+    }
+    await test.info().attach("nights-control-geometry", {
+      body: JSON.stringify(measurements, null, 2),
+      contentType: "application/json",
+    });
+  });
 });
 
 test.describe("Flight Search Error Handling", () => {

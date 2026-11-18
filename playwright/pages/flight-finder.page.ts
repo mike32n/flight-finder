@@ -47,6 +47,16 @@ export type HeaderControlLayout = {
   themeRight: number;
 };
 
+type NightsControlMeasurement = {
+  viewport: number;
+  value: string;
+  rowWidth: number;
+  inputWidth: number;
+  textAreaWidth: number;
+  textWidth: number;
+  buttonWidths: number[];
+};
+
 export default class MainPage {
   readonly page: Page;
   private documentLoadCount = 0;
@@ -241,6 +251,160 @@ export default class MainPage {
     ]) {
       await expect(element).toBeVisible();
     }
+  }
+
+  async expectNightsControlLayoutAtWidth(
+    width: number,
+  ): Promise<NightsControlMeasurement[]> {
+    await this.page.setViewportSize({ width, height: 900 });
+    await expect(this.nightsInput).toBeEnabled();
+    const measurements: NightsControlMeasurement[] = [];
+
+    for (const value of ["10", "30"]) {
+      await this.nightsInput.fill(value);
+      if (value === "30") {
+        await this.decrementButton.click();
+        await expect(this.nightsInput).toHaveValue("29");
+        await this.incrementButton.click();
+        await expect(this.nightsInput).toHaveValue(value);
+        await this.nightsInput.focus();
+      }
+      await this.page.mouse.move(0, 0);
+      await expect(this.decrementButton).toHaveCSS("transform", "none");
+      await expect(this.incrementButton).toHaveCSS("transform", "none");
+      await expect(this.nightsInput).toHaveValue(value);
+
+      const layout = await this.nightsInput.evaluate((input) => {
+        if (!(input instanceof HTMLInputElement) || input.type !== "number") {
+          throw new Error("Nights control must be a number input");
+        }
+        const row = input.closest(".stepper");
+        if (!row) throw new Error("Nights stepper is missing");
+        const inputBox = input.getBoundingClientRect();
+        const style = getComputedStyle(input);
+        const inputInsets =
+          parseFloat(style.paddingLeft) +
+          parseFloat(style.paddingRight) +
+          parseFloat(style.borderLeftWidth) +
+          parseFloat(style.borderRightWidth);
+        // Native number inputs expose different clientWidth boxes across engines.
+        const textAreaWidth = Math.min(
+          inputBox.width - inputInsets,
+          input.clientWidth,
+        );
+        const probe = document.createElement("span");
+        probe.style.cssText = "position:fixed;visibility:hidden;white-space:pre";
+        for (const property of [
+          "font-family",
+          "font-size",
+          "font-weight",
+          "font-style",
+          "font-stretch",
+          "font-variant-numeric",
+          "font-feature-settings",
+          "font-kerning",
+          "letter-spacing",
+        ]) {
+          probe.style.setProperty(property, style.getPropertyValue(property));
+        }
+        document.body.appendChild(probe);
+        probe.textContent = input.value;
+        const textWidth = probe.getBoundingClientRect().width;
+        probe.textContent = "00";
+        const twoCharacterWidth = probe.getBoundingClientRect().width;
+        probe.remove();
+
+        const textCenter = inputBox.left + inputBox.width / 2;
+        const textUnobstructed = [-0.5, 0, 0.5].every(
+          (offset) =>
+            document.elementFromPoint(
+              textCenter + offset * textWidth,
+              inputBox.top + inputBox.height / 2,
+            ) === input,
+        );
+        const box = (element: Element) => {
+          const rect = element.getBoundingClientRect();
+          return {
+            left: rect.left,
+            right: rect.right,
+            top: rect.top,
+            bottom: rect.bottom,
+            width: rect.width,
+          };
+        };
+        const buttons = [...row.querySelectorAll("button")].map((button) => {
+          const buttonStyle = getComputedStyle(button);
+          const text = document.createRange();
+          text.selectNodeContents(button);
+          return {
+            ...box(button),
+            flexShrink: buttonStyle.flexShrink,
+            naturalWidth:
+              text.getBoundingClientRect().width +
+              parseFloat(buttonStyle.paddingLeft) +
+              parseFloat(buttonStyle.paddingRight) +
+              parseFloat(buttonStyle.borderLeftWidth) +
+              parseFloat(buttonStyle.borderRightWidth),
+          };
+        });
+        return {
+          row: box(row),
+          input: box(input),
+          buttons,
+          textAreaWidth,
+          textWidth,
+          twoCharacterWidth,
+          inputInsets,
+          textUnobstructed,
+          inputScrollLeft: input.scrollLeft,
+          gap: parseFloat(getComputedStyle(row).columnGap),
+          documentWidth: document.documentElement.scrollWidth,
+          viewportWidth: document.documentElement.clientWidth,
+        };
+      });
+
+      expect(layout.buttons).toHaveLength(2);
+      expect(layout.gap).toBe(6);
+      expect(layout.inputInsets).toBe(26);
+      expect(layout.documentWidth).toBeLessThanOrEqual(layout.viewportWidth);
+      for (const control of [...layout.buttons, layout.input]) {
+        expect(control.left).toBeGreaterThanOrEqual(layout.row.left - 0.01);
+        expect(control.right).toBeLessThanOrEqual(layout.row.right + 0.01);
+        expect(control.top).toBeGreaterThanOrEqual(layout.row.top - 0.01);
+        expect(control.bottom).toBeLessThanOrEqual(layout.row.bottom + 0.01);
+      }
+      expect(layout.buttons[0].right).toBeLessThanOrEqual(layout.input.left);
+      expect(layout.input.right).toBeLessThanOrEqual(layout.buttons[1].left);
+      if (width <= 768) {
+        expect(layout.input.width).toBeGreaterThanOrEqual(72);
+        expect(layout.textAreaWidth).toBeGreaterThanOrEqual(layout.textWidth);
+        expect(layout.textUnobstructed).toBe(true);
+        expect(layout.inputScrollLeft).toBe(0);
+        for (const button of layout.buttons) {
+          expect(button.width).toBeCloseTo(76, 2);
+          expect(button.flexShrink).toBe("0");
+        }
+      } else {
+        expect(layout.input.width).toBeCloseTo(
+          layout.twoCharacterWidth + layout.inputInsets,
+          1,
+        );
+        for (const button of layout.buttons) {
+          expect(button.width).toBeCloseTo(button.naturalWidth, 1);
+          expect(button.width).toBeLessThan(76);
+        }
+      }
+      measurements.push({
+        viewport: width,
+        value,
+        rowWidth: layout.row.width,
+        inputWidth: layout.input.width,
+        textAreaWidth: layout.textAreaWidth,
+        textWidth: layout.textWidth,
+        buttonWidths: layout.buttons.map((button) => button.width),
+      });
+    }
+    return measurements;
   }
 
   async expectSmartFlexPreference(
@@ -1364,6 +1528,7 @@ export default class MainPage {
 
       return {
         mode: element.dataset.layout,
+        mobileViewport: matchMedia("(max-width: 768px)").matches,
         innerLeft,
         innerRight,
         documentWidth: document.documentElement.scrollWidth,
@@ -1431,6 +1596,13 @@ export default class MainPage {
     } else {
       expect(layout.route.top).toBeLessThan(layout.dates.top);
       expect(layout.dates.top).toBeLessThan(layout.price.top);
+      if (layout.mobileViewport) {
+        expect(layout.price.textAlign).toBe("right");
+        expect(layout.price.right).toBeCloseTo(layout.innerRight, 0);
+      } else {
+        expect(layout.price.textAlign).not.toBe("right");
+        expect(layout.price.left).toBeCloseTo(layout.innerLeft, 0);
+      }
       if (layout.insight) {
         expect(layout.price.top).toBeLessThan(layout.insight.top);
       }

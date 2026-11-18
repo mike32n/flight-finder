@@ -1632,8 +1632,9 @@ body.dark #start-date {
     width: 100%;
   }
 
-  .stepper button {
-    width: auto;
+  .nights-field .stepper button {
+    flex: 0 0 76px;
+    width: 76px;
   }
 
   .weekday-field select,
@@ -1647,9 +1648,15 @@ body.dark #start-date {
     width: 100%;
   }
 
-  .stepper input {
+  .nights-field .stepper input {
     flex: 1;
+    min-width: 72px;
     width: auto;
+  }
+
+  .result-card[data-layout="mobile"] .result-price {
+    justify-self: end;
+    text-align: right;
   }
 
   /* Airport badges */

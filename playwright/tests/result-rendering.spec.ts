@@ -94,7 +94,7 @@ test.describe("Result rendering", () => {
     await flightFinder.selectAirportByEnter("lca");
     await common.click(flightFinder.searchButton);
 
-    for (const width of [320, 360, 390, 768, 1280]) {
+    for (const width of [320, 360, 390, 768, 769, 1024, 1280]) {
       await flightFinder.expectResultCardLayoutAtWidth(width);
     }
 
@@ -122,7 +122,7 @@ test.describe("Result rendering", () => {
     await flightFinder.selectAirportByEnter("lca");
     await common.click(flightFinder.searchButton);
 
-    for (const width of [320, 360, 390, 768, 1280]) {
+    for (const width of [320, 360, 390, 768, 769, 1024, 1280]) {
       await flightFinder.expectResultCardLayoutAtWidth(width);
       await flightFinder.expectResultBadgeBesideRoute(
         "Flexible Dates",
@@ -243,6 +243,10 @@ test.describe("Result rendering", () => {
     await flightFinder.setResultCardWidth(600, card);
     await flightFinder.expectResultRowsFit(true, true, card);
     await flightFinder.expectResultCardLayoutMode("desktop", card);
+    for (const width of [768, 1280]) {
+      await flightFinder.expectResultCardLayoutAtWidth(width, card);
+      await flightFinder.expectResultCardLayoutMode("desktop", card);
+    }
     await flightFinder.expectResultBadgeBesideRoute("Flexible Dates", card);
     await flightFinder.expectResultUnitScaling(
       { route: false, dates: false, price: false, insight: false },
