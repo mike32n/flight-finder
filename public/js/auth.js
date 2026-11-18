@@ -4,6 +4,7 @@ let sessionVersion = 0;
 let currentUserRequestId = 0;
 let loginAttemptId = 0;
 let activeLoginAttempt = null;
+let accountDisclosureController = null;
 const pendingSmartFlexSaves = new Map();
 let pendingSmartFlexError = null;
 
@@ -394,7 +395,135 @@ document
   .getElementById("smart-flex-preference")
   .addEventListener("change", saveSmartFlexPreference);
 
+function initializeAccountDisclosure() {
+  const info = document.getElementById("auth-user-info");
+  const trigger = document.getElementById("account-info-btn");
+  const email = document.getElementById("auth-user-email");
+  const controller = new AbortController();
+  accountDisclosureController = controller;
+  const options = { signal: controller.signal };
+  let pinned = false;
+  let pointerFocus = false;
+
+  const close = () => {
+    pinned = false;
+    pointerFocus = false;
+    email.hidden = true;
+    trigger.setAttribute("aria-expanded", "false");
+  };
+  const open = () => {
+    email.hidden = false;
+    trigger.setAttribute("aria-expanded", "true");
+
+    const margin = 8;
+    const viewport = document.documentElement;
+    email.style.maxWidth = `${Math.min(320, viewport.clientWidth - 2 * margin)}px`;
+    email.style.left = "0px";
+    email.style.top = "0px";
+    const buttonBox = trigger.getBoundingClientRect();
+    const emailBox = email.getBoundingClientRect();
+    const left = Math.max(
+      margin,
+      Math.min(
+        buttonBox.left + (buttonBox.width - emailBox.width) / 2,
+        viewport.clientWidth - emailBox.width - margin,
+      ),
+    );
+    const below = buttonBox.bottom + margin;
+    const top =
+      below + emailBox.height <= viewport.clientHeight - margin
+        ? below
+        : Math.max(margin, buttonBox.top - emailBox.height - margin);
+    email.style.left = `${left}px`;
+    email.style.top = `${top}px`;
+  };
+
+  info.addEventListener(
+    "pointerenter",
+    (event) => {
+      if (event.pointerType !== "touch") open();
+    },
+    options,
+  );
+  info.addEventListener(
+    "pointerleave",
+    () => {
+      if (!pinned && document.activeElement !== trigger) close();
+    },
+    options,
+  );
+  trigger.addEventListener(
+    "pointerdown",
+    () => {
+      pointerFocus = true;
+    },
+    options,
+  );
+  trigger.addEventListener(
+    "focus",
+    () => {
+      if (!pointerFocus) open();
+      pointerFocus = false;
+    },
+    options,
+  );
+  info.addEventListener(
+    "focusout",
+    (event) => {
+      if (!pinned && !info.contains(event.relatedTarget)) close();
+    },
+    options,
+  );
+  trigger.addEventListener(
+    "click",
+    () => {
+      pointerFocus = false;
+      if (pinned) {
+        close();
+      } else {
+        pinned = true;
+        open();
+      }
+    },
+    options,
+  );
+  const dismissOutside = (event) => {
+    if (!info.contains(event.target)) close();
+  };
+  window.addEventListener("pointerdown", dismissOutside, options);
+  window.addEventListener("click", dismissOutside, options);
+  window.addEventListener(
+    "keydown",
+    (event) => {
+      if (event.key === "Escape" && !email.hidden) {
+        event.preventDefault();
+        close();
+      } else if (event.key === "Tab" && !email.hidden) {
+        close();
+      }
+    },
+    options,
+  );
+  window.addEventListener(
+    "pointercancel",
+    () => {
+      pointerFocus = false;
+    },
+    options,
+  );
+  window.addEventListener("resize", close, options);
+  window.addEventListener(
+    "scroll",
+    (event) => {
+      if (!info.contains(event.target)) close();
+    },
+    { ...options, capture: true },
+  );
+}
+
 function renderAuthUI() {
+  accountDisclosureController?.abort();
+  accountDisclosureController = null;
   const adminLink = document.getElementById("admin-link");
 
   if (adminLink) {
@@ -407,27 +536,27 @@ function renderAuthUI() {
   if (authUser) {
     container.innerHTML = `
       <div class="auth-user-card">
-        <div class="auth-user-icon" aria-hidden="true">🔐</div>
-
-        <div
-          class="auth-user-info"
-          role="group"
-          aria-label="Signed in"
-          aria-describedby="auth-user-email"
-        >
-          <div class="auth-user-label" aria-hidden="true">Signed in</div>
-          <span id="auth-user-email" class="auth-user-email" hidden></span>
+        <div id="auth-user-info" class="auth-user-info">
+          <button
+            type="button"
+            id="account-info-btn"
+            aria-label="Show account information"
+            aria-expanded="false"
+            aria-controls="auth-user-email"
+            aria-describedby="auth-user-email"
+          >
+            <span class="auth-user-icon" aria-hidden="true">🔐</span>
+          </button>
+          <span id="auth-user-email" class="auth-user-email" role="tooltip" hidden></span>
         </div>
 
         <button id="logout-btn">Logout</button>
       </div>
     `;
 
-    const info = container.querySelector(".auth-user-info");
     const email = document.getElementById("auth-user-email");
     email.textContent = authUser.email;
-    email.title = authUser.email;
-    info.title = authUser.email;
+    initializeAccountDisclosure();
 
     document.getElementById("logout-btn").addEventListener("click", logout);
   } else {

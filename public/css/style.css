@@ -266,7 +266,7 @@ h1 {
   --header-control-gap: 12px;
   --auth-item-gap: 8px;
   --auth-card-inline-padding: 8px;
-  --auth-slot-width: 177.203125px; /* Natural icon, label, Logout, gap, and padding width. */
+  --auth-slot-width: 177.203125px; /* Reserved width shared by both authentication states. */
   --auth-control-height: var(--header-corner-size);
 }
 
@@ -406,8 +406,47 @@ h1 {
   flex: 0 0 auto;
 }
 
-#app-header #auth-container .auth-user-label {
-  white-space: nowrap;
+#app-header #account-info-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 var(--auth-control-height);
+  width: var(--auth-control-height);
+  height: var(--auth-control-height);
+  padding: 0;
+  background: transparent;
+  color: var(--text);
+  border: 0;
+  box-shadow: none;
+  font: inherit;
+}
+
+#app-header #account-info-btn:hover {
+  transform: none;
+}
+
+#app-header .auth-user-email {
+  position: fixed;
+  z-index: 100;
+  width: max-content;
+  max-width: calc(100vw - 16px);
+  padding: 8px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--modal-shadow);
+  line-height: 1.4;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+#app-header .auth-user-email::before {
+  position: absolute;
+  top: -8px;
+  right: 0;
+  left: 0;
+  height: 8px;
+  content: "";
 }
 
 #app-header .main-page-header #theme-button {
@@ -1027,11 +1066,6 @@ body.dark #start-date {
 .auth-user-info {
   min-width: 0;
   text-align: left;
-}
-
-.auth-user-label {
-  color: var(--muted);
-  font-size: 0.75rem;
 }
 
 .auth-user-email {

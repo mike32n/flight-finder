@@ -50,12 +50,13 @@ test.describe("Admin navigation", () => {
 
   for (const account of ["guest", "registered"] as const) {
     test(`TC-NAV-01-${account.toUpperCase()} | should hide admin navigation for a ${account} user`, async () => {
+      let accountEmail: string | undefined;
+      const unbrokenEmailSegment = "m".repeat(26);
       if (account === "registered") {
-        const user = await createVerifiedTestUser(
-          "e2e-responsive-header-very-long-account-email",
-        );
+        const user = await createVerifiedTestUser(unbrokenEmailSegment);
 
         await auth.login(user.email, user.password);
+        accountEmail = user.email;
         await common.expectVisible(flightFinder.logoutButton);
       }
 
@@ -64,7 +65,13 @@ test.describe("Admin navigation", () => {
       for (const width of [
         320, 360, 390, 440, 768, 769, 800, 900, 1024, 1280,
       ]) {
-        await flightFinder.expectHeaderLayoutAtWidth(width);
+        const layout = await flightFinder.expectHeaderLayoutAtWidth(width);
+        if (accountEmail) {
+          await flightFinder.hoverAccountDisclosure(accountEmail);
+          await flightFinder.expectAccountDisclosureFits(unbrokenEmailSegment);
+          await flightFinder.expectHeaderControlsMatch(layout);
+          await flightFinder.dismissAccountDisclosureWithEscape();
+        }
       }
     });
   }
@@ -389,5 +396,74 @@ test.describe("Admin navigation", () => {
     await common.expectVisible(flightFinder.logoutButton);
     await access.expectRequestCount(2);
     await admin.expectRequestCount(1);
+  });
+
+  test("TC-NAV-16 | should reveal account information through hover and keyboard without losing focus", async () => {
+    const user = await createVerifiedTestUser();
+    await auth.login(user.email, user.password);
+    await flightFinder.expectAccountDisclosureHidden();
+
+    await flightFinder.hoverAccountDisclosure(user.email);
+    await flightFinder.hoverAccountEmail(user.email);
+    await flightFinder.leaveAccountDisclosure();
+    await flightFinder.hoverAccountDisclosure(user.email);
+    await flightFinder.activateAccountDisclosure();
+    await flightFinder.expectAccountEmail(user.email);
+    await flightFinder.activateAccountDisclosure();
+    await flightFinder.expectAccountDisclosureHidden();
+    await flightFinder.hoverAccountDisclosure(user.email);
+    await flightFinder.dismissAccountDisclosureOutside();
+
+    await flightFinder.focusAccountDisclosure(user.email);
+    for (const key of ["Enter", "Space"] as const) {
+      await flightFinder.activateAccountDisclosure(key);
+      await flightFinder.expectAccountEmail(user.email);
+      await flightFinder.activateAccountDisclosure(key);
+      await flightFinder.expectAccountDisclosureHidden();
+    }
+    await flightFinder.activateAccountDisclosure("Enter");
+    await flightFinder.expectAccountEmail(user.email);
+    await flightFinder.dismissAccountDisclosureWithEscape();
+    await flightFinder.focusAccountDisclosure(user.email);
+    await flightFinder.tabOutOfAccountDisclosure();
+
+    await flightFinder.focusAccountDisclosure(user.email);
+    await flightFinder.activateAccountDisclosure("Enter");
+    await flightFinder.moveFocusOutsidePinnedAccountDisclosure(user.email);
+    await flightFinder.dismissAccountDisclosureWithEscape();
+    await flightFinder.focusAccountDisclosure(user.email);
+    await flightFinder.activateAccountDisclosure("Space");
+    await flightFinder.moveFocusOutsidePinnedAccountDisclosure(user.email);
+    await flightFinder.dismissAccountDisclosureOutside();
+    await flightFinder.focusAccountDisclosure(user.email);
+    await flightFinder.activateAccountDisclosure("Enter");
+    await flightFinder.tabOutOfAccountDisclosure();
+
+    await common.click(flightFinder.toggleThemeButton);
+    await common.expectDarkThemeIsActive();
+    await flightFinder.hoverAccountDisclosure(user.email);
+    await flightFinder.expectAccountDisclosureFits();
+    await flightFinder.dismissAccountDisclosureWithEscape();
+  });
+
+  test.describe("Touch account information", () => {
+    test.use({ hasTouch: true });
+
+    test("TC-NAV-17 | should toggle and dismiss account information through real touch activation", async () => {
+      const user = await createVerifiedTestUser();
+      await auth.login(user.email, user.password);
+      for (const width of [320, 360, 390, 768, 769, 1024, 1280]) {
+        const layout = await flightFinder.expectHeaderLayoutAtWidth(width);
+        await flightFinder.tapAccountDisclosure();
+        await flightFinder.expectAccountEmail(user.email);
+        await flightFinder.expectAccountDisclosureFits();
+        await flightFinder.expectHeaderControlsMatch(layout);
+        await flightFinder.tapAccountDisclosure();
+        await flightFinder.expectAccountDisclosureHidden();
+        await flightFinder.tapAccountDisclosure();
+        await flightFinder.expectAccountEmail(user.email);
+        await flightFinder.tapOutsideAccountDisclosure();
+      }
+    });
   });
 });

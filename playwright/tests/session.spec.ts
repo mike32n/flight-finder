@@ -397,6 +397,9 @@ test.describe("Session lifecycle", () => {
         await tab.common.expectHidden(tab.auth.loginButton);
         await tab.auth.expectAuthenticatedUser(firstUser.email);
         await tab.auth.expectAuthTokenForUser(firstUser.userId, firstUser.email);
+        await tab.flightFinder.leaveAccountDisclosure();
+        await tab.flightFinder.hoverAccountDisclosure(firstUser.email);
+        await tab.flightFinder.dismissAccountDisclosureWithEscape();
       }
       await auth.expectSameAuthToken(secondAuth);
 
@@ -405,6 +408,7 @@ test.describe("Session lifecycle", () => {
       await secondCommon.click(secondFlightFinder.searchButton);
       await secondFlightFinder.expectResultsFooterText("Finished");
       await secondCommon.expectVisible(secondFlightFinder.firstResult);
+      await secondFlightFinder.hoverAccountDisclosure(firstUser.email);
 
       await common.click(flightFinder.logoutButton);
 
@@ -415,6 +419,7 @@ test.describe("Session lifecycle", () => {
         await tab.flightFinder.expectSearchAccessReady();
         await tab.flightFinder.expectResultsEmpty();
         await tab.flightFinder.expectPrivateSearchDataRemoved();
+        await tab.flightFinder.expectAccountDisclosureRemoved(firstUser.email);
       }
 
       await auth.login(secondUser.email, secondUser.password);
@@ -426,6 +431,9 @@ test.describe("Session lifecycle", () => {
         await tab.common.expectHidden(tab.auth.loginButton);
         await tab.auth.expectAuthenticatedUser(secondUser.email);
         await tab.auth.expectAuthTokenForUser(secondUser.userId, secondUser.email);
+        await tab.flightFinder.leaveAccountDisclosure();
+        await tab.flightFinder.hoverAccountDisclosure(secondUser.email);
+        await tab.flightFinder.dismissAccountDisclosureWithEscape();
         await tab.flightFinder.expectResultsEmpty();
         await tab.flightFinder.expectPrivateSearchDataRemoved();
       }

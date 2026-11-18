@@ -64,6 +64,8 @@ export default class MainPage {
 
   readonly authContainer: Locator;
   readonly logoutButton: Locator;
+  readonly accountInfoButton: Locator;
+  readonly accountEmail: Locator;
 
   readonly toggleThemeButton: Locator;
   readonly searchButton: Locator;
@@ -126,6 +128,11 @@ export default class MainPage {
     this.errorCards = page.locator(".error-card");
 
     this.authContainer = page.locator("#auth-container");
+    this.accountInfoButton = this.authContainer.getByRole("button", {
+      name: "Show account information",
+      exact: true,
+    });
+    this.accountEmail = this.authContainer.locator("#auth-user-email");
     this.logoutButton = page.getByRole("button", {
       name: "Logout",
       exact: true,
@@ -556,6 +563,153 @@ export default class MainPage {
     expect(authModalOutsideApp).toBe(true);
   }
 
+  async expectAccountDisclosureHidden(): Promise<void> {
+    await expect(this.accountEmail).toBeHidden();
+    await expect(this.accountInfoButton).toHaveAttribute("aria-expanded", "false");
+  }
+
+  async expectAccountEmail(email: string): Promise<void> {
+    await expect(this.accountEmail).toBeVisible();
+    await expect(this.accountEmail).toHaveText(email);
+    await expect(this.accountEmail).toHaveRole("tooltip");
+    await expect(this.authContainer.getByRole("tooltip")).toHaveCount(1);
+    await expect(this.accountInfoButton).toHaveAttribute("aria-expanded", "true");
+    await expect(this.accountInfoButton).toHaveAccessibleDescription(email);
+    expect(await this.accountEmail.getAttribute("title")).toBeNull();
+  }
+
+  async hoverAccountDisclosure(email: string): Promise<void> {
+    await this.page.mouse.move(0, 0);
+    await this.accountInfoButton.hover();
+    await this.expectAccountEmail(email);
+  }
+
+  async hoverAccountEmail(email: string): Promise<void> {
+    const box = await this.accountEmail.boundingBox();
+    if (!box) throw new Error("Account disclosure must be visible before hovering it.");
+    await this.page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, {
+      steps: 10,
+    });
+    await this.expectAccountEmail(email);
+  }
+
+  async leaveAccountDisclosure(): Promise<void> {
+    await this.page.mouse.move(0, 0);
+    await this.expectAccountDisclosureHidden();
+  }
+
+  async focusAccountDisclosure(email: string): Promise<void> {
+    await this.page.mouse.move(0, 0);
+    await this.smartFlexPreference.focus();
+    await this.page.keyboard.press("Tab");
+    await expect(this.accountInfoButton).toBeFocused();
+    await this.expectAccountEmail(email);
+  }
+
+  async moveFocusOutsidePinnedAccountDisclosure(email: string): Promise<void> {
+    await expect(this.accountInfoButton).toBeFocused();
+    await this.smartFlexPreference.focus();
+    await expect(this.smartFlexPreference).toBeFocused();
+    await this.expectAccountEmail(email);
+  }
+
+  async activateAccountDisclosure(key?: "Enter" | "Space"): Promise<void> {
+    if (key) {
+      await expect(this.accountInfoButton).toBeFocused();
+      await this.accountInfoButton.press(key);
+      await expect(this.accountInfoButton).toBeFocused();
+    } else {
+      await this.accountInfoButton.click();
+    }
+  }
+
+  async dismissAccountDisclosureWithEscape(): Promise<void> {
+    const wasFocused = await this.accountInfoButton.evaluate(
+      (button) => document.activeElement === button,
+    );
+    await this.page.keyboard.press("Escape");
+    await this.expectAccountDisclosureHidden();
+    if (wasFocused) await expect(this.accountInfoButton).toBeFocused();
+  }
+
+  async dismissAccountDisclosureOutside(): Promise<void> {
+    await this.heading.click();
+    await this.expectAccountDisclosureHidden();
+  }
+
+  async tabOutOfAccountDisclosure(): Promise<void> {
+    await this.page.keyboard.press("Tab");
+    await expect(this.logoutButton).toBeFocused();
+    await this.expectAccountDisclosureHidden();
+  }
+
+  async tapAccountDisclosure(): Promise<void> {
+    await this.accountInfoButton.tap();
+  }
+
+  async tapOutsideAccountDisclosure(): Promise<void> {
+    await this.heading.tap();
+    await this.expectAccountDisclosureHidden();
+  }
+
+  async expectAccountDisclosureRemoved(previousEmail: string): Promise<void> {
+    await expect(this.accountInfoButton).toHaveCount(0);
+    await expect(this.accountEmail).toHaveCount(0);
+    await expect(this.authContainer).not.toContainText(previousEmail);
+  }
+
+  async expectAccountDisclosureFits(unbrokenSegment?: string): Promise<void> {
+    const layout = await this.accountEmail.evaluate((email, segment) => {
+      const box = email.getBoundingClientRect();
+      const range = document.createRange();
+      range.selectNodeContents(email);
+      const textRects = [...range.getClientRects()];
+      let segmentLineCount = 0;
+      if (segment) {
+        const text = email.firstChild;
+        if (!(text instanceof Text) || !text.data.startsWith(segment)) {
+          throw new Error("Account email must start with the expected unbroken segment.");
+        }
+        range.setStart(text, 0);
+        range.setEnd(text, segment.length);
+        segmentLineCount = new Set(
+          [...range.getClientRects()].map((rect) => rect.top),
+        ).size;
+      }
+      return {
+        left: box.left,
+        top: box.top,
+        right: box.right,
+        bottom: box.bottom,
+        width: box.width,
+        height: box.height,
+        viewportWidth: document.documentElement.clientWidth,
+        viewportHeight: document.documentElement.clientHeight,
+        documentWidth: document.documentElement.scrollWidth,
+        clientWidth: email.clientWidth,
+        scrollWidth: email.scrollWidth,
+        segmentLineCount,
+        textFits: textRects.every(
+          (text) =>
+            text.left >= box.left - 0.5 &&
+            text.right <= box.right + 0.5 &&
+            text.top >= box.top - 0.5 &&
+            text.bottom <= box.bottom + 0.5,
+        ),
+      };
+    }, unbrokenSegment);
+    expect(layout.width).toBeGreaterThan(0);
+    expect(layout.height).toBeGreaterThan(0);
+    expect(layout.left).toBeGreaterThanOrEqual(7.5);
+    expect(layout.top).toBeGreaterThanOrEqual(7.5);
+    expect(layout.right).toBeLessThanOrEqual(layout.viewportWidth - 7.5);
+    expect(layout.bottom).toBeLessThanOrEqual(layout.viewportHeight - 7.5);
+    expect(layout.documentWidth).toBeLessThanOrEqual(layout.viewportWidth + 1);
+    expect(layout.scrollWidth).toBeLessThanOrEqual(layout.clientWidth + 1);
+    expect(layout.textFits).toBe(true);
+    if (unbrokenSegment) expect(layout.segmentLineCount).toBeGreaterThan(1);
+  }
+
   async expectHeaderLayoutAtWidth(
     width: number,
     statusText?: string,
@@ -634,7 +788,6 @@ export default class MainPage {
       const infoBox = info?.getBoundingClientRect();
       const iconBox = icon?.getBoundingClientRect();
       const authCardBox = authCard?.getBoundingClientRect();
-      const label = auth.querySelector(".auth-user-label");
       const authBar = auth.querySelector(".auth-bar");
       const emailStyle = email ? getComputedStyle(email) : null;
       const authCardStyle = authCard ? getComputedStyle(authCard) : null;
@@ -748,11 +901,10 @@ export default class MainPage {
         userInfoTop: infoBox?.top ?? 0,
         userInfoHeight: infoBox?.height ?? 0,
         userInfoCenter: infoBox ? infoBox.top + infoBox.height / 2 : 0,
-        userInfoRole: info?.getAttribute("role") ?? "",
         userInfoTitle: info?.getAttribute("title") ?? "",
-        userInfoDescribedBy: info?.getAttribute("aria-describedby") ?? "",
-        userInfoLabel: label?.textContent?.trim() ?? "",
+        visibleUserLabels: auth.querySelectorAll(".auth-user-label").length,
         iconWidth: iconBox?.width ?? 0,
+        iconLeft: iconBox?.left ?? 0,
         iconRight: iconBox?.right ?? 0,
         iconCenter: iconBox ? iconBox.top + iconBox.height / 2 : 0,
         authCardWidth: authCardBox?.width ?? 0,
@@ -906,17 +1058,42 @@ export default class MainPage {
     }
 
     if (layout.logoutWidth > 0) {
-      expect(layout.userInfoLabel).toBe("Signed in");
+      expect(layout.visibleUserLabels).toBe(0);
       expect(layout.emailHidden).toBe(true);
-      expect(layout.userInfoRole).toBe("group");
-      expect(layout.userInfoDescribedBy).toBe("auth-user-email");
-      expect(layout.userInfoTitle).toBe(layout.emailText);
-      expect(layout.emailTitle).toBe(layout.emailText);
+      expect(layout.userInfoTitle).toBe("");
+      expect(layout.emailTitle).toBe("");
       expect(layout.emailText.length).toBeGreaterThan(0);
-      expect(layout.emailPosition).toBe("static");
-      await expect(
-        this.authContainer.getByRole("group", { name: "Signed in" }),
-      ).toHaveAccessibleDescription(layout.emailText);
+      expect(layout.emailPosition).toBe("fixed");
+      await expect(this.accountInfoButton).toHaveRole("button");
+      await expect(this.accountInfoButton).toHaveAccessibleName(
+        "Show account information",
+      );
+      await expect(this.accountInfoButton).toHaveAccessibleDescription(
+        layout.emailText,
+      );
+      await expect(this.accountInfoButton).toHaveAttribute(
+        "aria-controls",
+        "auth-user-email",
+      );
+      await expect(this.accountInfoButton).toHaveAttribute(
+        "aria-describedby",
+        "auth-user-email",
+      );
+      await expect(this.accountInfoButton.locator(".auth-user-icon")).toHaveAttribute(
+        "aria-hidden",
+        "true",
+      );
+      await expect(this.accountInfoButton.locator(".auth-user-icon")).toHaveText(
+        "🔐",
+      );
+      const iconFontSize = await this.accountInfoButton
+        .locator(".auth-user-icon")
+        .evaluate((icon) => parseFloat(getComputedStyle(icon).fontSize));
+      expect(iconFontSize).toBeCloseTo(19.2, 4);
+      expect(await this.accountInfoButton.getAttribute("title")).toBeNull();
+      await this.expectAccountDisclosureHidden();
+      await expect(this.accountInfoButton).toHaveCSS("width", "32px");
+      await expect(this.accountInfoButton).toHaveCSS("height", "32px");
       expect(layout.logoutHeight).toBeCloseTo(layout.themeHeight, 2);
       expect(layout.authCardDisplay).toBe("flex");
       expect(layout.authCardFlexWrap).toBe("nowrap");
@@ -941,7 +1118,8 @@ export default class MainPage {
         2,
       );
       expect(layout.userInfoRight).toBeLessThanOrEqual(layout.logoutLeft);
-      expect(layout.iconRight).toBeLessThanOrEqual(layout.userInfoLeft);
+      expect(layout.iconLeft).toBeGreaterThanOrEqual(layout.userInfoLeft);
+      expect(layout.iconRight).toBeLessThanOrEqual(layout.userInfoRight);
     }
 
     if (layout.loginWidth > 0 && layout.registerWidth > 0) {
@@ -1034,8 +1212,10 @@ export default class MainPage {
     expect(layout.formLeft).toBeCloseTo(expected.formLeft, 0);
     expect(layout.formWidth).toBeCloseTo(expected.formWidth, 0);
     expect(layout.formHeight).toBeCloseTo(expected.formHeight, 0);
-    expect(layout.authHeight).toBeCloseTo(expected.loginHeight, 0);
-    expect(expected.loginHeight).toBeCloseTo(expected.registerHeight, 0);
+    if (expected.loginHeight > 0 || expected.registerHeight > 0) {
+      expect(layout.authHeight).toBeCloseTo(expected.loginHeight, 0);
+      expect(expected.loginHeight).toBeCloseTo(expected.registerHeight, 0);
+    }
     expect(layout.themeLeft).toBeCloseTo(expected.themeLeft, 0);
     expect(layout.themeTop).toBeCloseTo(expected.themeTop, 0);
     expect(layout.themeRight).toBeCloseTo(expected.themeRight, 0);
