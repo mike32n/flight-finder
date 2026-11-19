@@ -40,8 +40,10 @@ export type HeaderControlLayout = {
   formLeft: number;
   formWidth: number;
   formHeight: number;
-  loginHeight: number;
-  registerHeight: number;
+  authButtonLeft: number;
+  authButtonTop: number;
+  authButtonWidth: number;
+  authButtonHeight: number;
   themeLeft: number;
   themeTop: number;
   themeRight: number;
@@ -990,9 +992,11 @@ export default class MainPage {
       const container = header.closest(".container");
       const form = container?.querySelector("#search-view .form");
       const login = header.querySelector("#login-btn");
-      const register = header.querySelector("#register-btn");
       const logout = header.querySelector("#logout-btn");
+      const authButton = login ?? logout;
       const email = header.querySelector("#auth-user-email");
+      const settings = header.querySelector(".header-search-settings");
+      const feedback = header.querySelector("#smart-flex-preference-error");
 
       if (
         !admin ||
@@ -1001,6 +1005,9 @@ export default class MainPage {
         !theme ||
         !controls ||
         !auth ||
+        !authButton ||
+        !settings ||
+        !feedback ||
         !mainHeader ||
         !container ||
         !form
@@ -1020,8 +1027,9 @@ export default class MainPage {
       const authBox = auth.getBoundingClientRect();
       const authContentBox = authContent?.getBoundingClientRect();
       const loginBox = login?.getBoundingClientRect();
-      const registerBox = register?.getBoundingClientRect();
       const logoutBox = logout?.getBoundingClientRect();
+      const authButtonBox = authButton.getBoundingClientRect();
+      const authButtonStyle = getComputedStyle(authButton);
       const authCard = auth.querySelector(".auth-user-card");
       const info = auth.querySelector(".auth-user-info");
       const icon = auth.querySelector(".auth-user-icon");
@@ -1062,7 +1070,6 @@ export default class MainPage {
           container.clientWidth -
           parseFloat(containerStyle.paddingLeft) -
           parseFloat(containerStyle.paddingRight),
-        containerCenter: containerBox.left + containerBox.width / 2,
         adminRight: adminBox.right,
         adminLeft: adminBox.left,
         adminTop: adminBox.top,
@@ -1073,6 +1080,14 @@ export default class MainPage {
         adminPosition: adminStyle.position,
         adminVisible: getComputedStyle(admin).display !== "none",
         headerColumnGap: parseFloat(mainHeaderStyle.columnGap),
+        rootFontSize: parseFloat(
+          getComputedStyle(document.documentElement).fontSize,
+        ),
+        settingsFontSize: parseFloat(getComputedStyle(settings).fontSize),
+        preferenceFontSize: parseFloat(
+          getComputedStyle(preferenceContainer).fontSize,
+        ),
+        feedbackFontSize: parseFloat(getComputedStyle(feedback).fontSize),
         statusLeft: statusBox.left,
         statusRight: statusBox.right,
         statusTop: statusBox.top,
@@ -1115,23 +1130,25 @@ export default class MainPage {
         authHeight: authBox.height,
         authPosition: getComputedStyle(auth).position,
         loginHeight: loginBox?.height ?? 0,
-        registerHeight: registerBox?.height ?? 0,
         logoutHeight: logoutBox?.height ?? 0,
+        authButtonLeft: authButtonBox.left,
+        authButtonTop: authButtonBox.top,
+        authButtonRight: authButtonBox.right,
+        authButtonWidth: authButtonBox.width,
+        authButtonHeight: authButtonBox.height,
+        authButtonFontSize: parseFloat(authButtonStyle.fontSize),
+        authButtonFontFamily: authButtonStyle.fontFamily,
+        authButtonScrollWidth: authButton.scrollWidth,
+        authButtonClientWidth: authButton.clientWidth,
+        authButtonCount: auth.querySelectorAll("#login-btn, #logout-btn").length,
+        registerCount: header.querySelectorAll("#register-btn").length,
         authContentPosition: authContent
           ? getComputedStyle(authContent).position
           : null,
         loginWidth: loginBox?.width ?? 0,
         loginScrollWidth: login?.scrollWidth ?? 0,
         loginClientWidth: login?.clientWidth ?? 0,
-        loginLeft: loginBox?.left ?? 0,
-        loginTop: loginBox?.top ?? 0,
         loginPosition: login ? getComputedStyle(login).position : null,
-        registerWidth: registerBox?.width ?? 0,
-        registerScrollWidth: register?.scrollWidth ?? 0,
-        registerClientWidth: register?.clientWidth ?? 0,
-        registerRight: registerBox?.right ?? 0,
-        registerTop: registerBox?.top ?? 0,
-        registerPosition: register ? getComputedStyle(register).position : null,
         logoutPosition: logout ? getComputedStyle(logout).position : null,
         logoutWidth: logoutBox?.width ?? 0,
         logoutPadding: logout ? getComputedStyle(logout).padding : null,
@@ -1162,12 +1179,6 @@ export default class MainPage {
         authWidth: authBox.width,
         authCenter: authBox.left + authBox.width / 2,
         availableBetweenCorners: themeBox.left - adminBox.right,
-        centeredNoOverlapMaxAuthWidth:
-          2 *
-          Math.min(
-            containerBox.left + containerBox.width / 2 - adminBox.right,
-            themeBox.left - (containerBox.left + containerBox.width / 2),
-          ),
         authContentWidth: authContentBox?.width ?? 0,
         emailTitle: email?.getAttribute("title") ?? "",
         emailText: email?.textContent ?? "",
@@ -1204,9 +1215,6 @@ export default class MainPage {
     if (layout.loginPosition !== null) {
       expect(layout.loginPosition).toBe("static");
     }
-    if (layout.registerPosition !== null) {
-      expect(layout.registerPosition).toBe("static");
-    }
     if (layout.logoutPosition !== null) {
       expect(layout.logoutPosition).toBe("static");
     }
@@ -1225,6 +1233,28 @@ export default class MainPage {
     expect(layout.authOverlapsAdmin).toBe(false);
     expect(layout.authOverlapsTheme).toBe(false);
     expect(layout.authTop).toBeCloseTo(layout.themeTop, 0);
+    expect(layout.authButtonCount).toBe(1);
+    expect(layout.registerCount).toBe(0);
+    expect(layout.authButtonWidth).toBeCloseTo(72, 2);
+    expect(layout.authButtonHeight).toBeCloseTo(32, 2);
+    expect(layout.authButtonTop).toBeCloseTo(layout.themeTop, 2);
+    expect(layout.authButtonRight).toBeCloseTo(layout.authRight - 8, 2);
+    expect(layout.authButtonScrollWidth).toBeLessThanOrEqual(
+      layout.authButtonClientWidth,
+    );
+    expect(layout.authButtonFontFamily).toBe("Arial, sans-serif");
+    for (const [element, fontSize] of Object.entries({
+      status: layout.statusFontSize,
+      smartFlex: layout.preferenceFontSize,
+      authButton: layout.authButtonFontSize,
+      smartFlexError: layout.feedbackFontSize,
+    })) {
+      expect(fontSize, `${element} font size`).toBeCloseTo(
+        layout.rootFontSize * 0.9,
+        2,
+      );
+    }
+    expect(layout.settingsFontSize).toBeCloseTo(layout.rootFontSize, 2);
     expect(layout.themeRight).toBeCloseTo(layout.headerRight, 0);
     expect(layout.themeWidth).toBeCloseTo(32, 0);
     expect(layout.themeHeight).toBeCloseTo(32, 0);
@@ -1240,23 +1270,17 @@ export default class MainPage {
       expect(layout.adminTopOffset).toBeCloseTo(layout.adminLeftOffset, 0);
       expect(layout.adminTopOffset).toBeCloseTo(30, 0);
       expect(layout.authWidth).toBeLessThanOrEqual(
-        layout.centeredNoOverlapMaxAuthWidth + 0.01,
+        layout.availableBetweenCorners + 0.01,
       );
     }
 
     if (width <= 768) {
-      const expectedCornerClearance = Math.max(
-        0,
-        (layout.headerClientWidth - layout.authWidth - 2 * layout.themeWidth) /
-          2,
-      );
-      expect(layout.authLeftClearance).toBeCloseTo(expectedCornerClearance, 1);
-      expect(layout.authRightClearance).toBeCloseTo(expectedCornerClearance, 1);
-      if (expectedCornerClearance >= 20) {
-        expect(layout.authLeftClearance).toBeGreaterThanOrEqual(20);
-        expect(layout.authRightClearance).toBeGreaterThanOrEqual(20);
-      }
-      expect(layout.authCenter).toBeCloseTo(layout.containerCenter, 0);
+      const expectedLeftClearance =
+        layout.headerClientWidth - layout.authWidth - 2 * layout.themeWidth;
+      expect(expectedLeftClearance).toBeGreaterThanOrEqual(0);
+      expect(layout.authLeftClearance).toBeCloseTo(expectedLeftClearance, 1);
+      expect(layout.authRightClearance).toBeCloseTo(0, 2);
+      expect(layout.authRight).toBeCloseTo(layout.themeLeft, 2);
       if (statusText !== undefined) {
         expect(layout.statusLeft).toBeCloseTo(layout.headerLeft, 0);
         expect(layout.authTop + layout.authHeight).toBeLessThanOrEqual(
@@ -1270,12 +1294,8 @@ export default class MainPage {
           availableBetweenCorners,
           2,
         );
-        expect(layout.centeredNoOverlapMaxAuthWidth).toBeCloseTo(
-          availableBetweenCorners,
-          2,
-        );
         expect(layout.authWidth).toBeLessThanOrEqual(
-          layout.centeredNoOverlapMaxAuthWidth + 0.01,
+          availableBetweenCorners + 0.01,
         );
         expect(layout.authLeft).toBeGreaterThanOrEqual(layout.adminRight);
         expect(layout.authRight).toBeLessThanOrEqual(layout.themeLeft);
@@ -1290,11 +1310,6 @@ export default class MainPage {
         expect(layout.statusRight).toBeLessThanOrEqual(layout.authLeft);
       }
       expect(layout.authThemeGap).toBeCloseTo(layout.headerColumnGap, 1);
-      if (statusText !== undefined) {
-        expect(layout.statusFontSize).toBeGreaterThanOrEqual(12);
-        expect(layout.statusFontSize).toBeLessThanOrEqual(14.4);
-        expect(layout.statusFontSize).toBeCloseTo(14.4, 2);
-      }
     }
 
     if (layout.logoutWidth > 0) {
@@ -1362,22 +1377,12 @@ export default class MainPage {
       expect(layout.iconRight).toBeLessThanOrEqual(layout.userInfoRight);
     }
 
-    if (layout.loginWidth > 0 && layout.registerWidth > 0) {
+    if (layout.loginWidth > 0) {
       expect(layout.authBarPadding).toBe("0px 8px");
       expect(layout.authContentHeight).toBeCloseTo(layout.authHeight, 2);
-      expect(layout.loginTop).toBeCloseTo(layout.registerTop, 0);
-      expect(layout.registerRight - layout.loginLeft).toBeCloseTo(
-        layout.authWidth - 16,
-        2,
-      );
       expect(layout.loginHeight).toBeCloseTo(layout.themeHeight, 2);
-      expect(layout.registerHeight).toBeCloseTo(layout.themeHeight, 2);
-      expect(layout.loginWidth / layout.registerWidth).toBeCloseTo(0.68065, 2);
       expect(layout.loginScrollWidth).toBeLessThanOrEqual(
         layout.loginClientWidth,
-      );
-      expect(layout.registerScrollWidth).toBeLessThanOrEqual(
-        layout.registerClientWidth,
       );
     }
 
@@ -1396,8 +1401,10 @@ export default class MainPage {
       formLeft: layout.formLeft,
       formWidth: layout.formWidth,
       formHeight: layout.formHeight,
-      loginHeight: layout.loginHeight,
-      registerHeight: layout.registerHeight,
+      authButtonLeft: layout.authButtonLeft,
+      authButtonTop: layout.authButtonTop,
+      authButtonWidth: layout.authButtonWidth,
+      authButtonHeight: layout.authButtonHeight,
       themeLeft: layout.themeLeft,
       themeTop: layout.themeTop,
       themeRight: layout.themeRight,
@@ -1410,17 +1417,19 @@ export default class MainPage {
     const layout = await this.appHeader.evaluate((header) => {
       const auth = header.querySelector("#auth-container");
       const theme = header.querySelector("#theme-button");
+      const authButton = auth?.querySelector("#login-btn, #logout-btn");
       const form = header
         .closest(".container")
         ?.querySelector("#search-view .form");
 
-      if (!auth || !theme || !form) {
+      if (!auth || !theme || !form || !authButton) {
         throw new Error("Header controls or search form are missing");
       }
 
       const authBox = auth.getBoundingClientRect();
       const themeBox = theme.getBoundingClientRect();
       const formBox = form.getBoundingClientRect();
+      const authButtonBox = authButton.getBoundingClientRect();
 
       return {
         authCenter: authBox.left + authBox.width / 2,
@@ -1432,11 +1441,10 @@ export default class MainPage {
         formLeft: formBox.left,
         formWidth: formBox.width,
         formHeight: formBox.height,
-        loginHeight:
-          auth.querySelector("#login-btn")?.getBoundingClientRect().height ?? 0,
-        registerHeight:
-          auth.querySelector("#register-btn")?.getBoundingClientRect().height ??
-          0,
+        authButtonLeft: authButtonBox.left,
+        authButtonTop: authButtonBox.top,
+        authButtonWidth: authButtonBox.width,
+        authButtonHeight: authButtonBox.height,
         themeLeft: themeBox.left,
         themeTop: themeBox.top,
         themeRight: themeBox.right,
@@ -1452,10 +1460,10 @@ export default class MainPage {
     expect(layout.formLeft).toBeCloseTo(expected.formLeft, 0);
     expect(layout.formWidth).toBeCloseTo(expected.formWidth, 0);
     expect(layout.formHeight).toBeCloseTo(expected.formHeight, 0);
-    if (expected.loginHeight > 0 || expected.registerHeight > 0) {
-      expect(layout.authHeight).toBeCloseTo(expected.loginHeight, 0);
-      expect(expected.loginHeight).toBeCloseTo(expected.registerHeight, 0);
-    }
+    expect(layout.authButtonLeft).toBeCloseTo(expected.authButtonLeft, 2);
+    expect(layout.authButtonTop).toBeCloseTo(expected.authButtonTop, 2);
+    expect(layout.authButtonWidth).toBeCloseTo(expected.authButtonWidth, 2);
+    expect(layout.authButtonHeight).toBeCloseTo(expected.authButtonHeight, 2);
     expect(layout.themeLeft).toBeCloseTo(expected.themeLeft, 0);
     expect(layout.themeTop).toBeCloseTo(expected.themeTop, 0);
     expect(layout.themeRight).toBeCloseTo(expected.themeRight, 0);
@@ -2463,7 +2471,7 @@ export default class MainPage {
         name: "Register",
         exact: true,
       }),
-    ).toBeVisible();
+    ).toHaveCount(0);
   }
 
   async expectOriginSuggestionAbsent(code: string): Promise<void> {

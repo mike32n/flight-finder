@@ -49,7 +49,7 @@ test.describe("Admin navigation", () => {
   }
 
   for (const account of ["guest", "registered"] as const) {
-    test(`TC-NAV-01-${account.toUpperCase()} | should hide admin navigation for a ${account} user`, async () => {
+    test(`TC-NAV-01-${account.toUpperCase()} | should hide admin navigation and right-align authentication for a ${account} user`, async () => {
       let accountEmail: string | undefined;
       const unbrokenEmailSegment = "m".repeat(26);
       if (account === "registered") {
@@ -111,7 +111,7 @@ test.describe("Admin navigation", () => {
     await admin.expectRequestCount(1);
   });
 
-  test("TC-NAV-03 | should keep authentication and theme positions stable across auth states", async () => {
+  test("TC-NAV-03 | should keep equal-sized authentication controls and theme positions stable across auth states", async () => {
     const widths = [320, 360, 390, 440, 768, 769, 800, 900, 1024, 1280];
     const guestLayouts: HeaderControlLayout[] = [];
 
@@ -130,6 +130,12 @@ test.describe("Admin navigation", () => {
     }
 
     await common.click(flightFinder.logoutButton);
+    await common.expectVisible(auth.loginButton);
+    for (let index = 0; index < widths.length; index++) {
+      await flightFinder.expectHeaderLayoutAtWidth(widths[index]);
+      await flightFinder.expectHeaderControlsMatch(guestLayouts[index]);
+    }
+
     const adminUser = await createVerifiedAdminTestUser();
     await auth.login(adminUser.email, adminUser.password);
     await common.expectVisible(navigation.adminLink);

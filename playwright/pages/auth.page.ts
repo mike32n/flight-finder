@@ -24,7 +24,7 @@ export default class AuthPage {
   readonly loginMessage: Locator;
 
   readonly registerFormContainer: Locator;
-  readonly registerButton: Locator;
+  readonly createAccountButton: Locator;
   readonly registerForm: Locator;
   readonly registerEmailInput: Locator;
   readonly registerPasswordInput: Locator;
@@ -59,8 +59,8 @@ export default class AuthPage {
     this.loginMessage = page.locator("#login-message");
 
     this.registerFormContainer = page.locator("#register-form-container");
-    this.registerButton = page.getByRole("button", {
-      name: "Register",
+    this.createAccountButton = this.loginFormContainer.getByRole("button", {
+      name: "Create an account",
       exact: true,
     });
     this.registerForm = page.locator("#register-form");
@@ -89,6 +89,15 @@ export default class AuthPage {
     await this.loginPasswordInput.fill(password);
   }
 
+  async openRegistration(): Promise<void> {
+    await this.loginButton.click();
+    await expect(this.authModal).toBeVisible();
+    await expect(this.loginFormContainer).toBeVisible();
+    await this.createAccountButton.click();
+    await expect(this.registerFormContainer).toBeVisible();
+    await expect(this.loginFormContainer).toBeHidden();
+  }
+
   async expectModalCloseAtWidth(
     width: number,
     desktopSize?: CloseButtonSize,
@@ -98,8 +107,7 @@ export default class AuthPage {
 
     for (const mode of ["login", "register", "forgot"] as const) {
       if (mode === "register") {
-        await this.registerButton.click();
-        await expect(this.registerFormContainer).toBeVisible();
+        await this.openRegistration();
       } else {
         await this.loginButton.click();
         await expect(this.loginFormContainer).toBeVisible();

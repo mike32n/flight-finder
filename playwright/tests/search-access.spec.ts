@@ -2,7 +2,9 @@ import { test } from "@playwright/test";
 
 import Env from "../utils/env";
 import CommonPage from "../pages/common.page";
-import FlightFinderPage from "../pages/flight-finder.page";
+import FlightFinderPage, {
+  type HeaderControlLayout,
+} from "../pages/flight-finder.page";
 import AuthPage from "../pages/auth.page";
 
 test.describe("Search access", () => {
@@ -229,16 +231,19 @@ test.describe("Search access", () => {
     await flightFinder.mockSearchAccess("premium");
     await common.openPage(Env.test);
 
-    for (const width of [320, 360, 390, 768, 1280]) {
-      await flightFinder.expectHeaderLayoutAtWidth(width);
+    const widths = [320, 360, 390, 440, 768, 769, 800, 900, 1024, 1280];
+    const readyLayouts: HeaderControlLayout[] = [];
+    for (const width of widths) {
+      readyLayouts.push(await flightFinder.expectHeaderLayoutAtWidth(width));
     }
 
-    const shortStatusLayout = await flightFinder.expectHeaderLayoutAtWidth(320);
-    await flightFinder.expectHeaderLayoutAtWidth(
-      320,
-      "Search settings could not be loaded. Please reload the page to try again.",
-    );
-    await flightFinder.expectHeaderControlsMatch(shortStatusLayout);
+    for (let index = 0; index < widths.length; index++) {
+      await flightFinder.expectHeaderLayoutAtWidth(
+        widths[index],
+        "Search settings could not be loaded. Please reload the page to try again.",
+      );
+      await flightFinder.expectHeaderControlsMatch(readyLayouts[index]);
+    }
   });
 
   test("TC-SEARCH-ACCESS-07 | should update the badge on access refresh and fit narrow headings", async () => {

@@ -26,7 +26,7 @@ test.describe("Authentication - Register", () => {
     const email = createUniqueTestEmail("e2e-register");
     const password = "TestPassword1";
 
-    await common.click(auth.registerButton);
+    await auth.openRegistration();
 
     await common.expectVisible(auth.authModal);
     await common.expectVisible(auth.registerFormContainer);
@@ -45,7 +45,7 @@ test.describe("Authentication - Register", () => {
   test("TC-REGISTER-02 | should not register with an already registered email", async () => {
     const user = await createVerifiedTestUser();
 
-    await common.click(auth.registerButton);
+    await auth.openRegistration();
 
     await common.expectVisible(auth.authModal);
     await common.expectVisible(auth.registerFormContainer);
@@ -65,7 +65,7 @@ test.describe("Authentication - Register", () => {
   test("TC-REGISTER-03 | should resend verification for an unverified account with matching password", async () => {
     const user = await createTestUser();
 
-    await common.click(auth.registerButton);
+    await auth.openRegistration();
     await common.expectVisible(auth.authModal);
     await common.expectVisible(auth.registerFormContainer);
 
@@ -85,7 +85,7 @@ test.describe("Authentication - Register", () => {
     const verify = new VerifyPage(page);
     const flightFinder = new FlightFinderPage(page);
 
-    await common.click(auth.registerButton);
+    await auth.openRegistration();
     await common.expectVisible(auth.registerFormContainer);
     await auth.fillRegisterForm(email, password);
     await common.click(auth.registerSubmitButton);

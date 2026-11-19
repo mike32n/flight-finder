@@ -274,7 +274,7 @@ h1 {
   display: grid;
   grid-template-columns:
     minmax(var(--header-corner-size), 1fr) var(--auth-slot-width)
-    minmax(var(--header-corner-size), 1fr);
+    var(--header-corner-size);
   grid-template-areas:
     "admin auth theme"
     "status status status";
@@ -310,6 +310,7 @@ h1 {
 #app-header .main-page-header #search-access-status {
   min-width: 0;
   margin: 0 8px 0 0;
+  font-size: 0.9rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -322,7 +323,7 @@ h1 {
 
 #app-header #auth-container {
   grid-area: auth;
-  justify-self: center;
+  justify-self: end;
   align-self: start;
   width: var(--auth-slot-width);
   min-width: var(--auth-slot-width);
@@ -338,8 +339,8 @@ h1 {
 }
 
 #app-header #auth-container .auth-bar {
-  display: grid;
-  grid-template-columns: 0.68065fr 1fr;
+  display: flex;
+  justify-content: flex-end;
   gap: var(--auth-item-gap);
   width: 100%;
   max-width: 100%;
@@ -349,29 +350,10 @@ h1 {
   padding: 0 var(--auth-card-inline-padding);
 }
 
-#app-header #auth-container #login-btn {
-  flex: 0 0 auto;
-  width: 100%;
-  height: var(--auth-control-height);
-  min-height: var(--auth-control-height);
-  padding: 0 4px;
-  font-size: 0.9rem;
-  line-height: 1;
-}
-
-#app-header #auth-container #register-btn {
-  flex: 0 0 auto;
-  width: 100%;
-  height: var(--auth-control-height);
-  min-height: var(--auth-control-height);
-  padding: 0 4px;
-  font-size: 0.9rem;
-  line-height: 1;
-}
-
+#app-header #auth-container #login-btn,
 #app-header #auth-container #logout-btn {
   flex: 0 0 auto;
-  width: auto;
+  width: 72px;
   height: var(--auth-control-height);
   min-height: var(--auth-control-height);
   padding: 0 10px;
@@ -383,6 +365,7 @@ h1 {
 #app-header #auth-container .auth-user-card {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   flex-wrap: nowrap;
   gap: var(--auth-item-gap);
   width: 100%;
@@ -579,7 +562,7 @@ button:disabled {
   align-items: center;
   gap: 8px;
   color: var(--muted);
-  font-size: 14px;
+  font-size: 0.9rem;
   white-space: nowrap;
   pointer-events: auto;
 }
@@ -647,6 +630,7 @@ button:disabled {
 
 #smart-flex-preference-error {
   margin: 8px 0 0;
+  font-size: 0.9rem;
   overflow-wrap: anywhere;
 }
 
@@ -849,6 +833,10 @@ body.dark #start-date {
   box-shadow: var(--card-hover-shadow);
 }
 
+.error-card {
+  font-size: 15px;
+}
+
 .error-card,
 #smart-flex-preference-error {
   padding: 10px 20px;
@@ -856,7 +844,6 @@ body.dark #start-date {
   color: var(--error-card-text);
   border: 1px solid var(--error-card-border);
   border-radius: 8px;
-  font-size: 15px;
   font-weight: normal;
   animation: var(--error-animation);
 }
@@ -1304,7 +1291,6 @@ body.dark #start-date {
   #app-header .main-page-header #search-access-status {
     margin-left: calc(var(--header-corner-size) + var(--header-control-gap));
     align-self: center;
-    font-size: 0.9rem;
   }
 
   #app-header #auth-container {

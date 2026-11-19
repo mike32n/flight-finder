@@ -563,17 +563,12 @@ function renderAuthUI() {
     container.innerHTML = `
       <div class="auth-bar">
         <button id="login-btn">Login</button>
-        <button id="register-btn">Register</button>
       </div>
     `;
 
     document
       .getElementById("login-btn")
       .addEventListener("click", () => openAuthModal("login"));
-
-    document
-      .getElementById("register-btn")
-      .addEventListener("click", () => openAuthModal("register"));
   }
 }
 
