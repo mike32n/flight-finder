@@ -30,15 +30,22 @@
             <p id="search-access-status" class="meta-info" role="status">
               Loading search settings...
             </p>
-            <label class="smart-flex-preference" for="smart-flex-preference">
+            <div class="smart-flex-preference">
               <input
                 id="smart-flex-preference"
                 type="checkbox"
-                aria-describedby="smart-flex-preference-error"
+                aria-labelledby="smart-flex-preference-label"
+                aria-describedby="smart-flex-preference-description smart-flex-preference-error"
                 disabled
               />
-              Smart Flex
-            </label>
+              <span
+                id="smart-flex-preference-label"
+                title="Looks for cheaper flights on nearby dates."
+              >Smart Flex</span>
+              <span id="smart-flex-preference-description" hidden>
+                Looks for cheaper flights on nearby dates.
+              </span>
+            </div>
           </div>
 
           <div class="header-controls">

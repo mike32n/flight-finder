@@ -68,6 +68,7 @@ export default class MainPage {
   readonly searchAccessStatus: Locator;
   readonly premiumBadge: Locator;
   readonly smartFlexPreference: Locator;
+  readonly smartFlexText: Locator;
   readonly smartFlexPreferenceError: Locator;
   readonly sessionMessage: Locator;
   readonly errorCards: Locator;
@@ -131,6 +132,7 @@ export default class MainPage {
       name: "Smart Flex",
       exact: true,
     });
+    this.smartFlexText = this.appHeader.locator("#smart-flex-preference-label");
     this.smartFlexPreferenceError = this.appHeader.locator(
       "#smart-flex-preference-error",
     );
@@ -624,6 +626,80 @@ export default class MainPage {
     await this.smartFlexPreference.click();
   }
 
+  async activateSmartFlexWithSpace(): Promise<void> {
+    await this.smartFlexPreference.focus();
+    await expect(this.smartFlexPreference).toBeFocused();
+    await expect(this.smartFlexPreference).toHaveCSS("outline-style", "solid");
+    await expect(this.smartFlexPreference).toHaveCSS("outline-width", "2px");
+    await this.smartFlexPreference.press("Space");
+  }
+
+  watchSmartFlexSaves() {
+    const requests: Record<string, unknown>[] = [];
+    this.page.on("request", (request) => {
+      if (
+        new URL(request.url()).pathname === "/api/auth/me" &&
+        request.method() === "PATCH"
+      ) {
+        requests.push(request.postDataJSON());
+      }
+    });
+    return {
+      expectCount: async (count: number) => {
+        expect(requests).toHaveLength(count);
+      },
+      expectSavedPreference: async (checked: boolean, count: number) => {
+        await expect.poll(() => requests.length).toBe(count);
+        expect(requests[count - 1]).toMatchObject({
+          smartFlexPreference: checked,
+        });
+        await this.expectSmartFlexPreference(checked, true);
+      },
+    };
+  }
+
+  async expectSmartFlexTextInteractionAtWidth(width: number): Promise<void> {
+    await this.expectHeaderLayoutAtWidth(width);
+    const checked = await this.smartFlexPreference.isChecked();
+    const disabled = await this.smartFlexPreference.isDisabled();
+    const measure = () =>
+      this.appShell.evaluate((shell) =>
+        Array.from(shell.querySelectorAll(
+          "#app-header, .smart-flex-preference, #smart-flex-preference, #smart-flex-preference-label, .header-controls, #search-view .form",
+        )).map((element) => {
+          const { x, y, width, height } = element.getBoundingClientRect();
+          return { x, y, width, height };
+        }),
+      );
+    const before = await measure();
+    await this.smartFlexText.hover();
+    await expect(this.smartFlexText).toHaveAttribute(
+      "title",
+      "Looks for cheaper flights on nearby dates.",
+    );
+    await expect(this.smartFlexPreference).toHaveAttribute("type", "checkbox");
+    await expect(this.smartFlexPreference).toHaveAttribute(
+      "aria-labelledby",
+      "smart-flex-preference-label",
+    );
+    await expect(this.smartFlexPreference).toHaveAccessibleName("Smart Flex");
+    await expect(this.smartFlexPreference).toHaveAccessibleDescription(
+      "Looks for cheaper flights on nearby dates.",
+    );
+    expect(await measure()).toEqual(before);
+    await this.smartFlexText.click();
+    await this.expectSmartFlexPreference(checked, !disabled);
+    expect(await measure()).toEqual(before);
+  }
+
+  async expectDisabledSmartFlexIgnoresPointer(): Promise<void> {
+    await expect(this.smartFlexPreference).toBeDisabled();
+    const box = await this.smartFlexPreference.boundingBox();
+    if (!box) throw new Error("Smart Flex switch is missing");
+    await this.page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+    await this.expectSmartFlexPreference(false);
+  }
+
   async mockSmartFlexSaveFailure(status: 400 | 500): Promise<void> {
     await this.page.route("**/api/auth/me", async (route) => {
       if (route.request().method() !== "PATCH") {
@@ -647,10 +723,12 @@ export default class MainPage {
     await expect(this.smartFlexPreferenceError).toHaveRole("alert");
     await expect(this.smartFlexPreference).toHaveAttribute(
       "aria-describedby",
-      "smart-flex-preference-error",
+      "smart-flex-preference-description smart-flex-preference-error",
     );
     await expect(this.smartFlexPreference).toHaveAccessibleDescription(
-      new RegExp(`Smart Flex preference could not be ${outcome}\\.`),
+      new RegExp(
+        `^Looks for cheaper flights on nearby dates\\. Smart Flex preference could not be ${outcome}\\.`,
+      ),
     );
     await expect(this.appHeader.getByRole("alert")).toHaveCount(1);
   }
@@ -903,9 +981,7 @@ export default class MainPage {
     const layout = await this.appHeader.evaluate((header) => {
       const admin = header.querySelector("#admin-link");
       const status = header.querySelector("#search-access-status");
-      const preference = header.querySelector("#smart-flex-preference");
-      const preferenceLabel =
-        preference instanceof HTMLInputElement ? preference.labels?.[0] : null;
+      const preferenceContainer = header.querySelector(".smart-flex-preference");
       const theme = header.querySelector("#theme-button");
       const controls = header.querySelector(".header-controls");
       const auth = header.querySelector("#auth-container");
@@ -921,7 +997,7 @@ export default class MainPage {
       if (
         !admin ||
         !status ||
-        !preferenceLabel ||
+        !preferenceContainer ||
         !theme ||
         !controls ||
         !auth ||
@@ -937,7 +1013,7 @@ export default class MainPage {
       const adminBox = admin.getBoundingClientRect();
       const adminStyle = getComputedStyle(admin);
       const statusBox = status.getBoundingClientRect();
-      const preferenceBox = preferenceLabel.getBoundingClientRect();
+      const preferenceBox = preferenceContainer.getBoundingClientRect();
       const formBox = form.getBoundingClientRect();
       const themeBox = theme.getBoundingClientRect();
       const themeStyle = getComputedStyle(theme);

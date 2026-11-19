@@ -442,4 +442,40 @@ test.describe("Session lifecycle", () => {
       await secondAuth.closePage();
     }
   });
+
+  test("TC-SESSION-16 | should describe Smart Flex without activating it through text", async () => {
+    const saves = flightFinder.watchSmartFlexSaves();
+    await flightFinder.expectSearchAccessReady();
+    for (const width of [320, 360, 390, 440, 768, 769, 800, 900, 1024, 1280]) {
+      await flightFinder.expectSmartFlexTextInteractionAtWidth(width);
+    }
+    await flightFinder.expectDisabledSmartFlexIgnoresPointer();
+    await saves.expectCount(0);
+
+    const user = await createVerifiedTestUser();
+    await auth.login(user.email, user.password);
+    await flightFinder.expectSmartFlexPreference(true, true);
+    for (const width of [320, 360, 390, 440, 768, 769, 800, 900, 1024, 1280]) {
+      await flightFinder.expectSmartFlexTextInteractionAtWidth(width);
+    }
+    await saves.expectCount(0);
+
+    await flightFinder.toggleSmartFlexPreference();
+    await saves.expectSavedPreference(false, 1);
+    await common.reloadPage();
+    await flightFinder.expectSmartFlexPreference(false, true);
+
+    await flightFinder.expectSmartFlexTextInteractionAtWidth(390);
+    await saves.expectCount(1);
+    await flightFinder.activateSmartFlexWithSpace();
+    await saves.expectSavedPreference(true, 2);
+    await common.reloadPage();
+    await flightFinder.expectSmartFlexPreference(true, true);
+
+    await common.click(flightFinder.logoutButton);
+    await flightFinder.expectSmartFlexPreference(false);
+    await flightFinder.expectSmartFlexTextInteractionAtWidth(320);
+    await flightFinder.expectDisabledSmartFlexIgnoresPointer();
+    await saves.expectCount(2);
+  });
 });
